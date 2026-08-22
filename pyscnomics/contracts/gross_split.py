@@ -695,29 +695,31 @@ class GrossSplit(BaseProject):
         if not self.is_pod_1:
             return
 
+        oil_onstream_date, gas_onstream_date = self._require_onstream_dates()
+        is_strict = self.is_strict
+        if is_strict is None:
+            raise GrossSplitException("Attribute is_strict is missing")
+
         # Specify onstream year
-        onstream_yr = min([self.oil_onstream_date.year, self.gas_onstream_date.year])
+        onstream_yr = min([oil_onstream_date.year, gas_onstream_date.year])
 
         # Helper method to check whether capital costs PIS years < onstream year
         def _validate_capital_pis_years(mapping, is_before_onstream: bool):
-            kwargs = {
-                "is_strict": self.is_strict,
-                "onstream_year": onstream_yr,
-            }
-
             for obj, name, is_amort in mapping:
                 if is_before_onstream:
                     self._check_capital_pis_years_before_onstream(
                         obj_capital=obj,
                         obj_name=name,
                         is_amortization=is_amort,
-                        **kwargs,
+                        is_strict=is_strict,
+                        onstream_year=onstream_yr,
                     )
                 else:
                     self._check_capital_pis_years_after_onstream(
                         obj_capital=obj,
                         obj_name=name,
-                        **kwargs,
+                        is_strict=is_strict,
+                        onstream_year=onstream_yr,
                     )
 
         # Helper method to validate non-capital costs
@@ -726,7 +728,7 @@ class GrossSplit(BaseProject):
                 self._check_invalid_non_capital_costs(
                     obj_non_capital=obj,
                     obj_name=name,
-                    is_strict=self.is_strict,
+                    is_strict=is_strict,
                 )
 
         # Define several mapping variables
@@ -845,6 +847,7 @@ class GrossSplit(BaseProject):
 
         # Prepare data prior to calculating amortization
         self._prepare_amortization()
+        oil_onstream_date, gas_onstream_date = self._require_onstream_dates()
 
         # Mapping: fluid → (cost type, amortizable pool object, lifting object)
         amort_mapping = {
@@ -878,8 +881,8 @@ class GrossSplit(BaseProject):
             ),
         }
         onstream_year = min(
-            self.oil_onstream_date.year,
-            self.gas_onstream_date.year,
+            oil_onstream_date.year,
+            gas_onstream_date.year,
         )
 
         # Define intermediate attribute --> "amortizations": dict
@@ -957,8 +960,13 @@ class GrossSplit(BaseProject):
         if self.is_pod_1:
             return
 
+        oil_onstream_date, gas_onstream_date = self._require_onstream_dates()
+        is_strict = self.is_strict
+        if is_strict is None:
+            raise GrossSplitException("Attribute is_strict is missing")
+
         # Specify onstream year
-        onstream_yr = min([self.oil_onstream_date.year, self.gas_onstream_date.year])
+        onstream_yr = min([oil_onstream_date.year, gas_onstream_date.year])
 
         # All sunk costs (capital and non-capital) that must NOT exist
         # in Non-POD I Gross Split contracts
@@ -994,7 +1002,7 @@ class GrossSplit(BaseProject):
                 sc_object=obj,
                 sc_name=name,
                 is_capital=is_cap,
-                is_strict=self.is_strict,
+                is_strict=is_strict,
                 onstream_year=onstream_yr,
             )
 
@@ -1003,7 +1011,7 @@ class GrossSplit(BaseProject):
                 obj_capital=obj,
                 obj_name=name,
                 is_amortization=is_amort,
-                is_strict=self.is_strict,
+                is_strict=is_strict,
                 onstream_year=onstream_yr,
             )
 
@@ -2621,40 +2629,99 @@ class GrossSplit(BaseProject):
         ``_consolidated_``.
         """
 
+        oil_wap_price = self._require_array(self._oil_wap_price, "_oil_wap_price")
+        gas_wap_price = self._require_array(self._gas_wap_price, "_gas_wap_price")
+        oil_depreciable_sunk_cost = self._require_array(
+            self._oil_depreciable_sunk_cost, "_oil_depreciable_sunk_cost"
+        )
+        gas_depreciable_sunk_cost = self._require_array(
+            self._gas_depreciable_sunk_cost, "_gas_depreciable_sunk_cost"
+        )
+        oil_non_depreciable_sunk_cost = self._require_array(
+            self._oil_non_depreciable_sunk_cost,
+            "_oil_non_depreciable_sunk_cost",
+        )
+        gas_non_depreciable_sunk_cost = self._require_array(
+            self._gas_non_depreciable_sunk_cost,
+            "_gas_non_depreciable_sunk_cost",
+        )
+        oil_sunk_cost = self._require_array(self._oil_sunk_cost, "_oil_sunk_cost")
+        gas_sunk_cost = self._require_array(self._gas_sunk_cost, "_gas_sunk_cost")
+        oil_depreciable_preonstream = self._require_array(
+            self._oil_depreciable_preonstream, "_oil_depreciable_preonstream"
+        )
+        gas_depreciable_preonstream = self._require_array(
+            self._gas_depreciable_preonstream, "_gas_depreciable_preonstream"
+        )
+        oil_non_depreciable_preonstream = self._require_array(
+            self._oil_non_depreciable_preonstream,
+            "_oil_non_depreciable_preonstream",
+        )
+        gas_non_depreciable_preonstream = self._require_array(
+            self._gas_non_depreciable_preonstream,
+            "_gas_non_depreciable_preonstream",
+        )
+        oil_preonstream = self._require_array(
+            self._oil_preonstream, "_oil_preonstream"
+        )
+        gas_preonstream = self._require_array(
+            self._gas_preonstream, "_gas_preonstream"
+        )
+        oil_depreciable_postonstream = self._require_array(
+            self._oil_depreciable_postonstream, "_oil_depreciable_postonstream"
+        )
+        gas_depreciable_postonstream = self._require_array(
+            self._gas_depreciable_postonstream, "_gas_depreciable_postonstream"
+        )
+        oil_non_depreciable_postonstream = self._require_array(
+            self._oil_non_depreciable_postonstream,
+            "_oil_non_depreciable_postonstream",
+        )
+        gas_non_depreciable_postonstream = self._require_array(
+            self._gas_non_depreciable_postonstream,
+            "_gas_non_depreciable_postonstream",
+        )
+        oil_postonstream = self._require_array(
+            self._oil_postonstream, "_oil_postonstream"
+        )
+        gas_postonstream = self._require_array(
+            self._gas_postonstream, "_gas_postonstream"
+        )
+
         # Attributes associated with consolidated lifting
         self._consolidated_lifting = (
             self._oil_lifting.get_lifting_rate_ghv_arr()
             + self._gas_lifting.get_lifting_rate_ghv_arr()
         )
-        self._consolidated_wap_price = self._oil_wap_price + self._gas_wap_price
+        self._consolidated_wap_price = oil_wap_price + gas_wap_price
         self._consolidated_revenue = self._oil_revenue + self._gas_revenue
 
         # Attributes associated with consolidated sunk cost
         self._consolidated_depreciable_sunk_cost = (
-            self._oil_depreciable_sunk_cost + self._gas_depreciable_sunk_cost
+            oil_depreciable_sunk_cost + gas_depreciable_sunk_cost
         )
         self._consolidated_non_depreciable_sunk_cost = (
-            self._oil_non_depreciable_sunk_cost + self._gas_non_depreciable_sunk_cost
+            oil_non_depreciable_sunk_cost + gas_non_depreciable_sunk_cost
         )
-        self._consolidated_sunk_cost = self._oil_sunk_cost + self._gas_sunk_cost
+        self._consolidated_sunk_cost = oil_sunk_cost + gas_sunk_cost
 
         # Attributes associated with consolidated preonstream
         self._consolidated_depreciable_preonstream = (
-            self._oil_depreciable_preonstream + self._gas_depreciable_preonstream
+            oil_depreciable_preonstream + gas_depreciable_preonstream
         )
         self._consolidated_non_depreciable_preonstream = (
-            self._oil_non_depreciable_preonstream + self._gas_non_depreciable_preonstream
+            oil_non_depreciable_preonstream + gas_non_depreciable_preonstream
         )
-        self._consolidated_preonstream = self._oil_preonstream + self._gas_preonstream
+        self._consolidated_preonstream = oil_preonstream + gas_preonstream
 
         # Attributes associated with consolidated postonstream
         self._consolidated_depreciable_postonstream = (
-            self._oil_depreciable_postonstream + self._gas_depreciable_postonstream
+            oil_depreciable_postonstream + gas_depreciable_postonstream
         )
         self._consolidated_non_depreciable_postonstream = (
-            self._oil_non_depreciable_postonstream + self._gas_non_depreciable_postonstream
+            oil_non_depreciable_postonstream + gas_non_depreciable_postonstream
         )
-        self._consolidated_postonstream = self._oil_postonstream + self._gas_postonstream
+        self._consolidated_postonstream = oil_postonstream + gas_postonstream
 
         categories = [
             "capital",
@@ -2662,44 +2729,91 @@ class GrossSplit(BaseProject):
             "opex",
             "asr",
             "lbt",
-            "cost_of_sales"
+            "cost_of_sales",
         ]
 
         # Attributes associated with consolidated expenditures pre tax,
         # consolidated indirect tax, and consolidated expenditures post tax
         for categ in categories:
-            oil_pre_tax = getattr(self, f"_oil_{categ}_expenditures_pre_tax")
-            gas_pre_tax = getattr(self, f"_gas_{categ}_expenditures_pre_tax")
-            oil_indirect_tax = getattr(self, f"_oil_{categ}_indirect_tax")
-            gas_indirect_tax = getattr(self, f"_gas_{categ}_indirect_tax")
-            oil_post_tax = getattr(self, f"_oil_{categ}_expenditures_post_tax")
-            gas_post_tax = getattr(self, f"_gas_{categ}_expenditures_post_tax")
+            oil_pre_tax_name = f"_oil_{categ}_expenditures_pre_tax"
+            gas_pre_tax_name = f"_gas_{categ}_expenditures_pre_tax"
+            oil_indirect_tax_name = f"_oil_{categ}_indirect_tax"
+            gas_indirect_tax_name = f"_gas_{categ}_indirect_tax"
+            oil_post_tax_name = f"_oil_{categ}_expenditures_post_tax"
+            gas_post_tax_name = f"_gas_{categ}_expenditures_post_tax"
+            oil_pre_tax = self._require_array(
+                getattr(self, oil_pre_tax_name), oil_pre_tax_name
+            )
+            gas_pre_tax = self._require_array(
+                getattr(self, gas_pre_tax_name), gas_pre_tax_name
+            )
+            oil_indirect_tax = self._require_array(
+                getattr(self, oil_indirect_tax_name), oil_indirect_tax_name
+            )
+            gas_indirect_tax = self._require_array(
+                getattr(self, gas_indirect_tax_name), gas_indirect_tax_name
+            )
+            oil_post_tax = self._require_array(
+                getattr(self, oil_post_tax_name), oil_post_tax_name
+            )
+            gas_post_tax = self._require_array(
+                getattr(self, gas_post_tax_name), gas_post_tax_name
+            )
 
             # Set attributes associated with consolidated expenditures pre tax
             setattr(
-                self, f"_consolidated_{categ}_expenditures_pre_tax", oil_pre_tax + gas_pre_tax
+                self,
+                f"_consolidated_{categ}_expenditures_pre_tax",
+                oil_pre_tax + gas_pre_tax,
             )
 
             # Set attributes associated with consolidated indirect taxes
             setattr(
-                self, f"_consolidated_{categ}_indirect_tax", oil_indirect_tax + gas_indirect_tax
+                self,
+                f"_consolidated_{categ}_indirect_tax",
+                oil_indirect_tax + gas_indirect_tax,
             )
 
             # Set attributes associated with consolidated expenditures post tax
             setattr(
-                self, f"_consolidated_{categ}_expenditures_post_tax", oil_post_tax + gas_post_tax
+                self,
+                f"_consolidated_{categ}_expenditures_post_tax",
+                oil_post_tax + gas_post_tax,
             )
 
+        oil_total_expenditures_pre_tax = self._require_array(
+            self._oil_total_expenditures_pre_tax,
+            "_oil_total_expenditures_pre_tax",
+        )
+        gas_total_expenditures_pre_tax = self._require_array(
+            self._gas_total_expenditures_pre_tax,
+            "_gas_total_expenditures_pre_tax",
+        )
+        oil_total_indirect_tax = self._require_array(
+            self._oil_total_indirect_tax, "_oil_total_indirect_tax"
+        )
+        gas_total_indirect_tax = self._require_array(
+            self._gas_total_indirect_tax, "_gas_total_indirect_tax"
+        )
+        oil_total_expenditures_post_tax = self._require_array(
+            self._oil_total_expenditures_post_tax,
+            "_oil_total_expenditures_post_tax",
+        )
+        gas_total_expenditures_post_tax = self._require_array(
+            self._gas_total_expenditures_post_tax,
+            "_gas_total_expenditures_post_tax",
+        )
+
         self._consolidated_total_expenditures_pre_tax = (
-            self._oil_total_expenditures_pre_tax + self._gas_total_expenditures_pre_tax
+            oil_total_expenditures_pre_tax + gas_total_expenditures_pre_tax
         )
 
         self._consolidated_total_indirect_tax = (
-            self._oil_total_indirect_tax + self._gas_total_indirect_tax
+            oil_total_indirect_tax + gas_total_indirect_tax
         )
 
         self._consolidated_total_expenditures_post_tax = (
-            self._oil_total_expenditures_post_tax + self._gas_total_expenditures_post_tax
+            oil_total_expenditures_post_tax + gas_total_expenditures_post_tax
         )
 
         # Attribute associated with carry forward depreciation
@@ -2776,10 +2890,49 @@ class GrossSplit(BaseProject):
             self._oil_government_take + self._gas_government_take
         )
 
+        oil_capital = self._require_array(self._oil_capital, "_oil_capital")
+        gas_capital = self._require_array(self._gas_capital, "_gas_capital")
+        oil_non_capital = self._require_array(
+            self._oil_non_capital, "_oil_non_capital"
+        )
+        gas_non_capital = self._require_array(
+            self._gas_non_capital, "_gas_non_capital"
+        )
+        oil_total_expenses = self._require_array(
+            self._oil_total_expenses, "_oil_total_expenses"
+        )
+        gas_total_expenses = self._require_array(
+            self._gas_total_expenses, "_gas_total_expenses"
+        )
+        oil_opex_expenditures_post_tax = self._require_array(
+            self._oil_opex_expenditures_post_tax,
+            "_oil_opex_expenditures_post_tax",
+        )
+        gas_opex_expenditures_post_tax = self._require_array(
+            self._gas_opex_expenditures_post_tax,
+            "_gas_opex_expenditures_post_tax",
+        )
+        oil_asr_expenditures_post_tax = self._require_array(
+            self._oil_asr_expenditures_post_tax,
+            "_oil_asr_expenditures_post_tax",
+        )
+        gas_asr_expenditures_post_tax = self._require_array(
+            self._gas_asr_expenditures_post_tax,
+            "_gas_asr_expenditures_post_tax",
+        )
+        oil_lbt_expenditures_post_tax = self._require_array(
+            self._oil_lbt_expenditures_post_tax,
+            "_oil_lbt_expenditures_post_tax",
+        )
+        gas_lbt_expenditures_post_tax = self._require_array(
+            self._gas_lbt_expenditures_post_tax,
+            "_gas_lbt_expenditures_post_tax",
+        )
+
         # Attributes associated with consolidated investments
-        self._consolidated_capital = self._oil_capital + self._gas_capital
-        self._consolidated_non_capital = self._oil_non_capital + self._gas_non_capital
-        self._consolidated_total_expenses = self._oil_total_expenses + self._gas_total_expenses
+        self._consolidated_capital = oil_capital + gas_capital
+        self._consolidated_non_capital = oil_non_capital + gas_non_capital
+        self._consolidated_total_expenses = oil_total_expenses + gas_total_expenses
 
         # Attribute associated with consolidated cashflow
         self._consolidated_cashflow = self._oil_ctr_cashflow + self._gas_ctr_cashflow
@@ -2787,15 +2940,15 @@ class GrossSplit(BaseProject):
         # =================================================================================
 
         self._consolidated_opex = (
-            self._oil_opex_expenditures_post_tax + self._gas_opex_expenditures_post_tax
+            oil_opex_expenditures_post_tax + gas_opex_expenditures_post_tax
         )
         self._consolidated_asr = (
-            self._oil_asr_expenditures_post_tax + self._gas_asr_expenditures_post_tax
+            oil_asr_expenditures_post_tax + gas_asr_expenditures_post_tax
         )
         self._consolidated_lbt = (
-            self._oil_lbt_expenditures_post_tax + self._gas_lbt_expenditures_post_tax
+            oil_lbt_expenditures_post_tax + gas_lbt_expenditures_post_tax
         )
-        self._consolidated_non_capital = self._oil_non_capital + self._gas_non_capital
+        self._consolidated_non_capital = oil_non_capital + gas_non_capital
 
     def run(
         self,
@@ -2871,6 +3024,8 @@ class GrossSplit(BaseProject):
             Results are stored as instance attributes.
         """
 
+        self._has_run = False
+
         # Perform initial check to several input arguments
         self._check_attributes()
 
@@ -2900,61 +3055,190 @@ class GrossSplit(BaseProject):
             co2_revenue=co2_revenue,
         )
 
+        oil_capital_pre_tax = self._require_array(
+            self._oil_capital_expenditures_pre_tax,
+            "_oil_capital_expenditures_pre_tax",
+        )
+        oil_intangible_pre_tax = self._require_array(
+            self._oil_intangible_expenditures_pre_tax,
+            "_oil_intangible_expenditures_pre_tax",
+        )
+        oil_opex_pre_tax = self._require_array(
+            self._oil_opex_expenditures_pre_tax,
+            "_oil_opex_expenditures_pre_tax",
+        )
+        oil_asr_pre_tax = self._require_array(
+            self._oil_asr_expenditures_pre_tax, "_oil_asr_expenditures_pre_tax"
+        )
+        oil_lbt_pre_tax = self._require_array(
+            self._oil_lbt_expenditures_pre_tax, "_oil_lbt_expenditures_pre_tax"
+        )
+        oil_sales_pre_tax = self._require_array(
+            self._oil_cost_of_sales_expenditures_pre_tax,
+            "_oil_cost_of_sales_expenditures_pre_tax",
+        )
+        gas_capital_pre_tax = self._require_array(
+            self._gas_capital_expenditures_pre_tax,
+            "_gas_capital_expenditures_pre_tax",
+        )
+        gas_intangible_pre_tax = self._require_array(
+            self._gas_intangible_expenditures_pre_tax,
+            "_gas_intangible_expenditures_pre_tax",
+        )
+        gas_opex_pre_tax = self._require_array(
+            self._gas_opex_expenditures_pre_tax,
+            "_gas_opex_expenditures_pre_tax",
+        )
+        gas_asr_pre_tax = self._require_array(
+            self._gas_asr_expenditures_pre_tax, "_gas_asr_expenditures_pre_tax"
+        )
+        gas_lbt_pre_tax = self._require_array(
+            self._gas_lbt_expenditures_pre_tax, "_gas_lbt_expenditures_pre_tax"
+        )
+        gas_sales_pre_tax = self._require_array(
+            self._gas_cost_of_sales_expenditures_pre_tax,
+            "_gas_cost_of_sales_expenditures_pre_tax",
+        )
+
         # Total pre-tax expenditures
         self._oil_total_expenditures_pre_tax = (
-            self._oil_capital_expenditures_pre_tax
-            + self._oil_intangible_expenditures_pre_tax
-            + self._oil_opex_expenditures_pre_tax
-            + self._oil_asr_expenditures_pre_tax
-            + self._oil_lbt_expenditures_pre_tax
-            + self._oil_cost_of_sales_expenditures_pre_tax
+            oil_capital_pre_tax
+            + oil_intangible_pre_tax
+            + oil_opex_pre_tax
+            + oil_asr_pre_tax
+            + oil_lbt_pre_tax
+            + oil_sales_pre_tax
         )
 
         self._gas_total_expenditures_pre_tax = (
-            self._gas_capital_expenditures_pre_tax
-            + self._gas_intangible_expenditures_pre_tax
-            + self._gas_opex_expenditures_pre_tax
-            + self._gas_asr_expenditures_pre_tax
-            + self._gas_lbt_expenditures_pre_tax
-            + self._gas_cost_of_sales_expenditures_pre_tax
+            gas_capital_pre_tax
+            + gas_intangible_pre_tax
+            + gas_opex_pre_tax
+            + gas_asr_pre_tax
+            + gas_lbt_pre_tax
+            + gas_sales_pre_tax
+        )
+
+        oil_capital_tax = self._require_array(
+            self._oil_capital_indirect_tax, "_oil_capital_indirect_tax"
+        )
+        oil_intangible_tax = self._require_array(
+            self._oil_intangible_indirect_tax, "_oil_intangible_indirect_tax"
+        )
+        oil_opex_tax = self._require_array(
+            self._oil_opex_indirect_tax, "_oil_opex_indirect_tax"
+        )
+        oil_asr_tax = self._require_array(
+            self._oil_asr_indirect_tax, "_oil_asr_indirect_tax"
+        )
+        oil_lbt_tax = self._require_array(
+            self._oil_lbt_indirect_tax, "_oil_lbt_indirect_tax"
+        )
+        oil_sales_tax = self._require_array(
+            self._oil_cost_of_sales_indirect_tax,
+            "_oil_cost_of_sales_indirect_tax",
+        )
+        gas_capital_tax = self._require_array(
+            self._gas_capital_indirect_tax, "_gas_capital_indirect_tax"
+        )
+        gas_intangible_tax = self._require_array(
+            self._gas_intangible_indirect_tax, "_gas_intangible_indirect_tax"
+        )
+        gas_opex_tax = self._require_array(
+            self._gas_opex_indirect_tax, "_gas_opex_indirect_tax"
+        )
+        gas_asr_tax = self._require_array(
+            self._gas_asr_indirect_tax, "_gas_asr_indirect_tax"
+        )
+        gas_lbt_tax = self._require_array(
+            self._gas_lbt_indirect_tax, "_gas_lbt_indirect_tax"
+        )
+        gas_sales_tax = self._require_array(
+            self._gas_cost_of_sales_indirect_tax,
+            "_gas_cost_of_sales_indirect_tax",
         )
 
         # Total indirect taxes
         self._oil_total_indirect_tax = (
-            self._oil_capital_indirect_tax
-            + self._oil_intangible_indirect_tax
-            + self._oil_opex_indirect_tax
-            + self._oil_asr_indirect_tax
-            + self._oil_lbt_indirect_tax
-            + self._oil_cost_of_sales_indirect_tax
+            oil_capital_tax
+            + oil_intangible_tax
+            + oil_opex_tax
+            + oil_asr_tax
+            + oil_lbt_tax
+            + oil_sales_tax
         )
 
         self._gas_total_indirect_tax = (
-            self._gas_capital_indirect_tax
-            + self._gas_intangible_indirect_tax
-            + self._gas_opex_indirect_tax
-            + self._gas_asr_indirect_tax
-            + self._gas_lbt_indirect_tax
-            + self._gas_cost_of_sales_indirect_tax
+            gas_capital_tax
+            + gas_intangible_tax
+            + gas_opex_tax
+            + gas_asr_tax
+            + gas_lbt_tax
+            + gas_sales_tax
+        )
+
+        oil_capital_post_tax = self._require_array(
+            self._oil_capital_expenditures_post_tax,
+            "_oil_capital_expenditures_post_tax",
+        )
+        oil_intangible_post_tax = self._require_array(
+            self._oil_intangible_expenditures_post_tax,
+            "_oil_intangible_expenditures_post_tax",
+        )
+        oil_opex_post_tax = self._require_array(
+            self._oil_opex_expenditures_post_tax,
+            "_oil_opex_expenditures_post_tax",
+        )
+        oil_asr_post_tax = self._require_array(
+            self._oil_asr_expenditures_post_tax, "_oil_asr_expenditures_post_tax"
+        )
+        oil_lbt_post_tax = self._require_array(
+            self._oil_lbt_expenditures_post_tax, "_oil_lbt_expenditures_post_tax"
+        )
+        oil_sales_post_tax = self._require_array(
+            self._oil_cost_of_sales_expenditures_post_tax,
+            "_oil_cost_of_sales_expenditures_post_tax",
+        )
+        gas_capital_post_tax = self._require_array(
+            self._gas_capital_expenditures_post_tax,
+            "_gas_capital_expenditures_post_tax",
+        )
+        gas_intangible_post_tax = self._require_array(
+            self._gas_intangible_expenditures_post_tax,
+            "_gas_intangible_expenditures_post_tax",
+        )
+        gas_opex_post_tax = self._require_array(
+            self._gas_opex_expenditures_post_tax,
+            "_gas_opex_expenditures_post_tax",
+        )
+        gas_asr_post_tax = self._require_array(
+            self._gas_asr_expenditures_post_tax, "_gas_asr_expenditures_post_tax"
+        )
+        gas_lbt_post_tax = self._require_array(
+            self._gas_lbt_expenditures_post_tax, "_gas_lbt_expenditures_post_tax"
+        )
+        gas_sales_post_tax = self._require_array(
+            self._gas_cost_of_sales_expenditures_post_tax,
+            "_gas_cost_of_sales_expenditures_post_tax",
         )
 
         # Total expenditures post-tax
         self._oil_total_expenditures_post_tax = (
-            self._oil_capital_expenditures_post_tax
-            + self._oil_intangible_expenditures_post_tax
-            + self._oil_opex_expenditures_post_tax
-            + self._oil_asr_expenditures_post_tax
-            + self._oil_lbt_expenditures_post_tax
-            + self._oil_cost_of_sales_expenditures_post_tax
+            oil_capital_post_tax
+            + oil_intangible_post_tax
+            + oil_opex_post_tax
+            + oil_asr_post_tax
+            + oil_lbt_post_tax
+            + oil_sales_post_tax
         )
 
         self._gas_total_expenditures_post_tax = (
-            self._gas_capital_expenditures_post_tax
-            + self._gas_intangible_expenditures_post_tax
-            + self._gas_opex_expenditures_post_tax
-            + self._gas_asr_expenditures_post_tax
-            + self._gas_lbt_expenditures_post_tax
-            + self._gas_cost_of_sales_expenditures_post_tax
+            gas_capital_post_tax
+            + gas_intangible_post_tax
+            + gas_opex_post_tax
+            + gas_asr_post_tax
+            + gas_lbt_post_tax
+            + gas_sales_post_tax
         )
 
         # Prepare sunk costs, preonstream costs, and postonstream costs
@@ -3414,15 +3698,19 @@ class GrossSplit(BaseProject):
         self._oil_net_operating_profit = net_post_trf[:, 0]
         self._gas_net_operating_profit = net_post_trf[:, 1]
 
+        oil_onstream_date, gas_onstream_date = self._require_onstream_dates()
+        oil_wap_price = self._require_array(self._oil_wap_price, "_oil_wap_price")
+        gas_wap_price = self._require_array(self._gas_wap_price, "_gas_wap_price")
+
         # DMO
         self._oil_dmo_volume, self._oil_dmo_fee, self._oil_ddmo = psc_tools.get_dmo_gross_split(
-            onstream_date=self.oil_onstream_date,
+            onstream_date=oil_onstream_date,
             start_date=self.start_date,
             project_years=self.project_years,
             dmo_holiday_duration=self.oil_dmo_holiday_duration,
             dmo_volume_portion=self.oil_dmo_volume_portion,
             dmo_fee_portion=self.oil_dmo_fee_portion,
-            price=self._oil_wap_price,
+            price=oil_wap_price,
             unrecovered_cost=self._oil_carward_cost_aftertf,
             is_dmo_end_weighted=is_dmo_end_weighted,
             net_operating_profit=self._oil_net_operating_profit,
@@ -3430,13 +3718,13 @@ class GrossSplit(BaseProject):
         )
 
         self._gas_dmo_volume, self._gas_dmo_fee, self._gas_ddmo = psc_tools.get_dmo_gross_split(
-            onstream_date=self.gas_onstream_date,
+            onstream_date=gas_onstream_date,
             start_date=self.start_date,
             project_years=self.project_years,
             dmo_holiday_duration=self.gas_dmo_holiday_duration,
             dmo_volume_portion=self.gas_dmo_volume_portion,
             dmo_fee_portion=self.gas_dmo_fee_portion,
-            price=self._gas_wap_price,
+            price=gas_wap_price,
             unrecovered_cost=self._gas_carward_cost_aftertf,
             is_dmo_end_weighted=is_dmo_end_weighted,
             net_operating_profit=self._gas_net_operating_profit,
@@ -3487,20 +3775,36 @@ class GrossSplit(BaseProject):
         # Contractor cash flow deducts direct pre-production cost, DMO, and
         # tax. Using sunk, pre-onstream, and post-tax expenditures avoids
         # double-counting the amortized pre-onstream pool.
+        oil_sunk_cost = self._require_array(self._oil_sunk_cost, "_oil_sunk_cost")
+        gas_sunk_cost = self._require_array(self._gas_sunk_cost, "_gas_sunk_cost")
+        oil_preonstream = self._require_array(
+            self._oil_preonstream, "_oil_preonstream"
+        )
+        gas_preonstream = self._require_array(
+            self._gas_preonstream, "_gas_preonstream"
+        )
+        oil_total_expenditures_post_tax = self._require_array(
+            self._oil_total_expenditures_post_tax,
+            "_oil_total_expenditures_post_tax",
+        )
+        gas_total_expenditures_post_tax = self._require_array(
+            self._gas_total_expenditures_post_tax,
+            "_gas_total_expenditures_post_tax",
+        )
         self._oil_ctr_cashflow = (
             self._oil_ctr_share_before_transfer
-            - self._oil_sunk_cost
-            - self._oil_preonstream
-            - self._oil_total_expenditures_post_tax
+            - oil_sunk_cost
+            - oil_preonstream
+            - oil_total_expenditures_post_tax
             - self._oil_ddmo
             - self._oil_tax
         )
 
         self._gas_ctr_cashflow = (
             self._gas_ctr_share_before_transfer
-            - self._gas_sunk_cost
-            - self._gas_preonstream
-            - self._gas_total_expenditures_post_tax
+            - gas_sunk_cost
+            - gas_preonstream
+            - gas_total_expenditures_post_tax
             - self._gas_ddmo
             - self._gas_tax
         )
@@ -3512,8 +3816,16 @@ class GrossSplit(BaseProject):
         # Prepare consolidated attributes
         self._get_consolidated_profiles()
 
+        self._has_run = True
+
         # Display warning messages as pandas DataFrame
         # self.warnings_to_dataframe()
+
+    def _require_run(self) -> None:
+        if not self._has_run:
+            raise GrossSplitSummaryException(
+                "Call run() successfully before requesting a gross split summary."
+            )
 
     def get_summary(
         self,
@@ -3580,6 +3892,66 @@ class GrossSplit(BaseProject):
         - Economic indicators are computed according to SKK Migas evaluation conventions.
         """
 
+        self._require_run()
+        gas_wap_price = self._require_array(
+            self._gas_wap_price, "_gas_wap_price"
+        )
+        oil_sunk_cost = self._require_array(self._oil_sunk_cost, "_oil_sunk_cost")
+        gas_sunk_cost = self._require_array(self._gas_sunk_cost, "_gas_sunk_cost")
+        oil_capital_post_tax = self._require_array(
+            self._oil_capital_expenditures_post_tax,
+            "_oil_capital_expenditures_post_tax",
+        )
+        gas_capital_post_tax = self._require_array(
+            self._gas_capital_expenditures_post_tax,
+            "_gas_capital_expenditures_post_tax",
+        )
+        oil_depreciable_preonstream = self._require_array(
+            self._oil_depreciable_preonstream, "_oil_depreciable_preonstream"
+        )
+        gas_depreciable_preonstream = self._require_array(
+            self._gas_depreciable_preonstream, "_gas_depreciable_preonstream"
+        )
+        oil_intangible_post_tax = self._require_array(
+            self._oil_intangible_expenditures_post_tax,
+            "_oil_intangible_expenditures_post_tax",
+        )
+        gas_intangible_post_tax = self._require_array(
+            self._gas_intangible_expenditures_post_tax,
+            "_gas_intangible_expenditures_post_tax",
+        )
+        oil_opex_post_tax = self._require_array(
+            self._oil_opex_expenditures_post_tax,
+            "_oil_opex_expenditures_post_tax",
+        )
+        gas_opex_post_tax = self._require_array(
+            self._gas_opex_expenditures_post_tax,
+            "_gas_opex_expenditures_post_tax",
+        )
+        oil_asr_post_tax = self._require_array(
+            self._oil_asr_expenditures_post_tax, "_oil_asr_expenditures_post_tax"
+        )
+        gas_asr_post_tax = self._require_array(
+            self._gas_asr_expenditures_post_tax, "_gas_asr_expenditures_post_tax"
+        )
+        oil_lbt_post_tax = self._require_array(
+            self._oil_lbt_expenditures_post_tax, "_oil_lbt_expenditures_post_tax"
+        )
+        gas_lbt_post_tax = self._require_array(
+            self._gas_lbt_expenditures_post_tax, "_gas_lbt_expenditures_post_tax"
+        )
+        oil_total_indirect_tax = self._require_array(
+            self._oil_total_indirect_tax, "_oil_total_indirect_tax"
+        )
+        gas_total_indirect_tax = self._require_array(
+            self._gas_total_indirect_tax, "_gas_total_indirect_tax"
+        )
+        consolidated_cashflow = self._require_array(
+            self._consolidated_cashflow, "_consolidated_cashflow"
+        )
+        oil_capital = self._require_array(self._oil_capital, "_oil_capital")
+        gas_capital = self._require_array(self._gas_capital, "_gas_capital")
+
         # Prepare discount rate start year
         if discount_rate_start_year is None:
             discount_rate_start_year = self.start_date.year
@@ -3609,7 +3981,7 @@ class GrossSplit(BaseProject):
         gas_lifting_ghv = self._gas_lifting.get_lifting_rate_ghv_arr()
         gas_lifting_ghv_sum = np.sum(gas_lifting_ghv, dtype=float)
         gas_wap_sum = self._calc_division(
-            numerator=np.sum(self._gas_wap_price * gas_lifting_ghv),
+            numerator=np.sum(gas_wap_price * gas_lifting_ghv),
             denominator=gas_lifting_ghv_sum,
         )
 
@@ -3619,7 +3991,7 @@ class GrossSplit(BaseProject):
         total_gross_revenue_sum = oil_gross_revenue_sum + gas_gross_revenue_sum
 
         # Prepare sunk cost summary
-        sunk_cost_sum = np.sum(self._oil_sunk_cost + self._gas_sunk_cost, dtype=float)
+        sunk_cost_sum = np.sum(oil_sunk_cost + gas_sunk_cost, dtype=float)
 
         # Prepare preonstream costs
         preonstream_map = {
@@ -3639,15 +4011,15 @@ class GrossSplit(BaseProject):
 
         # Prepare tangible and intangible cost summary
         tangible_cost = (
-            self._oil_capital_expenditures_post_tax
-            + self._gas_capital_expenditures_post_tax
-            + self._oil_depreciable_preonstream
-            + self._gas_depreciable_preonstream
+            oil_capital_post_tax
+            + gas_capital_post_tax
+            + oil_depreciable_preonstream
+            + gas_depreciable_preonstream
         )
 
         intangible_cost = (
-            self._oil_intangible_expenditures_post_tax
-            + self._gas_intangible_expenditures_post_tax
+            oil_intangible_post_tax
+            + gas_intangible_post_tax
             + preonstream_costs["oil_intangible"]
             + preonstream_costs["gas_intangible"]
         )
@@ -3661,8 +4033,8 @@ class GrossSplit(BaseProject):
 
         # Prepare OPEX summary
         opex_cost = (
-            self._oil_opex_expenditures_post_tax
-            + self._gas_opex_expenditures_post_tax
+            oil_opex_post_tax
+            + gas_opex_post_tax
             + preonstream_costs["oil_opex"]
             + preonstream_costs["gas_opex"]
         )
@@ -3671,8 +4043,8 @@ class GrossSplit(BaseProject):
 
         # Prepare ASR summary
         asr_cost = (
-            self._oil_asr_expenditures_post_tax
-            + self._gas_asr_expenditures_post_tax
+            oil_asr_post_tax
+            + gas_asr_post_tax
             + preonstream_costs["oil_asr"]
             + preonstream_costs["gas_asr"]
         )
@@ -3681,8 +4053,8 @@ class GrossSplit(BaseProject):
 
         # Prepare LBT summary
         lbt_cost = (
-            self._oil_lbt_expenditures_post_tax
-            + self._gas_lbt_expenditures_post_tax
+            oil_lbt_post_tax
+            + gas_lbt_post_tax
             + preonstream_costs["oil_lbt"]
             + preonstream_costs["gas_lbt"]
         )
@@ -3690,8 +4062,8 @@ class GrossSplit(BaseProject):
         lbt_sum = lbt_cost.sum(dtype=float)
 
         # Include LBT in the total indirect tax summary.
-        oil_indirect_tax_sum = self._oil_total_indirect_tax.sum(dtype=float)
-        gas_indirect_tax_sum = self._gas_total_indirect_tax.sum(dtype=float)
+        oil_indirect_tax_sum = oil_total_indirect_tax.sum(dtype=float)
+        gas_indirect_tax_sum = gas_total_indirect_tax.sum(dtype=float)
 
         # Prepare carry forward depreciation summary
         oil_carward_depreciation_sum = self._oil_carry_forward_depreciation.sum(dtype=float)
@@ -3725,9 +4097,9 @@ class GrossSplit(BaseProject):
         # onward; full-cycle modes use the full project cash flow.
         if npv_mode == NPVSelection.NPV_POINT_FORWARD:
             mask = self.project_years >= discount_rate_start_year
-            ctr_irr = irr(cashflow=self._consolidated_cashflow[mask])
+            ctr_irr = irr(cashflow=consolidated_cashflow[mask])
         else:
-            ctr_irr = irr(cashflow=self._consolidated_cashflow)
+            ctr_irr = irr(cashflow=consolidated_cashflow)
 
         # Calculate NPV
         # NPV method: SKK real terms
@@ -3735,7 +4107,7 @@ class GrossSplit(BaseProject):
 
             # Contractor NPV
             ctr_npv = npv_skk_real_terms(
-                cashflow=self._consolidated_cashflow,
+                cashflow=consolidated_cashflow,
                 cashflow_years=self.project_years,
                 discount_rate=discount_rate,
                 reference_year=discount_rate_start_year,
@@ -3765,7 +4137,7 @@ class GrossSplit(BaseProject):
 
             # Contractor NPV
             ctr_npv = npv_skk_nominal_terms(
-                cashflow=self._consolidated_cashflow,
+                cashflow=consolidated_cashflow,
                 cashflow_years=self.project_years,
                 discount_rate=discount_rate,
                 discounting_mode=discounting_mode,
@@ -3792,7 +4164,7 @@ class GrossSplit(BaseProject):
 
             # Contractor NPV
             ctr_npv = npv_nominal_terms(
-                cashflow=self._consolidated_cashflow,
+                cashflow=consolidated_cashflow,
                 cashflow_years=self.project_years,
                 discount_rate=discount_rate,
                 reference_year=discount_rate_start_year,
@@ -3822,7 +4194,7 @@ class GrossSplit(BaseProject):
 
             # Contractor NPV
             ctr_npv = npv_real_terms(
-                cashflow=self._consolidated_cashflow,
+                cashflow=consolidated_cashflow,
                 cashflow_years=self.project_years,
                 discount_rate=discount_rate,
                 reference_year=discount_rate_start_year,
@@ -3854,7 +4226,7 @@ class GrossSplit(BaseProject):
         else:
             # Contractor NPV
             ctr_npv = npv_point_forward(
-                cashflow=self._consolidated_cashflow,
+                cashflow=consolidated_cashflow,
                 cashflow_years=self.project_years,
                 discount_rate=discount_rate,
                 reference_year=discount_rate_start_year,
@@ -3892,7 +4264,7 @@ class GrossSplit(BaseProject):
 
         # Contractor POT
         ctr_pot = pot_psc(
-            cashflow=self._consolidated_cashflow,
+            cashflow=consolidated_cashflow,
             cashflow_years=self.project_years,
             reference_year=discount_rate_start_year,
         )
@@ -3930,7 +4302,7 @@ class GrossSplit(BaseProject):
 
         # Net cash flow is a full-lifecycle project metric. Point-forward
         # selection applies to valuation metrics, not this reported total.
-        ctr_net_cashflow_sum = self._consolidated_cashflow.sum(dtype=float)
+        ctr_net_cashflow_sum = consolidated_cashflow.sum(dtype=float)
         ctr_net_cashflow_over_gross_rev = self._calc_division(
             numerator=ctr_net_cashflow_sum, denominator=total_gross_revenue_sum
         )
@@ -3946,8 +4318,8 @@ class GrossSplit(BaseProject):
             "ctr_gross_share": ctr_gross_share_sum,
             "gov_gross_share": gov_gross_share_sum,
             "investment": investment_sum,
-            "oil_capex": self._oil_capital.sum(),
-            "gas_capex": self._gas_capital.sum(),
+            "oil_capex": oil_capital.sum(),
+            "gas_capex": gas_capital.sum(),
             "sunk_cost": sunk_cost_sum,
             "tangible": tangible_sum,
             "intangible": intangible_sum,

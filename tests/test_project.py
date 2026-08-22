@@ -9,7 +9,11 @@ from datetime import date
 from pyscnomics.econ.selection import FluidType, InflationAppliedTo
 from pyscnomics.econ.revenue import Lifting
 from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR
-from pyscnomics.contracts.project import BaseProject, BaseProjectException
+from pyscnomics.contracts.project import (
+    BaseProject,
+    BaseProjectException,
+    BaseProjectSummaryException,
+)
 
 
 # Create an example of Lifting data
@@ -50,6 +54,18 @@ lifting_nanas = Lifting(
     ghv=np.array([0.1, 0.1, 0.1]),
     fluid_type=FluidType.GAS,
 )
+
+
+def test_get_summary_requires_successful_run() -> None:
+    base_case = BaseProject(
+        start_date=date(2023, 1, 1),
+        end_date=date(2030, 12, 31),
+        approval_year=2023,
+        lifting=(lifting_mangga,),
+    )
+
+    with pytest.raises(BaseProjectSummaryException, match=r"run\(\)"):
+        base_case.get_summary()
 
 
 def test_incorrect_data_input():

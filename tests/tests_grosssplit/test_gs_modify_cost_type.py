@@ -4,12 +4,13 @@ cost_type attribute in each cost Classes.
 """
 
 import numpy as np
+import pytest
 from datetime import date
 
 from pyscnomics.econ.selection import FluidType, CostType
 from pyscnomics.econ.revenue import Lifting
 from pyscnomics.econ.costs import CapitalCost
-from pyscnomics.contracts.gross_split import GrossSplit
+from pyscnomics.contracts.gross_split import GrossSplit, GrossSplitSummaryException
 
 
 kwargs = {
@@ -28,6 +29,13 @@ kwargs = {
     "oil_carry_forward_depreciation": 10,
     "gas_carry_forward_depreciation": 10,
 }
+
+
+def test_gross_split_summary_requires_successful_run() -> None:
+    gross_split = GrossSplit(**kwargs)
+
+    with pytest.raises(GrossSplitSummaryException, match=r"run\(\)"):
+        gross_split.get_summary()
 
 
 def test_classifies_capital_cost_types_by_project_period():

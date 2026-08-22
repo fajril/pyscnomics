@@ -1,6 +1,6 @@
 import pytest
 
-from pyscnomics.contracts.costrecovery import CostRecovery
+from pyscnomics.contracts.costrecovery import CostRecovery, CostRecoverySummaryException
 from pyscnomics.dataset.sample import load_data
 from pyscnomics.econ.selection import DiscountingMode, NPVSelection
 from pyscnomics.tools import get_summary  # pyright: ignore[reportPrivateLocalImportUsage, reportUnknownVariableType]
@@ -13,6 +13,14 @@ def cost_recovery() -> CostRecovery:
     assert isinstance(contract, CostRecovery)
     contract.run()  # pyright: ignore[reportUnknownMemberType]
     return contract
+
+
+def test_cost_recovery_summary_requires_successful_run() -> None:
+    contract = load_data("case1", "cost_recovery")
+    assert isinstance(contract, CostRecovery)
+
+    with pytest.raises(CostRecoverySummaryException, match=r"run\(\)"):
+        contract.get_summary()
 
 
 @pytest.mark.parametrize(

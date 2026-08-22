@@ -3,10 +3,12 @@ Configure base project as the foundation (or parent class) for PSC contract.
 """
 
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
 from dataclasses import dataclass, field
 from datetime import date
 from functools import reduce
+from typing import TypeVar
 
 from pyscnomics.econ.revenue import Lifting
 from pyscnomics.econ.selection import (
@@ -40,6 +42,8 @@ from pyscnomics.econ.indicator import (
 pd.set_option("display.max_rows", 200)
 pd.set_option("display.max_columns", 200)
 pd.set_option("display.max_colwidth", 100)
+
+_ArrayDType = TypeVar("_ArrayDType", bound=np.generic)
 
 
 class BaseProjectException(Exception):
@@ -117,299 +121,300 @@ class BaseProject:
     start_date: date
     end_date: date
     approval_year: int
-    oil_onstream_date: date = field(default=None)
-    gas_onstream_date: date = field(default=None)
-    is_pod_1: bool = field(default=False)
-    is_strict: bool = field(default=True)
-    lifting: tuple[Lifting, ...] = field(default=None)
-    capital_cost: tuple[CapitalCost, ...] = field(default=None)
-    intangible_cost: tuple[Intangible, ...] = field(default=None)
-    opex: tuple[OPEX, ...] = field(default=None)
-    asr_cost: tuple[ASR, ...] = field(default=None)
-    lbt_cost: tuple[LBT, ...] = field(default=None)
-    cost_of_sales: tuple[CostOfSales, ...] = field(default=None)
+    oil_onstream_date: date | None = field(default=None)
+    gas_onstream_date: date | None = field(default=None)
+    is_pod_1: bool | None = field(default=False)
+    is_strict: bool | None = field(default=True)
+    lifting: tuple[Lifting, ...] | None = field(default=None)
+    capital_cost: tuple[CapitalCost, ...] | None = field(default=None)
+    intangible_cost: tuple[Intangible, ...] | None = field(default=None)
+    opex: tuple[OPEX, ...] | None = field(default=None)
+    asr_cost: tuple[ASR, ...] | None = field(default=None)
+    lbt_cost: tuple[LBT, ...] | None = field(default=None)
+    cost_of_sales: tuple[CostOfSales, ...] | None = field(default=None)
 
     # Attributes associated with project duration
-    project_duration: int = field(default=None, init=False)
-    project_years: np.ndarray = field(default=None, init=False)
+    project_duration: int = field(init=False)
+    project_years: npt.NDArray[np.int64] = field(init=False)
+    _has_run: bool = field(default=False, init=False, repr=False)
 
     # Attributes associated with lifting for each fluid types
-    _oil_lifting: Lifting = field(default=None, init=False, repr=False)
-    _gas_lifting: Lifting = field(default=None, init=False, repr=False)
-    _sulfur_lifting: Lifting = field(default=None, init=False, repr=False)
-    _electricity_lifting: Lifting = field(default=None, init=False, repr=False)
-    _co2_lifting: Lifting = field(default=None, init=False, repr=False)
+    _oil_lifting: Lifting = field(init=False, repr=False)
+    _gas_lifting: Lifting = field(init=False, repr=False)
+    _sulfur_lifting: Lifting = field(init=False, repr=False)
+    _electricity_lifting: Lifting = field(init=False, repr=False)
+    _co2_lifting: Lifting = field(init=False, repr=False)
 
     # Attributes associated with revenue for each fluid types
-    _oil_revenue: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_revenue: np.ndarray = field(default=None, init=False, repr=False)
-    _sulfur_revenue: np.ndarray = field(default=None, init=False, repr=False)
-    _electricity_revenue: np.ndarray = field(default=None, init=False, repr=False)
-    _co2_revenue: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_revenue: npt.NDArray[np.float64] = field(init=False, repr=False)
+    _gas_revenue: npt.NDArray[np.float64] = field(init=False, repr=False)
+    _sulfur_revenue: npt.NDArray[np.float64] = field(init=False, repr=False)
+    _electricity_revenue: npt.NDArray[np.float64] = field(init=False, repr=False)
+    _co2_revenue: npt.NDArray[np.float64] = field(init=False, repr=False)
 
     # Atributes associated with WAP price
-    _oil_wap_price: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_wap_price: np.ndarray = field(default=None, init=False, repr=False)
-    _sulfur_wap_price: np.ndarray = field(default=None, init=False, repr=False)
-    _electricity_wap_price: np.ndarray = field(default=None, init=False, repr=False)
-    _co2_wap_price: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_wap_price: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _gas_wap_price: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _sulfur_wap_price: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _electricity_wap_price: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _co2_wap_price: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
 
     # Attributes associated with total cost per component
-    capital_cost_total: CapitalCost = field(default=None, init=False, repr=False)
-    intangible_cost_total: Intangible = field(default=None, init=False, repr=False)
-    opex_total: OPEX = field(default=None, init=False, repr=False)
-    asr_cost_total: ASR = field(default=None, init=False, repr=False)
-    lbt_cost_total: LBT = field(default=None, init=False, repr=False)
-    cost_of_sales_total: CostOfSales = field(default=None, init=False, repr=False)
+    capital_cost_total: CapitalCost = field(init=False, repr=False)
+    intangible_cost_total: Intangible = field(init=False, repr=False)
+    opex_total: OPEX = field(init=False, repr=False)
+    asr_cost_total: ASR = field(init=False, repr=False)
+    lbt_cost_total: LBT = field(init=False, repr=False)
+    cost_of_sales_total: CostOfSales = field(init=False, repr=False)
 
     # Attributes associated with post onstream cost in each cost categories
-    _oil_capital_postonstream: CapitalCost = field(default=None, init=False, repr=False)
-    _gas_capital_postonstream: CapitalCost = field(default=None, init=False, repr=False)
-    _oil_intangible_postonstream: Intangible = field(default=None, init=False, repr=False)
-    _gas_intangible_postonstream: Intangible = field(default=None, init=False, repr=False)
-    _oil_opex_postonstream: OPEX = field(default=None, init=False, repr=False)
-    _gas_opex_postonstream: OPEX = field(default=None, init=False, repr=False)
-    _oil_asr_postonstream: ASR = field(default=None, init=False, repr=False)
-    _gas_asr_postonstream: ASR = field(default=None, init=False, repr=False)
-    _oil_lbt_postonstream: LBT = field(default=None, init=False, repr=False)
-    _gas_lbt_postonstream: LBT = field(default=None, init=False, repr=False)
-    _oil_cost_of_sales_postonstream: CostOfSales = field(default=None, init=False, repr=False)
-    _gas_cost_of_sales_postonstream: CostOfSales = field(default=None, init=False, repr=False)
+    _oil_capital_postonstream: CapitalCost = field(init=False, repr=False)
+    _gas_capital_postonstream: CapitalCost = field(init=False, repr=False)
+    _oil_intangible_postonstream: Intangible = field(init=False, repr=False)
+    _gas_intangible_postonstream: Intangible = field(init=False, repr=False)
+    _oil_opex_postonstream: OPEX = field(init=False, repr=False)
+    _gas_opex_postonstream: OPEX = field(init=False, repr=False)
+    _oil_asr_postonstream: ASR = field(init=False, repr=False)
+    _gas_asr_postonstream: ASR = field(init=False, repr=False)
+    _oil_lbt_postonstream: LBT = field(init=False, repr=False)
+    _gas_lbt_postonstream: LBT = field(init=False, repr=False)
+    _oil_cost_of_sales_postonstream: CostOfSales = field(init=False, repr=False)
+    _gas_cost_of_sales_postonstream: CostOfSales = field(init=False, repr=False)
 
     # Attributes associated with preonstream cost in each cost categories
-    _oil_capital_preonstream: CapitalCost = field(default=None, init=False, repr=False)
-    _gas_capital_preonstream: CapitalCost = field(default=None, init=False, repr=False)
-    _oil_intangible_preonstream: Intangible = field(default=None, init=False, repr=False)
-    _gas_intangible_preonstream: Intangible = field(default=None, init=False, repr=False)
-    _oil_opex_preonstream: OPEX = field(default=None, init=False, repr=False)
-    _gas_opex_preonstream: OPEX = field(default=None, init=False, repr=False)
-    _oil_asr_preonstream: ASR = field(default=None, init=False, repr=False)
-    _gas_asr_preonstream: ASR = field(default=None, init=False, repr=False)
-    _oil_lbt_preonstream: LBT = field(default=None, init=False, repr=False)
-    _gas_lbt_preonstream: LBT = field(default=None, init=False, repr=False)
-    _oil_cost_of_sales_preonstream: CostOfSales = field(default=None, init=False, repr=False)
-    _gas_cost_of_sales_preonstream: CostOfSales = field(default=None, init=False, repr=False)
+    _oil_capital_preonstream: CapitalCost = field(init=False, repr=False)
+    _gas_capital_preonstream: CapitalCost = field(init=False, repr=False)
+    _oil_intangible_preonstream: Intangible = field(init=False, repr=False)
+    _gas_intangible_preonstream: Intangible = field(init=False, repr=False)
+    _oil_opex_preonstream: OPEX = field(init=False, repr=False)
+    _gas_opex_preonstream: OPEX = field(init=False, repr=False)
+    _oil_asr_preonstream: ASR = field(init=False, repr=False)
+    _gas_asr_preonstream: ASR = field(init=False, repr=False)
+    _oil_lbt_preonstream: LBT = field(init=False, repr=False)
+    _gas_lbt_preonstream: LBT = field(init=False, repr=False)
+    _oil_cost_of_sales_preonstream: CostOfSales = field(init=False, repr=False)
+    _gas_cost_of_sales_preonstream: CostOfSales = field(init=False, repr=False)
 
     # Attributes associated with sunkcost in each cost categories
-    _oil_capital_sunk_cost: CapitalCost = field(default=None, init=False, repr=False)
-    _gas_capital_sunk_cost: CapitalCost = field(default=None, init=False, repr=False)
-    _oil_intangible_sunk_cost: Intangible = field(default=None, init=False, repr=False)
-    _gas_intangible_sunk_cost: Intangible = field(default=None, init=False, repr=False)
-    _oil_opex_sunk_cost: OPEX = field(default=None, init=False, repr=False)
-    _gas_opex_sunk_cost: OPEX = field(default=None, init=False, repr=False)
-    _oil_asr_sunk_cost: ASR = field(default=None, init=False, repr=False)
-    _gas_asr_sunk_cost: ASR = field(default=None, init=False, repr=False)
-    _oil_lbt_sunk_cost: LBT = field(default=None, init=False, repr=False)
-    _gas_lbt_sunk_cost: LBT = field(default=None, init=False, repr=False)
-    _oil_cost_of_sales_sunk_cost: CostOfSales = field(default=None, init=False, repr=False)
-    _gas_cost_of_sales_sunk_cost: CostOfSales = field(default=None, init=False, repr=False)
+    _oil_capital_sunk_cost: CapitalCost = field(init=False, repr=False)
+    _gas_capital_sunk_cost: CapitalCost = field(init=False, repr=False)
+    _oil_intangible_sunk_cost: Intangible = field(init=False, repr=False)
+    _gas_intangible_sunk_cost: Intangible = field(init=False, repr=False)
+    _oil_opex_sunk_cost: OPEX = field(init=False, repr=False)
+    _gas_opex_sunk_cost: OPEX = field(init=False, repr=False)
+    _oil_asr_sunk_cost: ASR = field(init=False, repr=False)
+    _gas_asr_sunk_cost: ASR = field(init=False, repr=False)
+    _oil_lbt_sunk_cost: LBT = field(init=False, repr=False)
+    _gas_lbt_sunk_cost: LBT = field(init=False, repr=False)
+    _oil_cost_of_sales_sunk_cost: CostOfSales = field(init=False, repr=False)
+    _gas_cost_of_sales_sunk_cost: CostOfSales = field(init=False, repr=False)
 
     # Attributes associated with sunk costs
-    _oil_depreciable_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_depreciable_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_non_depreciable_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_non_depreciable_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_depreciable_sunk_cost: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _gas_depreciable_sunk_cost: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _oil_non_depreciable_sunk_cost: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _gas_non_depreciable_sunk_cost: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _oil_sunk_cost: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _gas_sunk_cost: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
 
     # Attributes associated with preonstream costs
-    _oil_depreciable_preonstream: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_depreciable_preonstream: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_non_depreciable_preonstream: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_non_depreciable_preonstream: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_preonstream: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_preonstream: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_depreciable_preonstream: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _gas_depreciable_preonstream: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _oil_non_depreciable_preonstream: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _gas_non_depreciable_preonstream: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _oil_preonstream: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _gas_preonstream: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
 
     # Attributes associated with postonstream costs
-    _oil_depreciable_postonstream: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_depreciable_postonstream: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_non_depreciable_postonstream: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_non_depreciable_postonstream: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_postonstream: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_postonstream: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_depreciable_postonstream: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _gas_depreciable_postonstream: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _oil_non_depreciable_postonstream: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _gas_non_depreciable_postonstream: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _oil_postonstream: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _gas_postonstream: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
 
     # Attributes associated with pre tax expenditures for each cost categories
-    _oil_capital_expenditures_pre_tax: np.ndarray = field(
+    _oil_capital_expenditures_pre_tax: npt.NDArray[np.float64] | None = field(
         default=None, init=False, repr=False
     )
-    _gas_capital_expenditures_pre_tax: np.ndarray = field(
+    _gas_capital_expenditures_pre_tax: npt.NDArray[np.float64] | None = field(
         default=None, init=False, repr=False
     )
-    _oil_intangible_expenditures_pre_tax: np.ndarray = field(
+    _oil_intangible_expenditures_pre_tax: npt.NDArray[np.float64] | None = field(
         default=None, init=False, repr=False
     )
-    _gas_intangible_expenditures_pre_tax: np.ndarray = field(
+    _gas_intangible_expenditures_pre_tax: npt.NDArray[np.float64] | None = field(
         default=None, init=False, repr=False
     )
-    _oil_opex_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_opex_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_asr_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_asr_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_lbt_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_lbt_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_cost_of_sales_expenditures_pre_tax: np.ndarray = field(
+    _oil_opex_expenditures_pre_tax: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _gas_opex_expenditures_pre_tax: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _oil_asr_expenditures_pre_tax: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _gas_asr_expenditures_pre_tax: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _oil_lbt_expenditures_pre_tax: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _gas_lbt_expenditures_pre_tax: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _oil_cost_of_sales_expenditures_pre_tax: npt.NDArray[np.float64] | None = field(
         default=None, init=False, repr=False
     )
-    _gas_cost_of_sales_expenditures_pre_tax: np.ndarray = field(
+    _gas_cost_of_sales_expenditures_pre_tax: npt.NDArray[np.float64] | None = field(
         default=None, init=False, repr=False
     )
 
     # Attributes associated with indirect taxes for each cost categories
-    _oil_capital_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_capital_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_intangible_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_intangible_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_opex_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_opex_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_asr_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_asr_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_lbt_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_lbt_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_cost_of_sales_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_cost_of_sales_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_capital_indirect_tax: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _gas_capital_indirect_tax: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _oil_intangible_indirect_tax: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _gas_intangible_indirect_tax: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _oil_opex_indirect_tax: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _gas_opex_indirect_tax: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _oil_asr_indirect_tax: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _gas_asr_indirect_tax: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _oil_lbt_indirect_tax: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _gas_lbt_indirect_tax: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _oil_cost_of_sales_indirect_tax: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _gas_cost_of_sales_indirect_tax: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
 
     # Attributes associated with post tax expenditures for each cost categories
-    _oil_capital_expenditures_post_tax: np.ndarray = field(
+    _oil_capital_expenditures_post_tax: npt.NDArray[np.float64] | None = field(
         default=None, init=False, repr=False
     )
-    _gas_capital_expenditures_post_tax: np.ndarray = field(
+    _gas_capital_expenditures_post_tax: npt.NDArray[np.float64] | None = field(
         default=None, init=False, repr=False
     )
-    _oil_intangible_expenditures_post_tax: np.ndarray = field(
+    _oil_intangible_expenditures_post_tax: npt.NDArray[np.float64] | None = field(
         default=None, init=False, repr=False
     )
-    _gas_intangible_expenditures_post_tax: np.ndarray = field(
+    _gas_intangible_expenditures_post_tax: npt.NDArray[np.float64] | None = field(
         default=None, init=False, repr=False
     )
-    _oil_opex_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_opex_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_asr_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_asr_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_lbt_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_lbt_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_cost_of_sales_expenditures_post_tax: np.ndarray = field(
+    _oil_opex_expenditures_post_tax: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _gas_opex_expenditures_post_tax: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _oil_asr_expenditures_post_tax: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _gas_asr_expenditures_post_tax: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _oil_lbt_expenditures_post_tax: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _gas_lbt_expenditures_post_tax: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _oil_cost_of_sales_expenditures_post_tax: npt.NDArray[np.float64] | None = field(
         default=None, init=False, repr=False
     )
-    _gas_cost_of_sales_expenditures_post_tax: np.ndarray = field(
+    _gas_cost_of_sales_expenditures_post_tax: npt.NDArray[np.float64] | None = field(
         default=None, init=False, repr=False
     )
 
     # Attributes associated with total expenditures and indirect taxes for each fluid
-    _oil_total_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_total_expenditures_pre_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_total_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_total_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_total_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_total_expenditures_post_tax: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_total_expenditures_pre_tax: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _gas_total_expenditures_pre_tax: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _oil_total_indirect_tax: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _gas_total_indirect_tax: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _oil_total_expenditures_post_tax: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _gas_total_expenditures_post_tax: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
 
     # Attributes associated with capital costs, non capital costs. and total expenses
-    _oil_capital: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_capital: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_non_capital: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_non_capital: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_total_expenses: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_total_expenses: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_capital: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _gas_capital: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _oil_non_capital: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _gas_non_capital: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _oil_total_expenses: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _gas_total_expenses: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
 
     # Attributes associated with cashflow
-    _oil_cashflow: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_cashflow: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_cashflow: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _gas_cashflow: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
 
     # Attribute to store warning messages
     warning_messages: list = field(default_factory=lambda: [], init=False, repr=False)
 
     # Attributes associated with consolidated profiles
-    _consolidated_lifting: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_wap_price: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_revenue: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_lifting: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _consolidated_wap_price: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _consolidated_revenue: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
 
-    _consolidated_depreciable_sunk_cost: np.ndarray = field(
+    _consolidated_depreciable_sunk_cost: npt.NDArray[np.float64] | None = field(
         default=None, init=False, repr=False
     )
-    _consolidated_non_depreciable_sunk_cost: np.ndarray = field(
+    _consolidated_non_depreciable_sunk_cost: npt.NDArray[np.float64] | None = field(
         default=None, init=False, repr=False
     )
-    _consolidated_sunk_cost: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_sunk_cost: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
 
-    _consolidated_depreciable_preonstream: np.ndarray = field(
+    _consolidated_depreciable_preonstream: npt.NDArray[np.float64] | None = field(
         default=None, init=False, repr=False
     )
-    _consolidated_non_depreciable_preonstream: np.ndarray = field(
+    _consolidated_non_depreciable_preonstream: npt.NDArray[np.float64] | None = field(
         default=None, init=False, repr=False
     )
-    _consolidated_preonstream: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_preonstream: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
 
-    _consolidated_depreciable_postonstream: np.ndarray = field(
+    _consolidated_depreciable_postonstream: npt.NDArray[np.float64] | None = field(
         default=None, init=False, repr=False
     )
-    _consolidated_non_depreciable_postonstream: np.ndarray = field(
+    _consolidated_non_depreciable_postonstream: npt.NDArray[np.float64] | None = field(
         default=None, init=False, repr=False
     )
-    _consolidated_postonstream: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_postonstream: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
 
-    _consolidated_capital_expenditures_pre_tax: np.ndarray = field(
+    _consolidated_capital_expenditures_pre_tax: npt.NDArray[np.float64] | None = field(
         default=None, init=False, repr=False
     )
-    _consolidated_intangible_expenditures_pre_tax: np.ndarray = field(
+    _consolidated_intangible_expenditures_pre_tax: npt.NDArray[np.float64] | None = field(
         default=None, init=False, repr=False
     )
-    _consolidated_opex_expenditures_pre_tax: np.ndarray = field(
+    _consolidated_opex_expenditures_pre_tax: npt.NDArray[np.float64] | None = field(
         default=None, init=False, repr=False
     )
-    _consolidated_asr_expenditures_pre_tax: np.ndarray = field(
+    _consolidated_asr_expenditures_pre_tax: npt.NDArray[np.float64] | None = field(
         default=None, init=False, repr=False
     )
-    _consolidated_lbt_expenditures_pre_tax: np.ndarray = field(
+    _consolidated_lbt_expenditures_pre_tax: npt.NDArray[np.float64] | None = field(
         default=None, init=False, repr=False
     )
-    _consolidated_cost_of_sales_expenditures_pre_tax: np.ndarray = field(
+    _consolidated_cost_of_sales_expenditures_pre_tax: npt.NDArray[np.float64] | None = field(
         default=None, init=False, repr=False
     )
-    _consolidated_total_expenditures_pre_tax: np.ndarray = field(
-        default=None, init=False, repr=False
-    )
-
-    _consolidated_capital_indirect_tax: np.ndarray = field(
-        default=None, init=False, repr=False
-    )
-    _consolidated_intangible_indirect_tax: np.ndarray = field(
-        default=None, init=False, repr=False
-    )
-    _consolidated_opex_indirect_tax: np.ndarray = field(
-        default=None, init=False, repr=False
-    )
-    _consolidated_asr_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_lbt_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_cost_of_sales_indirect_tax: np.ndarray = field(
-        default=None, init=False, repr=False
-    )
-    _consolidated_total_indirect_tax: np.ndarray = field(default=None, init=False, repr=False)
-
-    _consolidated_capital_expenditures_post_tax: np.ndarray = field(
-        default=None, init=False, repr=False
-    )
-    _consolidated_intangible_expenditures_post_tax: np.ndarray = field(
-        default=None, init=False, repr=False
-    )
-    _consolidated_opex_expenditures_post_tax: np.ndarray = field(
-        default=None, init=False, repr=False
-    )
-    _consolidated_asr_expenditures_post_tax: np.ndarray = field(
-        default=None, init=False, repr=False
-    )
-    _consolidated_lbt_expenditures_post_tax: np.ndarray = field(
-        default=None, init=False, repr=False
-    )
-    _consolidated_cost_of_sales_expenditures_post_tax: np.ndarray = field(
-        default=None, init=False, repr=False
-    )
-    _consolidated_total_expenditures_post_tax: np.ndarray = field(
+    _consolidated_total_expenditures_pre_tax: npt.NDArray[np.float64] | None = field(
         default=None, init=False, repr=False
     )
 
-    _consolidated_capital: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_non_capital: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_total_expenses: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_cashflow: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_capital_indirect_tax: npt.NDArray[np.float64] | None = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_intangible_indirect_tax: npt.NDArray[np.float64] | None = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_opex_indirect_tax: npt.NDArray[np.float64] | None = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_asr_indirect_tax: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _consolidated_lbt_indirect_tax: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _consolidated_cost_of_sales_indirect_tax: npt.NDArray[np.float64] | None = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_total_indirect_tax: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+
+    _consolidated_capital_expenditures_post_tax: npt.NDArray[np.float64] | None = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_intangible_expenditures_post_tax: npt.NDArray[np.float64] | None = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_opex_expenditures_post_tax: npt.NDArray[np.float64] | None = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_asr_expenditures_post_tax: npt.NDArray[np.float64] | None = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_lbt_expenditures_post_tax: npt.NDArray[np.float64] | None = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_cost_of_sales_expenditures_post_tax: npt.NDArray[np.float64] | None = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_total_expenditures_post_tax: npt.NDArray[np.float64] | None = field(
+        default=None, init=False, repr=False
+    )
+
+    _consolidated_capital: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _consolidated_non_capital: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _consolidated_total_expenses: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
+    _consolidated_cashflow: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
 
     def __post_init__(self):
         """
@@ -445,12 +450,12 @@ class BaseProject:
         if self.start_date <= self.end_date:
             self.project_duration = self.end_date.year - self.start_date.year + 1
             self.project_years = np.arange(
-                self.start_date.year, self.end_date.year + 1, 1
+                self.start_date.year, self.end_date.year + 1, 1, dtype=np.int64
             )
 
         else:
             raise BaseProjectException(
-                f"start date {self.start_date} "
+                f"start date {self.start_date} " +
                 f"is after the end date: {self.end_date}"
             )
 
@@ -461,7 +466,7 @@ class BaseProject:
         else:
             if not isinstance(self.is_pod_1, bool):
                 raise BaseProjectException(
-                    f"Attribute is_pod_1 must be a boolean, not "
+                    "Attribute is_pod_1 must be a boolean, not " +
                     f"a/an {self.is_pod_1.__class__.__qualname__}"
                 )
 
@@ -472,7 +477,7 @@ class BaseProject:
         else:
             if not isinstance(self.is_strict, bool):
                 raise BaseProjectException(
-                    f"Attribute is_strict must be a boolean, not "
+                    "Attribute is_strict must be a boolean, not " +
                     f"a/an {self.is_strict.__class__.__qualname__}"
                 )
 
@@ -524,7 +529,7 @@ class BaseProject:
         else:
             if not isinstance(self.lifting, tuple):
                 raise BaseProjectException(
-                    f"Attribute lifting must be provided as a tuple of Lifting instances, "
+                    "Attribute lifting must be provided as a tuple of Lifting instances, " +
                     f"not as an/a {self.lifting.__class__.__qualname__}"
                 )
 
@@ -568,7 +573,7 @@ class BaseProject:
         else:
             if not isinstance(self.capital_cost, tuple):
                 raise BaseProjectException(
-                    f"Attribute capital_cost must be provided as a tuple of CapitalCost "
+                    "Attribute capital_cost must be provided as a tuple of CapitalCost " +
                     f"instances, not as an/a {self.capital_cost.__class__.__qualname__}"
                 )
 
@@ -594,7 +599,7 @@ class BaseProject:
         else:
             if not isinstance(self.intangible_cost, tuple):
                 raise BaseProjectException(
-                    f"Attribute intangible_cost must be provided as a tuple of Intangible "
+                    "Attribute intangible_cost must be provided as a tuple of Intangible " +
                     f"instances, not as an/a {self.intangible_cost.__class__.__qualname__}"
                 )
 
@@ -620,7 +625,7 @@ class BaseProject:
         else:
             if not isinstance(self.opex, tuple):
                 raise BaseProjectException(
-                    f"Attribute opex must be provided as a tuple of OPEX instances, "
+                    "Attribute opex must be provided as a tuple of OPEX instances, " +
                     f"not as an/a {self.opex.__class__.__qualname__}"
                 )
 
@@ -646,7 +651,7 @@ class BaseProject:
         else:
             if not isinstance(self.asr_cost, tuple):
                 raise BaseProjectException(
-                    f"Attribute asr_cost must be provided as a tuple of ASR instances, "
+                    "Attribute asr_cost must be provided as a tuple of ASR instances, " +
                     f"not as an/a {self.asr_cost.__class__.__qualname__}"
                 )
 
@@ -672,7 +677,7 @@ class BaseProject:
         else:
             if not isinstance(self.lbt_cost, tuple):
                 raise BaseProjectException(
-                    f"Attribute lbt_cost must be provided as a tuple of LBT instances, "
+                    "Attribute lbt_cost must be provided as a tuple of LBT instances, " +
                     f"not as an/a {self.lbt_cost.__class__.__qualname__}"
                 )
 
@@ -698,7 +703,7 @@ class BaseProject:
         else:
             if not isinstance(self.cost_of_sales, tuple):
                 raise BaseProjectException(
-                    f"Attribute cost_of_sales must be provided as a tuple of CostOfSales "
+                    "Attribute cost_of_sales must be provided as a tuple of CostOfSales " +
                     f"instances, not as an/a {self.cost_of_sales.__class__.__qualname__}"
                 )
 
@@ -828,7 +833,7 @@ class BaseProject:
 
         # Case 1: fluid has positive revenue
         if len(revenue_idx) > 0:
-            earliest_revenue_year = self.project_years[revenue_idx[0]]
+            earliest_revenue_year = int(self.project_years[revenue_idx[0]])
 
             # If onstream date is not provided, infer it from the earliest revenue year
             if onstream_date is None:
@@ -841,18 +846,18 @@ class BaseProject:
                 # Onstream year must fall within project duration
                 if not (self.start_date.year <= onstream_year <= self.end_date.year):
                     raise BaseProjectException(
-                        f"{fluid.capitalize()} onstream year ({onstream_year}) must be within "
+                        f"{fluid.capitalize()} onstream year ({onstream_year}) must be within " +
                         f"project period ({self.start_date.year}-{self.end_date.year})."
                     )
 
                 # Only allow two values as onstream year:
                 # (1) earliest_lifting_year, or (2) earliest_revenue_year
-                earliest_lifting_year = min(lifting.prod_year)
+                earliest_lifting_year = int(min(lifting.prod_year))
                 allowed_years = {earliest_lifting_year, earliest_revenue_year}
 
                 if onstream_year not in allowed_years:
                     raise BaseProjectException(
-                        f"Invalid {fluid} onstream year ({onstream_year}). "
+                        f"Invalid {fluid} onstream year ({onstream_year}). " +
                         f"Allowed values: {sorted(allowed_years)}."
                     )
 
@@ -861,6 +866,22 @@ class BaseProject:
         # Case 2: No revenue at all -> fallback to project end date
         else:
             return self.end_date
+
+    def _require_onstream_dates(self) -> tuple[date, date]:
+        oil_onstream_date = self.oil_onstream_date
+        gas_onstream_date = self.gas_onstream_date
+        if oil_onstream_date is None or gas_onstream_date is None:
+            raise BaseProjectException("Oil and gas onstream dates must be available")
+        return oil_onstream_date, gas_onstream_date
+
+    def _require_array(
+        self,
+        value: npt.NDArray[_ArrayDType] | None,
+        field_name: str,
+    ) -> npt.NDArray[_ArrayDType]:
+        if value is None:
+            raise BaseProjectException(f"Attribute {field_name} is missing")
+        return value
 
     def _get_lifting_by_commodity(self, commodity: FluidType) -> Lifting:
         """
@@ -893,7 +914,11 @@ class BaseProject:
         using dunder method __add__() of class Lifting.
         """
 
-        fluid_types = [lft.fluid_type for lft in self.lifting]
+        lifting = self.lifting
+        if lifting is None:
+            raise BaseProjectException("Attribute lifting is missing")
+
+        fluid_types = [lft.fluid_type for lft in lifting]
 
         if commodity not in fluid_types:
             return Lifting(
@@ -908,7 +933,7 @@ class BaseProject:
             )
 
         return reduce(
-            lambda x, y: x + y, (lft for lft in self.lifting if lft.fluid_type == commodity)
+            lambda x, y: x + y, (lft for lft in lifting if lft.fluid_type == commodity)
         )
 
     def _get_oil_lifting(self) -> Lifting:
@@ -1001,7 +1026,9 @@ class BaseProject:
         """
         return self._get_lifting_by_commodity(commodity=FluidType.CO2)
 
-    def _calc_wap_price(self, fluidtype: FluidType) -> np.ndarray:
+    def _calc_wap_price(
+        self, fluidtype: FluidType
+    ) -> npt.NDArray[np.float64]:
         """
         Compute the Weighted Average Price (WAP) for a given fluid type.
 
@@ -1026,12 +1053,16 @@ class BaseProject:
         - If `total_vol` is zero for any time step, the result is explicitly set to
           zero to avoid division errors.
         """
+        lifting = self.lifting
+        if lifting is None:
+            raise BaseProjectException("Attribute lifting is missing")
+
         # Initialize attributes with zero values with length = project_duration
         vol_x_price = np.zeros_like(self.project_years, dtype=np.float64)
         total_vol = np.zeros_like(self.project_years, dtype=np.float64)
 
         # Add contributions from every FLUID TYPE lifting instances
-        for lft in self.lifting:
+        for lft in lifting:
             if lft.fluid_type == fluidtype:
                 lft_rate = lft.get_lifting_rate_ghv_arr()
                 vol_x_price += lft_rate * lft.get_price_arr()
@@ -1219,20 +1250,17 @@ class BaseProject:
 
         cct = self.capital_cost_total
 
-        kwargs = {
-            "start_year": cct.start_year,
-            "end_year": cct.end_year,
-        }
-
         if fluid_type not in cct.cost_allocation:
+            oil_onstream_date, gas_onstream_date = self._require_onstream_dates()
 
             onstream_yr = {
-                FluidType.OIL: self.oil_onstream_date.year,
-                FluidType.GAS: self.gas_onstream_date.year,
+                FluidType.OIL: oil_onstream_date.year,
+                FluidType.GAS: gas_onstream_date.year,
             }[fluid_type]
 
             return CapitalCost(
-                **kwargs,
+                start_year=cct.start_year,
+                end_year=cct.end_year,
                 expense_year=np.array([cct.start_year]),
                 cost=np.array([0]),
                 cost_allocation=[fluid_type],
@@ -1244,14 +1272,15 @@ class BaseProject:
             mask = (allocation_array == fluid_type)
 
             return CapitalCost(
-                **kwargs,
+                start_year=cct.start_year,
+                end_year=cct.end_year,
                 expense_year=cct.expense_year[mask],
                 cost=cct.cost[mask],
                 cost_allocation=allocation_array[mask].tolist(),
                 cost_type=np.array(cct.cost_type)[mask].tolist(),
                 description=np.array(cct.description)[mask].tolist(),
                 tax_portion=cct.tax_portion[mask],
-                tax_discount=cct.tax_discount[mask],
+                tax_discount=np.asarray(cct.tax_discount, dtype=np.float64)[mask],
                 pis_year=cct.pis_year[mask],
                 salvage_value=cct.salvage_value[mask],
                 useful_life=cct.useful_life[mask],
@@ -1291,14 +1320,10 @@ class BaseProject:
 
         ict = self.intangible_cost_total
 
-        kwargs = {
-            "start_year": ict.start_year,
-            "end_year": ict.end_year,
-        }
-
         if fluid_type not in ict.cost_allocation:
             return Intangible(
-                **kwargs,
+                start_year=ict.start_year,
+                end_year=ict.end_year,
                 expense_year=np.array([ict.start_year]),
                 cost=np.array([0]),
                 cost_allocation=[fluid_type],
@@ -1309,14 +1334,15 @@ class BaseProject:
             mask = (allocation_array == fluid_type)
 
             return Intangible(
-                **kwargs,
+                start_year=ict.start_year,
+                end_year=ict.end_year,
                 expense_year=ict.expense_year[mask],
                 cost=ict.cost[mask],
                 cost_allocation=allocation_array[mask].tolist(),
                 description=np.array(ict.description)[mask].tolist(),
                 cost_type=np.array(ict.cost_type)[mask].tolist(),
                 tax_portion=ict.tax_portion[mask],
-                tax_discount=ict.tax_discount[mask],
+                tax_discount=np.asarray(ict.tax_discount, dtype=np.float64)[mask],
             )
 
     def _classify_opex_by_fluid(self, fluid_type: FluidType) -> OPEX:
@@ -1351,14 +1377,10 @@ class BaseProject:
         """
 
         ot = self.opex_total
-        kwargs = {
-            "start_year": ot.start_year,
-            "end_year": ot.end_year,
-        }
-
         if fluid_type not in ot.cost_allocation:
             return OPEX(
-                **kwargs,
+                start_year=ot.start_year,
+                end_year=ot.end_year,
                 expense_year=np.array([ot.start_year]),
                 fixed_cost=np.array([0]),
                 cost_allocation=[fluid_type],
@@ -1369,13 +1391,14 @@ class BaseProject:
             mask = (allocation_array == fluid_type)
 
             return OPEX(
-                **kwargs,
+                start_year=ot.start_year,
+                end_year=ot.end_year,
                 expense_year=ot.expense_year[mask],
                 cost_allocation=allocation_array[mask].tolist(),
                 cost_type=np.array(ot.cost_type)[mask].tolist(),
                 description=np.array(ot.description)[mask].tolist(),
                 tax_portion=ot.tax_portion[mask],
-                tax_discount=ot.tax_discount[mask],
+                tax_discount=np.asarray(ot.tax_discount, dtype=np.float64)[mask],
                 fixed_cost=ot.fixed_cost[mask],
                 prod_rate=ot.prod_rate[mask],
                 cost_per_volume=ot.cost_per_volume[mask],
@@ -1414,14 +1437,10 @@ class BaseProject:
         """
 
         act = self.asr_cost_total
-        kwargs = {
-            "start_year": act.start_year,
-            "end_year": act.end_year,
-        }
-
         if fluid_type not in act.cost_allocation:
             return ASR(
-                **kwargs,
+                start_year=act.start_year,
+                end_year=act.end_year,
                 expense_year=np.array([act.start_year]),
                 cost=np.array([0]),
                 cost_allocation=[fluid_type],
@@ -1432,16 +1451,17 @@ class BaseProject:
             mask = (allocation_array == fluid_type)
 
             return ASR(
-                **kwargs,
+                start_year=act.start_year,
+                end_year=act.end_year,
                 expense_year=act.expense_year[mask],
                 cost=act.cost[mask],
                 cost_allocation=allocation_array[mask].tolist(),
                 cost_type=np.array(act.cost_type)[mask].tolist(),
                 description=np.array(act.description)[mask].tolist(),
                 tax_portion=act.tax_portion[mask],
-                tax_discount=act.tax_discount[mask],
+                tax_discount=np.asarray(act.tax_discount, dtype=np.float64)[mask],
                 final_year=act.final_year[mask],
-                future_rate=act.future_rate[mask],
+                future_rate=np.asarray(act.future_rate, dtype=np.float64)[mask],
             )
 
     def _classify_lbt_cost_by_fluid(self, fluid_type: FluidType) -> LBT:
@@ -1477,14 +1497,10 @@ class BaseProject:
         """
 
         lct = self.lbt_cost_total
-        kwargs = {
-            "start_year": lct.start_year,
-            "end_year": lct.end_year,
-        }
-
         if fluid_type not in lct.cost_allocation:
             return LBT(
-                **kwargs,
+                start_year=lct.start_year,
+                end_year=lct.end_year,
                 expense_year=np.array([lct.start_year]),
                 cost=np.array([0]),
                 cost_allocation=[fluid_type],
@@ -1495,13 +1511,14 @@ class BaseProject:
             mask = (allocation_array == fluid_type)
 
             return LBT(
-                **kwargs,
+                start_year=lct.start_year,
+                end_year=lct.end_year,
                 expense_year=lct.expense_year[mask],
                 cost_allocation=allocation_array[mask].tolist(),
                 cost_type=np.array(lct.cost_type)[mask].tolist(),
                 description=np.array(lct.description)[mask].tolist(),
                 tax_portion=lct.tax_portion[mask],
-                tax_discount=lct.tax_discount[mask],
+                tax_discount=np.asarray(lct.tax_discount, dtype=np.float64)[mask],
                 final_year=lct.final_year[mask],
                 utilized_land_area=lct.utilized_land_area[mask],
                 utilized_building_area=lct.utilized_building_area[mask],
@@ -1543,14 +1560,10 @@ class BaseProject:
         """
 
         cst = self.cost_of_sales_total
-        kwargs = {
-            "start_year": cst.start_year,
-            "end_year": cst.end_year,
-        }
-
         if fluid_type not in cst.cost_allocation:
             return CostOfSales(
-                **kwargs,
+                start_year=cst.start_year,
+                end_year=cst.end_year,
                 expense_year=np.array([cst.start_year]),
                 cost=np.array([0]),
                 cost_allocation=[fluid_type],
@@ -1561,14 +1574,15 @@ class BaseProject:
             mask = (allocation_array == fluid_type)
 
             return CostOfSales(
-                **kwargs,
+                start_year=cst.start_year,
+                end_year=cst.end_year,
                 expense_year=cst.expense_year[mask],
                 cost=cst.cost[mask],
                 cost_allocation=allocation_array[mask].tolist(),
                 cost_type=np.array(cst.cost_type)[mask].tolist(),
                 description=np.array(cst.description)[mask].tolist(),
                 tax_portion=cst.tax_portion[mask],
-                tax_discount=cst.tax_discount[mask],
+                tax_discount=np.asarray(cst.tax_discount, dtype=np.float64)[mask],
             )
 
     @staticmethod
@@ -1637,7 +1651,8 @@ class BaseProject:
         onstream dates.
         """
 
-        onstream_yr = min([self.oil_onstream_date.year, self.gas_onstream_date.year])
+        oil_onstream_date, gas_onstream_date = self._require_onstream_dates()
+        onstream_yr = min([oil_onstream_date.year, gas_onstream_date.year])
 
         # Raise an error: approval year is not provided
         if self.approval_year is None:
@@ -1646,28 +1661,28 @@ class BaseProject:
         # Raise an error: approval year is not provided as an integer
         if not isinstance(self.approval_year, int):
             raise BaseProjectException(
-                f"Attribute approval_year must be an integer, not "
+                "Attribute approval_year must be an integer, not " +
                 f"{self.approval_year.__class__.__qualname__}"
             )
 
         # Raise an error: approval year is before the start year of the project
         if self.approval_year < self.start_date.year:
             raise BaseProjectException(
-                f"Approval year ({self.approval_year}) is before the project "
+                f"Approval year ({self.approval_year}) is before the project " +
                 f"start year ({self.start_date.year})"
             )
 
         # Raise an error: approval year is after the end year of the project
         if self.approval_year > self.end_date.year:
             raise BaseProjectException(
-                f"Approval year ({self.approval_year}) is after the project "
+                f"Approval year ({self.approval_year}) is after the project " +
                 f"end year ({self.end_date.year})"
             )
 
         # Raise an error: approval year is after onstream year
         if self.approval_year > onstream_yr:
             raise BaseProjectException(
-                f"Approval year ({self.approval_year}) as after "
+                f"Approval year ({self.approval_year}) as after " +
                 f"onstream year ({onstream_yr})"
             )
 
@@ -1675,7 +1690,7 @@ class BaseProject:
         self,
         onstream_year: int,
         cost_obj: CapitalCost | Intangible | OPEX | ASR | LBT | CostOfSales,
-    ) -> tuple:
+    ) -> tuple[npt.NDArray[np.int64], npt.NDArray[np.object_]]:
         """
         Assign default cost types based on reference years and project milestones.
 
@@ -1709,7 +1724,7 @@ class BaseProject:
         ry = cost_obj.expense_year
 
         # Identify entries without an explicitly assigned cost type
-        is_none = np.equal(ct, None)
+        is_none = np.equal(ct, np.asarray(None, dtype=np.object_))
 
         # Define masks for default cost type assignment based on project periods
         defaults = {
@@ -1730,8 +1745,8 @@ class BaseProject:
 
     def _validate_cost_type_consistency(
         self,
-        ct: np.ndarray,
-        ry: np.ndarray,
+        ct: npt.NDArray[np.object_],
+        ry: npt.NDArray[np.int64],
         onstream_year: int,
     ) -> None:
         """
@@ -1797,7 +1812,7 @@ class BaseProject:
                 continue
 
             # Identify entries whose cost type violates the rule for this period
-            hit = np.isin(ct[mask], invalid_types)
+            hit = np.isin(ct[mask], np.asarray(invalid_types, dtype=np.object_))
 
             if hit.any():
                 # Extract invalid cost type for reporting
@@ -1805,7 +1820,7 @@ class BaseProject:
 
                 # Specify message to be displayed
                 msg = (
-                    f"Cost type classification mismatch. "
+                    "Cost type classification mismatch. " +
                     f"Found {found} in {period} period."
                 )
 
@@ -1813,8 +1828,8 @@ class BaseProject:
 
     def _validate_boundary_year_cost_types(
         self,
-        ct: np.ndarray,
-        ry: np.ndarray,
+        ct: npt.NDArray[np.object_],
+        ry: npt.NDArray[np.int64],
         onstream_year: int,
     ) -> None:
         """
@@ -1854,7 +1869,7 @@ class BaseProject:
         if np.any(at_approval) and CostType.POST_ONSTREAM_COST in ct[at_approval]:
             # Prepare messages to be displayed
             msg_error = (
-                f"Cannot accept POST ONSTREAM COST as cost type at approval year "
+                "Cannot accept POST ONSTREAM COST as cost type at approval year " +
                 f"({self.approval_year})."
             )
 
@@ -1906,7 +1921,8 @@ class BaseProject:
         self._validate_approval_year()
 
         # Specify relevant onstream year
-        onstream_year = min([self.oil_onstream_date.year, self.gas_onstream_date.year])
+        oil_onstream_date, gas_onstream_date = self._require_onstream_dates()
+        onstream_year = min([oil_onstream_date.year, gas_onstream_date.year])
 
         # Assign default values for "None" input
         ry, ct = self._assign_default_cost_types(onstream_year=onstream_year, cost_obj=cost_obj)
@@ -1984,17 +2000,12 @@ class BaseProject:
         # Raise an exception for an incorrect input
         if not isinstance(cost_obj_fluid, CapitalCost):
             raise BaseProjectException(
-                f"Invalid input: cost_obj_fluid must be a CapitalCost object. "
+                "Invalid input: cost_obj_fluid must be a CapitalCost object. " +
                 f"Received {cost_obj_fluid.__class__.__qualname__} instead."
             )
 
-        # Define intermediate parameters
-        kwargs = {
-            "start_year": cost_obj_fluid.start_year,
-            "end_year": cost_obj_fluid.end_year,
-        }
-
-        onstream_yr = min([self.oil_onstream_date.year, self.gas_onstream_date.year])
+        oil_onstream_date, gas_onstream_date = self._require_onstream_dates()
+        onstream_yr = min([oil_onstream_date.year, gas_onstream_date.year])
 
         allocation = (
             FluidType.OIL if FluidType.OIL in cost_obj_fluid.cost_allocation
@@ -2013,7 +2024,8 @@ class BaseProject:
 
         if not np.any(mask):
             return CapitalCost(
-                **kwargs,
+                start_year=cost_obj_fluid.start_year,
+                end_year=cost_obj_fluid.end_year,
                 expense_year=np.array([ey]),
                 cost=np.array([0]),
                 cost_allocation=[allocation],
@@ -2022,14 +2034,17 @@ class BaseProject:
             )
 
         return CapitalCost(
-            **kwargs,
+            start_year=cost_obj_fluid.start_year,
+            end_year=cost_obj_fluid.end_year,
             expense_year=cost_obj_fluid.expense_year[mask],
             cost=cost_obj_fluid.cost[mask],
             cost_allocation=np.array(cost_obj_fluid.cost_allocation)[mask].tolist(),
             cost_type=np.array(cost_obj_fluid.cost_type)[mask].tolist(),
             description=np.array(cost_obj_fluid.description)[mask].tolist(),
             tax_portion=cost_obj_fluid.tax_portion[mask],
-            tax_discount=cost_obj_fluid.tax_discount[mask],
+            tax_discount=np.asarray(
+                cost_obj_fluid.tax_discount, dtype=np.float64
+            )[mask],
             pis_year=cost_obj_fluid.pis_year[mask],
             salvage_value=cost_obj_fluid.salvage_value[mask],
             useful_life=cost_obj_fluid.useful_life[mask],
@@ -2092,17 +2107,12 @@ class BaseProject:
         # Raise an exception for an incorrect input
         if not isinstance(cost_obj_fluid, Intangible):
             raise BaseProjectException(
-                f"Invalid input: cost_obj_fluid must be an Intangible object. "
+                "Invalid input: cost_obj_fluid must be an Intangible object. " +
                 f"Received {cost_obj_fluid.__class__.__qualname__} instead."
             )
 
-        # Define intermediate parameters
-        kwargs = {
-            "start_year": cost_obj_fluid.start_year,
-            "end_year": cost_obj_fluid.end_year,
-        }
-
-        onstream_yr = min([self.oil_onstream_date.year, self.gas_onstream_date.year])
+        oil_onstream_date, gas_onstream_date = self._require_onstream_dates()
+        onstream_yr = min([oil_onstream_date.year, gas_onstream_date.year])
 
         allocation = (
             FluidType.OIL if FluidType.OIL in cost_obj_fluid.cost_allocation
@@ -2121,7 +2131,8 @@ class BaseProject:
 
         if not np.any(mask):
             return Intangible(
-                **kwargs,
+                start_year=cost_obj_fluid.start_year,
+                end_year=cost_obj_fluid.end_year,
                 expense_year=np.array([ey]),
                 cost=np.array([0]),
                 cost_allocation=[allocation],
@@ -2129,14 +2140,17 @@ class BaseProject:
             )
 
         return Intangible(
-            **kwargs,
+            start_year=cost_obj_fluid.start_year,
+            end_year=cost_obj_fluid.end_year,
             expense_year=cost_obj_fluid.expense_year[mask],
             cost=cost_obj_fluid.cost[mask],
             cost_allocation=np.array(cost_obj_fluid.cost_allocation)[mask].tolist(),
             cost_type=np.array(cost_obj_fluid.cost_type)[mask].tolist(),
             description=np.array(cost_obj_fluid.description)[mask].tolist(),
             tax_portion=cost_obj_fluid.tax_portion[mask],
-            tax_discount=cost_obj_fluid.tax_discount[mask],
+            tax_discount=np.asarray(
+                cost_obj_fluid.tax_discount, dtype=np.float64
+            )[mask],
         )
 
     def _filter_opex(self, cost_obj_fluid: OPEX, include_cost_type: CostType) -> OPEX:
@@ -2194,17 +2208,12 @@ class BaseProject:
         # Raise an exception for an incorrect input
         if not isinstance(cost_obj_fluid, OPEX):
             raise BaseProjectException(
-                f"Invalid input: cost_obj_fluid must be an OPEX object. "
+                "Invalid input: cost_obj_fluid must be an OPEX object. " +
                 f"Received {cost_obj_fluid.__class__.__qualname__} instead."
             )
 
-        # Define intermediate parameters
-        kwargs = {
-            "start_year": cost_obj_fluid.start_year,
-            "end_year": cost_obj_fluid.end_year,
-        }
-
-        onstream_yr = min([self.oil_onstream_date.year, self.gas_onstream_date.year])
+        oil_onstream_date, gas_onstream_date = self._require_onstream_dates()
+        onstream_yr = min([oil_onstream_date.year, gas_onstream_date.year])
 
         allocation = (
             FluidType.OIL if FluidType.OIL in cost_obj_fluid.cost_allocation
@@ -2223,7 +2232,8 @@ class BaseProject:
 
         if not np.any(mask):
             return OPEX(
-                **kwargs,
+                start_year=cost_obj_fluid.start_year,
+                end_year=cost_obj_fluid.end_year,
                 expense_year=np.array([ey]),
                 fixed_cost=np.array([0]),
                 cost_allocation=[allocation],
@@ -2231,13 +2241,16 @@ class BaseProject:
             )
 
         return OPEX(
-            **kwargs,
+            start_year=cost_obj_fluid.start_year,
+            end_year=cost_obj_fluid.end_year,
             expense_year=cost_obj_fluid.expense_year[mask],
             cost_allocation=np.array(cost_obj_fluid.cost_allocation)[mask].tolist(),
             cost_type=np.array(cost_obj_fluid.cost_type)[mask].tolist(),
             description=np.array(cost_obj_fluid.description)[mask].tolist(),
             tax_portion=cost_obj_fluid.tax_portion[mask],
-            tax_discount=cost_obj_fluid.tax_discount[mask],
+            tax_discount=np.asarray(
+                cost_obj_fluid.tax_discount, dtype=np.float64
+            )[mask],
             fixed_cost=cost_obj_fluid.fixed_cost[mask],
             prod_rate=cost_obj_fluid.prod_rate[mask],
             cost_per_volume=cost_obj_fluid.cost_per_volume[mask],
@@ -2297,16 +2310,12 @@ class BaseProject:
         # Raise an exception for an incorrect input
         if not isinstance(cost_obj_fluid, ASR):
             raise BaseProjectException(
-                f"Invalid input: cost_obj_fluid must be an ASR object. "
+                "Invalid input: cost_obj_fluid must be an ASR object. " +
                 f"Received {cost_obj_fluid.__class__.__qualname__} instead."
             )
 
-        kwargs = {
-            "start_year": cost_obj_fluid.start_year,
-            "end_year": cost_obj_fluid.end_year,
-        }
-
-        onstream_yr = min([self.oil_onstream_date.year, self.gas_onstream_date.year])
+        oil_onstream_date, gas_onstream_date = self._require_onstream_dates()
+        onstream_yr = min([oil_onstream_date.year, gas_onstream_date.year])
 
         allocation = (
             FluidType.OIL if FluidType.OIL in cost_obj_fluid.cost_allocation
@@ -2325,7 +2334,8 @@ class BaseProject:
 
         if not np.any(mask):
             return ASR(
-                **kwargs,
+                start_year=cost_obj_fluid.start_year,
+                end_year=cost_obj_fluid.end_year,
                 expense_year=np.array([ey]),
                 cost=np.array([0]),
                 cost_allocation=[allocation],
@@ -2333,16 +2343,21 @@ class BaseProject:
             )
 
         return ASR(
-            **kwargs,
+            start_year=cost_obj_fluid.start_year,
+            end_year=cost_obj_fluid.end_year,
             expense_year=cost_obj_fluid.expense_year[mask],
             cost=cost_obj_fluid.cost[mask],
             cost_allocation=np.array(cost_obj_fluid.cost_allocation)[mask].tolist(),
             cost_type=np.array(cost_obj_fluid.cost_type)[mask].tolist(),
             description=np.array(cost_obj_fluid.description)[mask].tolist(),
             tax_portion=cost_obj_fluid.tax_portion[mask],
-            tax_discount=cost_obj_fluid.tax_discount[mask],
+            tax_discount=np.asarray(
+                cost_obj_fluid.tax_discount, dtype=np.float64
+            )[mask],
             final_year=cost_obj_fluid.final_year[mask],
-            future_rate=cost_obj_fluid.future_rate[mask],
+            future_rate=np.asarray(
+                cost_obj_fluid.future_rate, dtype=np.float64
+            )[mask],
         )
 
     def _filter_lbt(self, cost_obj_fluid: LBT, include_cost_type: CostType) -> LBT:
@@ -2401,17 +2416,12 @@ class BaseProject:
         # Raise an exception for an incorrect input
         if not isinstance(cost_obj_fluid, LBT):
             raise BaseProjectException(
-                f"Invalid input: cost_obj_fluid must be an LBT object. "
+                "Invalid input: cost_obj_fluid must be an LBT object. " +
                 f"Received {cost_obj_fluid.__class__.__qualname__} instead."
             )
 
-        # Define intermediate parameters
-        kwargs = {
-            "start_year": cost_obj_fluid.start_year,
-            "end_year": cost_obj_fluid.end_year,
-        }
-
-        onstream_yr = min([self.oil_onstream_date.year, self.gas_onstream_date.year])
+        oil_onstream_date, gas_onstream_date = self._require_onstream_dates()
+        onstream_yr = min([oil_onstream_date.year, gas_onstream_date.year])
 
         allocation = (
             FluidType.OIL if FluidType.OIL in cost_obj_fluid.cost_allocation
@@ -2430,7 +2440,8 @@ class BaseProject:
 
         if not np.any(mask):
             return LBT(
-                **kwargs,
+                start_year=cost_obj_fluid.start_year,
+                end_year=cost_obj_fluid.end_year,
                 expense_year=np.array([ey]),
                 cost=np.array([0]),
                 cost_allocation=[allocation],
@@ -2438,13 +2449,16 @@ class BaseProject:
             )
 
         return LBT(
-            **kwargs,
+            start_year=cost_obj_fluid.start_year,
+            end_year=cost_obj_fluid.end_year,
             expense_year=cost_obj_fluid.expense_year[mask],
             cost_allocation=np.array(cost_obj_fluid.cost_allocation)[mask].tolist(),
             cost_type=np.array(cost_obj_fluid.cost_type)[mask].tolist(),
             description=np.array(cost_obj_fluid.description)[mask].tolist(),
             tax_portion=cost_obj_fluid.tax_portion[mask],
-            tax_discount=cost_obj_fluid.tax_discount[mask],
+            tax_discount=np.asarray(
+                cost_obj_fluid.tax_discount, dtype=np.float64
+            )[mask],
             final_year=cost_obj_fluid.final_year[mask],
             utilized_land_area=cost_obj_fluid.utilized_land_area[mask],
             utilized_building_area=cost_obj_fluid.utilized_building_area[mask],
@@ -2508,17 +2522,12 @@ class BaseProject:
         # Raise an exception for an incorrect input
         if not isinstance(cost_obj_fluid, CostOfSales):
             raise BaseProjectException(
-                f"Invalid input: cost_obj_fluid must be a CostOfSales object. "
+                "Invalid input: cost_obj_fluid must be a CostOfSales object. " +
                 f"Received {cost_obj_fluid.__class__.__qualname__} instead."
             )
 
-        # Define intermediate parameters
-        kwargs = {
-            "start_year": cost_obj_fluid.start_year,
-            "end_year": cost_obj_fluid.end_year,
-        }
-
-        onstream_yr = min([self.oil_onstream_date.year, self.gas_onstream_date.year])
+        oil_onstream_date, gas_onstream_date = self._require_onstream_dates()
+        onstream_yr = min([oil_onstream_date.year, gas_onstream_date.year])
 
         allocation = (
             FluidType.OIL if FluidType.OIL in cost_obj_fluid.cost_allocation
@@ -2537,7 +2546,8 @@ class BaseProject:
 
         if not np.any(mask):
             return CostOfSales(
-                **kwargs,
+                start_year=cost_obj_fluid.start_year,
+                end_year=cost_obj_fluid.end_year,
                 expense_year=np.array([ey]),
                 cost=np.array([0]),
                 cost_allocation=[allocation],
@@ -2545,14 +2555,17 @@ class BaseProject:
             )
 
         return CostOfSales(
-            **kwargs,
+            start_year=cost_obj_fluid.start_year,
+            end_year=cost_obj_fluid.end_year,
             expense_year=cost_obj_fluid.expense_year[mask],
             cost=cost_obj_fluid.cost[mask],
             cost_allocation=np.array(cost_obj_fluid.cost_allocation)[mask].tolist(),
             cost_type=np.array(cost_obj_fluid.cost_type)[mask].tolist(),
             description=np.array(cost_obj_fluid.description)[mask].tolist(),
             tax_portion=cost_obj_fluid.tax_portion[mask],
-            tax_discount=cost_obj_fluid.tax_discount[mask],
+            tax_discount=np.asarray(
+                cost_obj_fluid.tax_discount, dtype=np.float64
+            )[mask],
         )
 
     def _check_inconsistent_start_year(self) -> None:
@@ -2637,56 +2650,56 @@ class BaseProject:
             ]
         ):
             raise BaseProjectException(
-                f"Inconsistent start project year: "
-                f"Base project ({self.start_date.year}), "
-                f"Oil lifting ({self._oil_lifting.start_year}), "
-                f"Gas lifting ({self._gas_lifting.start_year}), "
-                f"Sulfur lifting ({self._sulfur_lifting.start_year}), "
-                f"Electricity lifting ({self._electricity_lifting.start_year}), "
-                f"CO2 lifting ({self._co2_lifting.start_year}), "
-                f"Oil capital postonstream ({self._oil_capital_postonstream.start_year}), "
-                f"Gas capital postonstream ({self._gas_capital_postonstream.start_year}), "
-                f"Oil intangible postonstream "
-                f"({self._oil_intangible_postonstream.start_year}), "
-                f"Gas intangible postonstream "
-                f"({self._gas_intangible_postonstream.start_year}), "
-                f"Oil opex postonstream ({self._oil_opex_postonstream.start_year}), "
-                f"Gas opex postonstream ({self._gas_opex_postonstream.start_year}), "
-                f"Oil asr postonstream ({self._oil_asr_postonstream.start_year}), "
-                f"Gas asr postonstream ({self._gas_asr_postonstream.start_year}), "
-                f"Oil lbt postonstream ({self._oil_lbt_postonstream.start_year}), "
-                f"Gas lbt postonstream ({self._gas_lbt_postonstream.start_year}), "
-                f"Oil cost of sales postonstream "
-                f"({self._oil_cost_of_sales_postonstream.start_year}), "
-                f"Gas cost of sales postonstream "
-                f"({self._gas_cost_of_sales_postonstream.start_year}), "
-                f"Oil capital sunkcost ({self._oil_capital_sunk_cost.start_year}), "
-                f"Gas capital sunkcost ({self._gas_capital_sunk_cost.start_year}), "
-                f"Oil intangible sunkcost ({self._oil_intangible_sunk_cost.start_year}), "
-                f"Gas intangible sunkcost ({self._gas_intangible_sunk_cost.start_year}), "
-                f"Oil opex sunkcost ({self._oil_opex_sunk_cost.start_year}), "
-                f"Gas opex sunkcost ({self._gas_opex_sunk_cost.start_year}), "
-                f"Oil asr sunkcost ({self._oil_asr_sunk_cost.start_year}), "
-                f"Gas asr sunkcost ({self._gas_asr_sunk_cost.start_year}), "
-                f"Oil lbt sunkcost ({self._oil_lbt_sunk_cost.start_year}), "
-                f"Gas lbt sunkcost ({self._gas_lbt_sunk_cost.start_year}), "
-                f"Oil cost of sales sunkcost "
-                f"({self._oil_cost_of_sales_sunk_cost.start_year}), "
-                f"Gas cost of sales sunkcost "
-                f"({self._gas_cost_of_sales_sunk_cost.start_year}), "
-                f"Oil capital preonstream ({self._oil_capital_preonstream.start_year}), "
-                f"Gas capital preonstream ({self._gas_capital_preonstream.start_year}), "
-                f"Oil intangible preonstream ({self._oil_intangible_preonstream.start_year}), "
-                f"Gas intangible preonstream ({self._gas_intangible_preonstream.start_year}), "
-                f"Oil opex preonstream ({self._oil_opex_preonstream.start_year}), "
-                f"Gas opex preonstream ({self._gas_opex_preonstream.start_year}), "
-                f"Oil asr preonstream ({self._oil_asr_preonstream.start_year}), "
-                f"Gas asr preonstream ({self._gas_asr_preonstream.start_year}), "
-                f"Oil lbt preonstream ({self._oil_lbt_preonstream.start_year}), "
-                f"Gas lbt preonstream ({self._gas_lbt_preonstream.start_year}), "
-                f"Oil cost of sales preonstream "
-                f"({self._oil_cost_of_sales_preonstream.start_year}), "
-                f"Gas cost of sales preonstream "
+                "Inconsistent start project year: " +
+                f"Base project ({self.start_date.year}), " +
+                f"Oil lifting ({self._oil_lifting.start_year}), " +
+                f"Gas lifting ({self._gas_lifting.start_year}), " +
+                f"Sulfur lifting ({self._sulfur_lifting.start_year}), " +
+                f"Electricity lifting ({self._electricity_lifting.start_year}), " +
+                f"CO2 lifting ({self._co2_lifting.start_year}), " +
+                f"Oil capital postonstream ({self._oil_capital_postonstream.start_year}), " +
+                f"Gas capital postonstream ({self._gas_capital_postonstream.start_year}), " +
+                "Oil intangible postonstream " +
+                f"({self._oil_intangible_postonstream.start_year}), " +
+                "Gas intangible postonstream " +
+                f"({self._gas_intangible_postonstream.start_year}), " +
+                f"Oil opex postonstream ({self._oil_opex_postonstream.start_year}), " +
+                f"Gas opex postonstream ({self._gas_opex_postonstream.start_year}), " +
+                f"Oil asr postonstream ({self._oil_asr_postonstream.start_year}), " +
+                f"Gas asr postonstream ({self._gas_asr_postonstream.start_year}), " +
+                f"Oil lbt postonstream ({self._oil_lbt_postonstream.start_year}), " +
+                f"Gas lbt postonstream ({self._gas_lbt_postonstream.start_year}), " +
+                "Oil cost of sales postonstream " +
+                f"({self._oil_cost_of_sales_postonstream.start_year}), " +
+                "Gas cost of sales postonstream " +
+                f"({self._gas_cost_of_sales_postonstream.start_year}), " +
+                f"Oil capital sunkcost ({self._oil_capital_sunk_cost.start_year}), " +
+                f"Gas capital sunkcost ({self._gas_capital_sunk_cost.start_year}), " +
+                f"Oil intangible sunkcost ({self._oil_intangible_sunk_cost.start_year}), " +
+                f"Gas intangible sunkcost ({self._gas_intangible_sunk_cost.start_year}), " +
+                f"Oil opex sunkcost ({self._oil_opex_sunk_cost.start_year}), " +
+                f"Gas opex sunkcost ({self._gas_opex_sunk_cost.start_year}), " +
+                f"Oil asr sunkcost ({self._oil_asr_sunk_cost.start_year}), " +
+                f"Gas asr sunkcost ({self._gas_asr_sunk_cost.start_year}), " +
+                f"Oil lbt sunkcost ({self._oil_lbt_sunk_cost.start_year}), " +
+                f"Gas lbt sunkcost ({self._gas_lbt_sunk_cost.start_year}), " +
+                "Oil cost of sales sunkcost " +
+                f"({self._oil_cost_of_sales_sunk_cost.start_year}), " +
+                "Gas cost of sales sunkcost " +
+                f"({self._gas_cost_of_sales_sunk_cost.start_year}), " +
+                f"Oil capital preonstream ({self._oil_capital_preonstream.start_year}), " +
+                f"Gas capital preonstream ({self._gas_capital_preonstream.start_year}), " +
+                f"Oil intangible preonstream ({self._oil_intangible_preonstream.start_year}), " +
+                f"Gas intangible preonstream ({self._gas_intangible_preonstream.start_year}), " +
+                f"Oil opex preonstream ({self._oil_opex_preonstream.start_year}), " +
+                f"Gas opex preonstream ({self._gas_opex_preonstream.start_year}), " +
+                f"Oil asr preonstream ({self._oil_asr_preonstream.start_year}), " +
+                f"Gas asr preonstream ({self._gas_asr_preonstream.start_year}), " +
+                f"Oil lbt preonstream ({self._oil_lbt_preonstream.start_year}), " +
+                f"Gas lbt preonstream ({self._gas_lbt_preonstream.start_year}), " +
+                "Oil cost of sales preonstream " +
+                f"({self._oil_cost_of_sales_preonstream.start_year}), " +
+                "Gas cost of sales preonstream " +
                 f"({self._gas_cost_of_sales_preonstream.start_year})."
             )
 
@@ -2772,60 +2785,65 @@ class BaseProject:
             ]
         ):
             raise BaseProjectException(
-                f"Inconsistent end project year: "
-                f"Base project ({self.end_date.year}), "
-                f"Oil lifting ({self._oil_lifting.end_year}), "
-                f"Gas lifting ({self._gas_lifting.end_year}), "
-                f"Sulfur lifting ({self._sulfur_lifting.end_year}), "
-                f"Electricity lifting ({self._electricity_lifting.end_year}), "
-                f"CO2 lifting ({self._co2_lifting.end_year}), "
-                f"Oil capital postonstream ({self._oil_capital_postonstream.end_year}), "
-                f"Gas capital postonstream ({self._gas_capital_postonstream.end_year}), "
-                f"Oil intangible postonstream "
-                f"({self._oil_intangible_postonstream.end_year}), "
-                f"Gas intangible postonstream "
-                f"({self._gas_intangible_postonstream.end_year}), "
-                f"Oil opex postonstream ({self._oil_opex_postonstream.end_year}), "
-                f"Gas opex postonstream ({self._gas_opex_postonstream.end_year}), "
-                f"Oil asr postonstream ({self._oil_asr_postonstream.end_year}), "
-                f"Gas asr postonstream ({self._gas_asr_postonstream.end_year}), "
-                f"Oil lbt postonstream ({self._oil_lbt_postonstream.end_year}), "
-                f"Gas lbt postonstream ({self._gas_lbt_postonstream.end_year}), "
-                f"Oil cost of sales postonstream "
-                f"({self._oil_cost_of_sales_postonstream.end_year}), "
-                f"Gas cost of sales postonstream "
-                f"({self._gas_cost_of_sales_postonstream.end_year}), "
-                f"Oil capital sunkcost ({self._oil_capital_sunk_cost.end_year}), "
-                f"Gas capital sunkcost ({self._gas_capital_sunk_cost.end_year}), "
-                f"Oil intangible sunkcost ({self._oil_intangible_sunk_cost.end_year}), "
-                f"Gas intangible sunkcost ({self._gas_intangible_sunk_cost.end_year}), "
-                f"Oil opex sunkcost ({self._oil_opex_sunk_cost.end_year}), "
-                f"Gas opex sunkcost ({self._gas_opex_sunk_cost.end_year}), "
-                f"Oil asr sunkcost ({self._oil_asr_sunk_cost.end_year}), "
-                f"Gas asr sunkcost ({self._gas_asr_sunk_cost.end_year}), "
-                f"Oil lbt sunkcost ({self._oil_lbt_sunk_cost.end_year}), "
-                f"Gas lbt sunkcost ({self._gas_lbt_sunk_cost.end_year}), "
-                f"Oil cost of sales sunkcost "
-                f"({self._oil_cost_of_sales_sunk_cost.end_year}), "
-                f"Gas cost of sales sunkcost "
-                f"({self._gas_cost_of_sales_sunk_cost.end_year}), "
-                f"Oil capital preonstream ({self._oil_capital_preonstream.end_year}), "
-                f"Gas capital preonstream ({self._gas_capital_preonstream.end_year}), "
-                f"Oil intangible preonstream ({self._oil_intangible_preonstream.end_year}), "
-                f"Gas intangible preonstream ({self._gas_intangible_preonstream.end_year}), "
-                f"Oil opex preonstream ({self._oil_opex_preonstream.end_year}), "
-                f"Gas opex preonstream ({self._gas_opex_preonstream.end_year}), "
-                f"Oil asr preonstream ({self._oil_asr_preonstream.end_year}), "
-                f"Gas asr preonstream ({self._gas_asr_preonstream.end_year}), "
-                f"Oil lbt preonstream ({self._oil_lbt_preonstream.end_year}), "
-                f"Gas lbt preonstream ({self._gas_lbt_preonstream.end_year}), "
-                f"Oil cost of sales preonstream "
-                f"({self._oil_cost_of_sales_preonstream.end_year}), "
-                f"Gas cost of sales preonstream "
+                "Inconsistent end project year: " +
+                f"Base project ({self.end_date.year}), " +
+                f"Oil lifting ({self._oil_lifting.end_year}), " +
+                f"Gas lifting ({self._gas_lifting.end_year}), " +
+                f"Sulfur lifting ({self._sulfur_lifting.end_year}), " +
+                f"Electricity lifting ({self._electricity_lifting.end_year}), " +
+                f"CO2 lifting ({self._co2_lifting.end_year}), " +
+                f"Oil capital postonstream ({self._oil_capital_postonstream.end_year}), " +
+                f"Gas capital postonstream ({self._gas_capital_postonstream.end_year}), " +
+                "Oil intangible postonstream " +
+                f"({self._oil_intangible_postonstream.end_year}), " +
+                "Gas intangible postonstream " +
+                f"({self._gas_intangible_postonstream.end_year}), " +
+                f"Oil opex postonstream ({self._oil_opex_postonstream.end_year}), " +
+                f"Gas opex postonstream ({self._gas_opex_postonstream.end_year}), " +
+                f"Oil asr postonstream ({self._oil_asr_postonstream.end_year}), " +
+                f"Gas asr postonstream ({self._gas_asr_postonstream.end_year}), " +
+                f"Oil lbt postonstream ({self._oil_lbt_postonstream.end_year}), " +
+                f"Gas lbt postonstream ({self._gas_lbt_postonstream.end_year}), " +
+                "Oil cost of sales postonstream " +
+                f"({self._oil_cost_of_sales_postonstream.end_year}), " +
+                "Gas cost of sales postonstream " +
+                f"({self._gas_cost_of_sales_postonstream.end_year}), " +
+                f"Oil capital sunkcost ({self._oil_capital_sunk_cost.end_year}), " +
+                f"Gas capital sunkcost ({self._gas_capital_sunk_cost.end_year}), " +
+                f"Oil intangible sunkcost ({self._oil_intangible_sunk_cost.end_year}), " +
+                f"Gas intangible sunkcost ({self._gas_intangible_sunk_cost.end_year}), " +
+                f"Oil opex sunkcost ({self._oil_opex_sunk_cost.end_year}), " +
+                f"Gas opex sunkcost ({self._gas_opex_sunk_cost.end_year}), " +
+                f"Oil asr sunkcost ({self._oil_asr_sunk_cost.end_year}), " +
+                f"Gas asr sunkcost ({self._gas_asr_sunk_cost.end_year}), " +
+                f"Oil lbt sunkcost ({self._oil_lbt_sunk_cost.end_year}), " +
+                f"Gas lbt sunkcost ({self._gas_lbt_sunk_cost.end_year}), " +
+                "Oil cost of sales sunkcost " +
+                f"({self._oil_cost_of_sales_sunk_cost.end_year}), " +
+                "Gas cost of sales sunkcost " +
+                f"({self._gas_cost_of_sales_sunk_cost.end_year}), " +
+                f"Oil capital preonstream ({self._oil_capital_preonstream.end_year}), " +
+                f"Gas capital preonstream ({self._gas_capital_preonstream.end_year}), " +
+                f"Oil intangible preonstream ({self._oil_intangible_preonstream.end_year}), " +
+                f"Gas intangible preonstream ({self._gas_intangible_preonstream.end_year}), " +
+                f"Oil opex preonstream ({self._oil_opex_preonstream.end_year}), " +
+                f"Gas opex preonstream ({self._gas_opex_preonstream.end_year}), " +
+                f"Oil asr preonstream ({self._oil_asr_preonstream.end_year}), " +
+                f"Gas asr preonstream ({self._gas_asr_preonstream.end_year}), " +
+                f"Oil lbt preonstream ({self._oil_lbt_preonstream.end_year}), " +
+                f"Gas lbt preonstream ({self._gas_lbt_preonstream.end_year}), " +
+                "Oil cost of sales preonstream " +
+                f"({self._oil_cost_of_sales_preonstream.end_year}), " +
+                "Gas cost of sales preonstream " +
                 f"({self._gas_cost_of_sales_preonstream.end_year})."
             )
 
-    def _validate_sunkcost(self, sunkcost_objects: list) -> None:
+    def _validate_sunkcost(
+        self,
+        sunkcost_objects: list[
+            CapitalCost | Intangible | OPEX | ASR | LBT | CostOfSales
+        ],
+    ) -> None:
         """
         Validate that sunk cost objects do not extend beyond the cutoff year.
 
@@ -2850,7 +2868,8 @@ class BaseProject:
         """
 
         # Determine onstream year: the earlier between oil and gas onstream year
-        onstream_yr = min([self.oil_onstream_date.year, self.gas_onstream_date.year])
+        oil_onstream_date, gas_onstream_date = self._require_onstream_dates()
+        onstream_yr = min([oil_onstream_date.year, gas_onstream_date.year])
 
         # Extract maximum expense year for each sunkcost objects
         sunkcost_max_years = np.array(
@@ -2874,7 +2893,12 @@ class BaseProject:
                     (ContractType.BASE_PROJECT.value, message)
                 )
 
-    def _validate_preonstream(self, preonstream_objects: list) -> None:
+    def _validate_preonstream(
+        self,
+        preonstream_objects: list[
+            CapitalCost | Intangible | OPEX | ASR | LBT | CostOfSales
+        ],
+    ) -> None:
         """
         Validate year bounds of pre-onstream cost objects.
 
@@ -2902,7 +2926,8 @@ class BaseProject:
         """
 
         # Determine onstream year: the earlier between oil and gas onstream year
-        onstream_yr = min([self.oil_onstream_date.year, self.gas_onstream_date.year])
+        oil_onstream_date, gas_onstream_date = self._require_onstream_dates()
+        onstream_yr = min([oil_onstream_date.year, gas_onstream_date.year])
 
         # Helper to extract min/max expense year for each object
         def _extract_years(obj, func):
@@ -2944,7 +2969,7 @@ class BaseProject:
                     )
 
                 message = (
-                    f"Preonstream years ({incorrect_years}) fall outside the allowable "
+                    f"Preonstream years ({incorrect_years}) fall outside the allowable " +
                     f"range: {self.approval_year} <= preonstream_years <= {onstream_yr}."
                 )
 
@@ -2954,7 +2979,7 @@ class BaseProject:
             if np.any(mask):
                 incorrect_years = preonstream_max_years[mask]
                 message = (
-                    f"Preonstream years fall outside the allowable range: "
+                    "Preonstream years fall outside the allowable range: " +
                     f"preonstream_years ({incorrect_years} > {onstream_yr})."
                 )
 
@@ -2970,7 +2995,12 @@ class BaseProject:
                     (ContractType.BASE_PROJECT.value, message)
                 )
 
-    def _validate_postonstream(self, postonstream_objects: list) -> None:
+    def _validate_postonstream(
+        self,
+        postonstream_objects: list[
+            CapitalCost | Intangible | OPEX | ASR | LBT | CostOfSales
+        ],
+    ) -> None:
         """
         Validate year bounds of post-onstream cost objects.
 
@@ -2995,7 +3025,8 @@ class BaseProject:
         """
 
         # Determine onstream year: the earlier between oil and gas onstream year
-        onstream_yr = min([self.oil_onstream_date.year, self.gas_onstream_date.year])
+        oil_onstream_date, gas_onstream_date = self._require_onstream_dates()
+        onstream_yr = min([oil_onstream_date.year, gas_onstream_date.year])
 
         # Extract minimum expense year for each postonstream objects
         postonstream_min_years = np.array(
@@ -3007,7 +3038,7 @@ class BaseProject:
             # Collect offending years for reporting
             incorrect_years = postonstream_min_years[mask]
             message = (
-                f"Postonstream cost years ({incorrect_years}) occur before "
+                f"Postonstream cost years ({incorrect_years}) occur before " +
                 f"onstream year ({onstream_yr})"
             )
 
@@ -3145,11 +3176,13 @@ class BaseProject:
         }
 
         # Define depreciable sunk costs
-        self._oil_depreciable_sunk_cost = sunkcost_arr["oil_capital"]
-        self._gas_depreciable_sunk_cost = sunkcost_arr["gas_capital"]
+        oil_depreciable_sunk_cost = sunkcost_arr["oil_capital"]
+        gas_depreciable_sunk_cost = sunkcost_arr["gas_capital"]
+        self._oil_depreciable_sunk_cost = oil_depreciable_sunk_cost
+        self._gas_depreciable_sunk_cost = gas_depreciable_sunk_cost
 
         # Define non-depreciable sunk costs
-        self._oil_non_depreciable_sunk_cost = (
+        oil_non_depreciable_sunk_cost = (
             sunkcost_arr["oil_intangible"]
             + sunkcost_arr["oil_opex"]
             + sunkcost_arr["oil_asr"]
@@ -3157,22 +3190,19 @@ class BaseProject:
             + sunkcost_arr["oil_cost_of_sales"]
         )
 
-        self._gas_non_depreciable_sunk_cost = (
+        gas_non_depreciable_sunk_cost = (
             sunkcost_arr["gas_intangible"]
             + sunkcost_arr["gas_opex"]
             + sunkcost_arr["gas_asr"]
             + sunkcost_arr["gas_lbt"]
             + sunkcost_arr["gas_cost_of_sales"]
         )
+        self._oil_non_depreciable_sunk_cost = oil_non_depreciable_sunk_cost
+        self._gas_non_depreciable_sunk_cost = gas_non_depreciable_sunk_cost
 
         # Calculate (total = depreciable + non_depreciable costs)
-        self._oil_sunk_cost = (
-            self._oil_depreciable_sunk_cost + self._oil_non_depreciable_sunk_cost
-        )
-
-        self._gas_sunk_cost = (
-            self._gas_depreciable_sunk_cost + self._gas_non_depreciable_sunk_cost
-        )
+        self._oil_sunk_cost = oil_depreciable_sunk_cost + oil_non_depreciable_sunk_cost
+        self._gas_sunk_cost = gas_depreciable_sunk_cost + gas_non_depreciable_sunk_cost
 
     def _get_preonstream_array(self) -> None:
         """
@@ -3221,33 +3251,32 @@ class BaseProject:
         }
 
         # Define depreciable preonstream costs
-        self._oil_depreciable_preonstream = preonstream_arr["oil_capital"]
-        self._gas_depreciable_preonstream = preonstream_arr["gas_capital"]
+        oil_depreciable_preonstream = preonstream_arr["oil_capital"]
+        gas_depreciable_preonstream = preonstream_arr["gas_capital"]
+        self._oil_depreciable_preonstream = oil_depreciable_preonstream
+        self._gas_depreciable_preonstream = gas_depreciable_preonstream
 
         # Define non-depreciable preonstream costs
-        self._oil_non_depreciable_preonstream = (
+        oil_non_depreciable_preonstream = (
             preonstream_arr["oil_intangible"]
             + preonstream_arr["oil_opex"]
             + preonstream_arr["oil_asr"]
             + preonstream_arr["oil_lbt"]
             + preonstream_arr["oil_cost_of_sales"]
         )
-        self._gas_non_depreciable_preonstream = (
+        gas_non_depreciable_preonstream = (
             preonstream_arr["gas_intangible"]
             + preonstream_arr["gas_opex"]
             + preonstream_arr["gas_asr"]
             + preonstream_arr["gas_lbt"]
             + preonstream_arr["gas_cost_of_sales"]
         )
+        self._oil_non_depreciable_preonstream = oil_non_depreciable_preonstream
+        self._gas_non_depreciable_preonstream = gas_non_depreciable_preonstream
 
         # Calculate (total = depreciable + non_depreciable costs)
-        self._oil_preonstream = (
-            self._oil_depreciable_preonstream + self._oil_non_depreciable_preonstream
-        )
-
-        self._gas_preonstream = (
-            self._gas_depreciable_preonstream + self._gas_non_depreciable_preonstream
-        )
+        self._oil_preonstream = oil_depreciable_preonstream + oil_non_depreciable_preonstream
+        self._gas_preonstream = gas_depreciable_preonstream + gas_non_depreciable_preonstream
 
     def _get_postonstream_array(self) -> None:
         """
@@ -3274,24 +3303,43 @@ class BaseProject:
             Total gas post-onstream costs.
         """
 
+        oil_depreciable_postonstream = self._require_array(
+            self._oil_capital_expenditures_post_tax,
+            "_oil_capital_expenditures_post_tax",
+        )
+        gas_depreciable_postonstream = self._require_array(
+            self._gas_capital_expenditures_post_tax,
+            "_gas_capital_expenditures_post_tax",
+        )
+        oil_total_expenditures_post_tax = self._require_array(
+            self._oil_total_expenditures_post_tax,
+            "_oil_total_expenditures_post_tax",
+        )
+        gas_total_expenditures_post_tax = self._require_array(
+            self._gas_total_expenditures_post_tax,
+            "_gas_total_expenditures_post_tax",
+        )
+
         # Define depreciable postonstream costs
-        self._oil_depreciable_postonstream = self._oil_capital_expenditures_post_tax
-        self._gas_depreciable_postonstream = self._gas_capital_expenditures_post_tax
+        self._oil_depreciable_postonstream = oil_depreciable_postonstream
+        self._gas_depreciable_postonstream = gas_depreciable_postonstream
 
         # Define non-depreciable preonstream costs
-        self._oil_non_depreciable_postonstream = (
-            self._oil_total_expenditures_post_tax - self._oil_depreciable_postonstream
+        oil_non_depreciable_postonstream = (
+            oil_total_expenditures_post_tax - oil_depreciable_postonstream
         )
-        self._gas_non_depreciable_postonstream = (
-            self._gas_total_expenditures_post_tax - self._gas_depreciable_postonstream
+        gas_non_depreciable_postonstream = (
+            gas_total_expenditures_post_tax - gas_depreciable_postonstream
         )
+        self._oil_non_depreciable_postonstream = oil_non_depreciable_postonstream
+        self._gas_non_depreciable_postonstream = gas_non_depreciable_postonstream
 
         # Calculate (total = depreciable + non_depreciable costs)
         self._oil_postonstream = (
-            self._oil_depreciable_postonstream + self._oil_non_depreciable_postonstream
+            oil_depreciable_postonstream + oil_non_depreciable_postonstream
         )
         self._gas_postonstream = (
-            self._gas_depreciable_postonstream + self._gas_non_depreciable_postonstream
+            gas_depreciable_postonstream + gas_non_depreciable_postonstream
         )
 
     def _get_investments(self) -> None:
@@ -3341,44 +3389,107 @@ class BaseProject:
           distinguishing capital and non-capital investment categories.
         """
 
+        oil_depreciable_preonstream = self._require_array(
+            self._oil_depreciable_preonstream, "_oil_depreciable_preonstream"
+        )
+        gas_depreciable_preonstream = self._require_array(
+            self._gas_depreciable_preonstream, "_gas_depreciable_preonstream"
+        )
+        oil_non_depreciable_preonstream = self._require_array(
+            self._oil_non_depreciable_preonstream,
+            "_oil_non_depreciable_preonstream",
+        )
+        gas_non_depreciable_preonstream = self._require_array(
+            self._gas_non_depreciable_preonstream,
+            "_gas_non_depreciable_preonstream",
+        )
+        oil_capital_expenditures_post_tax = self._require_array(
+            self._oil_capital_expenditures_post_tax,
+            "_oil_capital_expenditures_post_tax",
+        )
+        gas_capital_expenditures_post_tax = self._require_array(
+            self._gas_capital_expenditures_post_tax,
+            "_gas_capital_expenditures_post_tax",
+        )
+        oil_intangible_expenditures_post_tax = self._require_array(
+            self._oil_intangible_expenditures_post_tax,
+            "_oil_intangible_expenditures_post_tax",
+        )
+        gas_intangible_expenditures_post_tax = self._require_array(
+            self._gas_intangible_expenditures_post_tax,
+            "_gas_intangible_expenditures_post_tax",
+        )
+        oil_opex_expenditures_post_tax = self._require_array(
+            self._oil_opex_expenditures_post_tax,
+            "_oil_opex_expenditures_post_tax",
+        )
+        gas_opex_expenditures_post_tax = self._require_array(
+            self._gas_opex_expenditures_post_tax,
+            "_gas_opex_expenditures_post_tax",
+        )
+        oil_asr_expenditures_post_tax = self._require_array(
+            self._oil_asr_expenditures_post_tax,
+            "_oil_asr_expenditures_post_tax",
+        )
+        gas_asr_expenditures_post_tax = self._require_array(
+            self._gas_asr_expenditures_post_tax,
+            "_gas_asr_expenditures_post_tax",
+        )
+        oil_lbt_expenditures_post_tax = self._require_array(
+            self._oil_lbt_expenditures_post_tax,
+            "_oil_lbt_expenditures_post_tax",
+        )
+        gas_lbt_expenditures_post_tax = self._require_array(
+            self._gas_lbt_expenditures_post_tax,
+            "_gas_lbt_expenditures_post_tax",
+        )
+        oil_cost_of_sales_expenditures_post_tax = self._require_array(
+            self._oil_cost_of_sales_expenditures_post_tax,
+            "_oil_cost_of_sales_expenditures_post_tax",
+        )
+        gas_cost_of_sales_expenditures_post_tax = self._require_array(
+            self._gas_cost_of_sales_expenditures_post_tax,
+            "_gas_cost_of_sales_expenditures_post_tax",
+        )
+
         # Capital investments
-        self._oil_capital = (
-            self._oil_depreciable_preonstream + self._oil_capital_expenditures_post_tax
-        )
-        self._gas_capital = (
-            self._gas_depreciable_preonstream + self._gas_capital_expenditures_post_tax
-        )
+        oil_capital = oil_depreciable_preonstream + oil_capital_expenditures_post_tax
+        gas_capital = gas_depreciable_preonstream + gas_capital_expenditures_post_tax
+        self._oil_capital = oil_capital
+        self._gas_capital = gas_capital
 
         # Non-capital investments
-        self._oil_non_capital = (
-            self._oil_non_depreciable_preonstream
-            + self._oil_intangible_expenditures_post_tax
-            + self._oil_opex_expenditures_post_tax
-            + self._oil_asr_expenditures_post_tax
-            + self._oil_lbt_expenditures_post_tax
-            + self._oil_cost_of_sales_expenditures_post_tax
+        oil_non_capital = (
+            oil_non_depreciable_preonstream
+            + oil_intangible_expenditures_post_tax
+            + oil_opex_expenditures_post_tax
+            + oil_asr_expenditures_post_tax
+            + oil_lbt_expenditures_post_tax
+            + oil_cost_of_sales_expenditures_post_tax
         )
 
-        self._gas_non_capital = (
-            self._gas_non_depreciable_preonstream
-            + self._gas_intangible_expenditures_post_tax
-            + self._gas_opex_expenditures_post_tax
-            + self._gas_asr_expenditures_post_tax
-            + self._gas_lbt_expenditures_post_tax
-            + self._gas_cost_of_sales_expenditures_post_tax
+        gas_non_capital = (
+            gas_non_depreciable_preonstream
+            + gas_intangible_expenditures_post_tax
+            + gas_opex_expenditures_post_tax
+            + gas_asr_expenditures_post_tax
+            + gas_lbt_expenditures_post_tax
+            + gas_cost_of_sales_expenditures_post_tax
         )
+        self._oil_non_capital = oil_non_capital
+        self._gas_non_capital = gas_non_capital
 
         # Total investments
-        self._oil_total_expenses = self._oil_capital + self._oil_non_capital
-        self._gas_total_expenses = self._gas_capital + self._gas_non_capital
+        self._oil_total_expenses = oil_capital + oil_non_capital
+        self._gas_total_expenses = gas_capital + gas_non_capital
 
     def _calc_pre_tax_expenditures(
         self,
         target_attr: CapitalCost | Intangible | OPEX | ASR | LBT,
-        year_inflation: np.ndarray = None,
-        inflation_rate: np.ndarray | int | float = 0.0,
+        year_inflation: npt.NDArray[np.int64] | None = None,
+        inflation_rate: npt.NDArray[np.float64] | int | float = 0.0,
         inflation_rate_applied_to: InflationAppliedTo | None = None,
-    ) -> np.ndarray:
+    ) -> npt.NDArray[np.float64]:
         """
         Calculate pre-tax expenditures with optional inflation adjustments.
 
@@ -3488,14 +3599,14 @@ class BaseProject:
 
         else:
             raise BaseProjectException(
-                "Parameter inflation_rate_applied_to is not recognized. "
+                "Parameter inflation_rate_applied_to is not recognized. " +
                 "Available options are: CAPEX, OPEX, CAPEX and OPEX, or None. "
             )
 
     def _get_expenditures_pre_tax(
         self,
-        year_inflation: np.ndarray = None,
-        inflation_rate: np.ndarray | int | float = 0.0,
+        year_inflation: npt.NDArray[np.int64] | None = None,
+        inflation_rate: npt.NDArray[np.float64] | int | float = 0.0,
         inflation_rate_applied_to: InflationAppliedTo | None = None,
     ) -> None:
         """
@@ -3585,7 +3696,9 @@ class BaseProject:
             ]
         ]
 
-    def _get_indirect_taxes(self, tax_rate: np.ndarray | float = 0.0) -> None:
+    def _get_indirect_taxes(
+        self, tax_rate: npt.NDArray[np.float64] | float = 0.0
+    ) -> None:
         """
         Calculate and assign indirect taxes for various oil and gas
         expenditure categories.
@@ -3705,8 +3818,14 @@ class BaseProject:
 
         for fluid in ["oil", "gas"]:
             for categ in categories:
-                pre_attr = getattr(self, f"_{fluid}_{categ}_expenditures_pre_tax")
-                tax_attr = getattr(self, f"_{fluid}_{categ}_indirect_tax")
+                pre_attr_name = f"_{fluid}_{categ}_expenditures_pre_tax"
+                tax_attr_name = f"_{fluid}_{categ}_indirect_tax"
+                pre_attr = self._require_array(
+                    getattr(self, pre_attr_name), pre_attr_name
+                )
+                tax_attr = self._require_array(
+                    getattr(self, tax_attr_name), tax_attr_name
+                )
                 setattr(self, f"_{fluid}_{categ}_expenditures_post_tax", pre_attr + tax_attr)
 
     def _get_other_revenue(
@@ -3761,10 +3880,18 @@ class BaseProject:
             self._gas_revenue += self._sulfur_revenue
 
         elif sulfur_revenue is OtherRevenue.REDUCTION_TO_OIL_OPEX:
-            self._oil_opex_expenditures_post_tax -= self._sulfur_revenue
+            oil_opex_expenditures_post_tax = self._require_array(
+                self._oil_opex_expenditures_post_tax,
+                "_oil_opex_expenditures_post_tax",
+            )
+            oil_opex_expenditures_post_tax -= self._sulfur_revenue
 
         elif sulfur_revenue is OtherRevenue.REDUCTION_TO_GAS_OPEX:
-            self._gas_opex_expenditures_post_tax -= self._sulfur_revenue
+            gas_opex_expenditures_post_tax = self._require_array(
+                self._gas_opex_expenditures_post_tax,
+                "_gas_opex_expenditures_post_tax",
+            )
+            gas_opex_expenditures_post_tax -= self._sulfur_revenue
 
         else:
             raise OtherRevenueException(
@@ -3779,10 +3906,18 @@ class BaseProject:
             self._gas_revenue += self._electricity_revenue
 
         elif electricity_revenue is OtherRevenue.REDUCTION_TO_OIL_OPEX:
-            self._oil_opex_expenditures_post_tax -= self._electricity_revenue
+            oil_opex_expenditures_post_tax = self._require_array(
+                self._oil_opex_expenditures_post_tax,
+                "_oil_opex_expenditures_post_tax",
+            )
+            oil_opex_expenditures_post_tax -= self._electricity_revenue
 
         elif electricity_revenue is OtherRevenue.REDUCTION_TO_GAS_OPEX:
-            self._gas_opex_expenditures_post_tax -= self._electricity_revenue
+            gas_opex_expenditures_post_tax = self._require_array(
+                self._gas_opex_expenditures_post_tax,
+                "_gas_opex_expenditures_post_tax",
+            )
+            gas_opex_expenditures_post_tax -= self._electricity_revenue
 
         else:
             raise OtherRevenueException(
@@ -3797,10 +3932,18 @@ class BaseProject:
             self._gas_revenue += self._co2_revenue
 
         elif co2_revenue is OtherRevenue.REDUCTION_TO_OIL_OPEX:
-            self._oil_opex_expenditures_post_tax -= self._co2_revenue
+            oil_opex_expenditures_post_tax = self._require_array(
+                self._oil_opex_expenditures_post_tax,
+                "_oil_opex_expenditures_post_tax",
+            )
+            oil_opex_expenditures_post_tax -= self._co2_revenue
 
         elif co2_revenue is OtherRevenue.REDUCTION_TO_GAS_OPEX:
-            self._gas_opex_expenditures_post_tax -= self._co2_revenue
+            gas_opex_expenditures_post_tax = self._require_array(
+                self._gas_opex_expenditures_post_tax,
+                "_gas_opex_expenditures_post_tax",
+            )
+            gas_opex_expenditures_post_tax -= self._co2_revenue
 
         else:
             raise OtherRevenueException(
@@ -3839,40 +3982,99 @@ class BaseProject:
         - All oil and gas attributes must be defined and have matching array shapes.
         """
 
+        oil_wap_price = self._require_array(self._oil_wap_price, "_oil_wap_price")
+        gas_wap_price = self._require_array(self._gas_wap_price, "_gas_wap_price")
+        oil_depreciable_sunk_cost = self._require_array(
+            self._oil_depreciable_sunk_cost, "_oil_depreciable_sunk_cost"
+        )
+        gas_depreciable_sunk_cost = self._require_array(
+            self._gas_depreciable_sunk_cost, "_gas_depreciable_sunk_cost"
+        )
+        oil_non_depreciable_sunk_cost = self._require_array(
+            self._oil_non_depreciable_sunk_cost,
+            "_oil_non_depreciable_sunk_cost",
+        )
+        gas_non_depreciable_sunk_cost = self._require_array(
+            self._gas_non_depreciable_sunk_cost,
+            "_gas_non_depreciable_sunk_cost",
+        )
+        oil_sunk_cost = self._require_array(self._oil_sunk_cost, "_oil_sunk_cost")
+        gas_sunk_cost = self._require_array(self._gas_sunk_cost, "_gas_sunk_cost")
+        oil_depreciable_preonstream = self._require_array(
+            self._oil_depreciable_preonstream, "_oil_depreciable_preonstream"
+        )
+        gas_depreciable_preonstream = self._require_array(
+            self._gas_depreciable_preonstream, "_gas_depreciable_preonstream"
+        )
+        oil_non_depreciable_preonstream = self._require_array(
+            self._oil_non_depreciable_preonstream,
+            "_oil_non_depreciable_preonstream",
+        )
+        gas_non_depreciable_preonstream = self._require_array(
+            self._gas_non_depreciable_preonstream,
+            "_gas_non_depreciable_preonstream",
+        )
+        oil_preonstream = self._require_array(
+            self._oil_preonstream, "_oil_preonstream"
+        )
+        gas_preonstream = self._require_array(
+            self._gas_preonstream, "_gas_preonstream"
+        )
+        oil_depreciable_postonstream = self._require_array(
+            self._oil_depreciable_postonstream, "_oil_depreciable_postonstream"
+        )
+        gas_depreciable_postonstream = self._require_array(
+            self._gas_depreciable_postonstream, "_gas_depreciable_postonstream"
+        )
+        oil_non_depreciable_postonstream = self._require_array(
+            self._oil_non_depreciable_postonstream,
+            "_oil_non_depreciable_postonstream",
+        )
+        gas_non_depreciable_postonstream = self._require_array(
+            self._gas_non_depreciable_postonstream,
+            "_gas_non_depreciable_postonstream",
+        )
+        oil_postonstream = self._require_array(
+            self._oil_postonstream, "_oil_postonstream"
+        )
+        gas_postonstream = self._require_array(
+            self._gas_postonstream, "_gas_postonstream"
+        )
+
         # Attributes associated with consolidated lifting
         self._consolidated_lifting = (
             self._oil_lifting.get_lifting_rate_ghv_arr()
             + self._gas_lifting.get_lifting_rate_ghv_arr()
         )
-        self._consolidated_wap_price = self._oil_wap_price + self._gas_wap_price
+        self._consolidated_wap_price = oil_wap_price + gas_wap_price
         self._consolidated_revenue = self._oil_revenue + self._gas_revenue
 
         # Attributes associated with consolidated sunkcost
         self._consolidated_depreciable_sunk_cost = (
-            self._oil_depreciable_sunk_cost + self._gas_depreciable_sunk_cost
+            oil_depreciable_sunk_cost + gas_depreciable_sunk_cost
         )
         self._consolidated_non_depreciable_sunk_cost = (
-            self._oil_non_depreciable_sunk_cost + self._gas_non_depreciable_sunk_cost
+            oil_non_depreciable_sunk_cost + gas_non_depreciable_sunk_cost
         )
-        self._consolidated_sunk_cost = self._oil_sunk_cost + self._gas_sunk_cost
+        self._consolidated_sunk_cost = oil_sunk_cost + gas_sunk_cost
 
         # Attributes associated with consolidated preonstream
         self._consolidated_depreciable_preonstream = (
-            self._oil_depreciable_preonstream + self._gas_depreciable_preonstream
+            oil_depreciable_preonstream + gas_depreciable_preonstream
         )
         self._consolidated_non_depreciable_preonstream = (
-            self._oil_non_depreciable_preonstream + self._gas_non_depreciable_preonstream
+            oil_non_depreciable_preonstream + gas_non_depreciable_preonstream
         )
-        self._consolidated_preonstream = self._oil_preonstream + self._gas_preonstream
+        self._consolidated_preonstream = oil_preonstream + gas_preonstream
 
         # Attributes associated with consolidated postonstream
         self._consolidated_depreciable_postonstream = (
-            self._oil_depreciable_postonstream + self._gas_depreciable_postonstream
+            oil_depreciable_postonstream + gas_depreciable_postonstream
         )
         self._consolidated_non_depreciable_postonstream = (
-            self._oil_non_depreciable_postonstream + self._gas_non_depreciable_postonstream
+            oil_non_depreciable_postonstream + gas_non_depreciable_postonstream
         )
-        self._consolidated_postonstream = self._oil_postonstream + self._gas_postonstream
+        self._consolidated_postonstream = oil_postonstream + gas_postonstream
 
         categories = [
             "capital",
@@ -3886,12 +4088,30 @@ class BaseProject:
         # Attributes associated with consolidated expenditures pre tax,
         # consolidated indirect tax, and consolidated expenditures post tax
         for categ in categories:
-            oil_pre_tax = getattr(self, f"_oil_{categ}_expenditures_pre_tax")
-            gas_pre_tax = getattr(self, f"_gas_{categ}_expenditures_pre_tax")
-            oil_indirect_tax = getattr(self, f"_oil_{categ}_indirect_tax")
-            gas_indirect_tax = getattr(self, f"_gas_{categ}_indirect_tax")
-            oil_post_tax = getattr(self, f"_oil_{categ}_expenditures_post_tax")
-            gas_post_tax = getattr(self, f"_gas_{categ}_expenditures_post_tax")
+            oil_pre_tax_name = f"_oil_{categ}_expenditures_pre_tax"
+            gas_pre_tax_name = f"_gas_{categ}_expenditures_pre_tax"
+            oil_indirect_tax_name = f"_oil_{categ}_indirect_tax"
+            gas_indirect_tax_name = f"_gas_{categ}_indirect_tax"
+            oil_post_tax_name = f"_oil_{categ}_expenditures_post_tax"
+            gas_post_tax_name = f"_gas_{categ}_expenditures_post_tax"
+            oil_pre_tax = self._require_array(
+                getattr(self, oil_pre_tax_name), oil_pre_tax_name
+            )
+            gas_pre_tax = self._require_array(
+                getattr(self, gas_pre_tax_name), gas_pre_tax_name
+            )
+            oil_indirect_tax = self._require_array(
+                getattr(self, oil_indirect_tax_name), oil_indirect_tax_name
+            )
+            gas_indirect_tax = self._require_array(
+                getattr(self, gas_indirect_tax_name), gas_indirect_tax_name
+            )
+            oil_post_tax = self._require_array(
+                getattr(self, oil_post_tax_name), oil_post_tax_name
+            )
+            gas_post_tax = self._require_array(
+                getattr(self, gas_post_tax_name), gas_post_tax_name
+            )
 
             # Set attributes associated with expenditures pre tax
             setattr(
@@ -3908,35 +4128,74 @@ class BaseProject:
                 self, f"_consolidated_{categ}_expenditures_post_tax", oil_post_tax + gas_post_tax
             )
 
+        oil_total_expenditures_pre_tax = self._require_array(
+            self._oil_total_expenditures_pre_tax,
+            "_oil_total_expenditures_pre_tax",
+        )
+        gas_total_expenditures_pre_tax = self._require_array(
+            self._gas_total_expenditures_pre_tax,
+            "_gas_total_expenditures_pre_tax",
+        )
+        oil_total_indirect_tax = self._require_array(
+            self._oil_total_indirect_tax, "_oil_total_indirect_tax"
+        )
+        gas_total_indirect_tax = self._require_array(
+            self._gas_total_indirect_tax, "_gas_total_indirect_tax"
+        )
+        oil_total_expenditures_post_tax = self._require_array(
+            self._oil_total_expenditures_post_tax,
+            "_oil_total_expenditures_post_tax",
+        )
+        gas_total_expenditures_post_tax = self._require_array(
+            self._gas_total_expenditures_post_tax,
+            "_gas_total_expenditures_post_tax",
+        )
+        oil_capital = self._require_array(self._oil_capital, "_oil_capital")
+        gas_capital = self._require_array(self._gas_capital, "_gas_capital")
+        oil_non_capital = self._require_array(
+            self._oil_non_capital, "_oil_non_capital"
+        )
+        gas_non_capital = self._require_array(
+            self._gas_non_capital, "_gas_non_capital"
+        )
+        oil_total_expenses = self._require_array(
+            self._oil_total_expenses, "_oil_total_expenses"
+        )
+        gas_total_expenses = self._require_array(
+            self._gas_total_expenses, "_gas_total_expenses"
+        )
+        oil_cashflow = self._require_array(self._oil_cashflow, "_oil_cashflow")
+        gas_cashflow = self._require_array(self._gas_cashflow, "_gas_cashflow")
+
         self._consolidated_total_expenditures_pre_tax = (
-            self._oil_total_expenditures_pre_tax + self._gas_total_expenditures_pre_tax
+            oil_total_expenditures_pre_tax + gas_total_expenditures_pre_tax
         )
 
         self._consolidated_total_indirect_tax = (
-            self._oil_total_indirect_tax + self._gas_total_indirect_tax
+            oil_total_indirect_tax + gas_total_indirect_tax
         )
 
         self._consolidated_total_expenditures_post_tax = (
-            self._oil_total_expenditures_post_tax + self._gas_total_expenditures_post_tax
+            oil_total_expenditures_post_tax + gas_total_expenditures_post_tax
         )
 
         # Attributes associated with consolidated investments
-        self._consolidated_capital = self._oil_capital + self._gas_capital
-        self._consolidated_non_capital = self._oil_non_capital + self._gas_non_capital
-        self._consolidated_total_expenses = self._oil_total_expenses + self._gas_total_expenses
+        self._consolidated_capital = oil_capital + gas_capital
+        self._consolidated_non_capital = oil_non_capital + gas_non_capital
+        self._consolidated_total_expenses = oil_total_expenses + gas_total_expenses
 
         # Attribute associated with consolidated cashflow
-        self._consolidated_cashflow = self._oil_cashflow + self._gas_cashflow
+        self._consolidated_cashflow = oil_cashflow + gas_cashflow
 
     def run(
         self,
         sulfur_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_GAS_REVENUE,
         electricity_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_OIL_REVENUE,
         co2_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_GAS_REVENUE,
-        vat_rate: np.ndarray | float = 0.0,
-        year_inflation: np.ndarray = None,
-        inflation_rate: np.ndarray | float = 0.0,
-        inflation_rate_applied_to: InflationAppliedTo = None,
+        vat_rate: npt.NDArray[np.float64] | float = 0.0,
+        year_inflation: npt.NDArray[np.int64] | None = None,
+        inflation_rate: npt.NDArray[np.float64] | float = 0.0,
+        inflation_rate_applied_to: InflationAppliedTo | None = None,
     ) -> None:
         """
         Executes the full economic calculation workflow for a base project.
@@ -3964,6 +4223,8 @@ class BaseProject:
             Specifies which expenditures the inflation rate should be applied to.
         """
 
+        self._has_run = False
+
         # WAP (Weighted Average Price) for each produced fluid
         self._get_wap_price()
 
@@ -3990,64 +4251,204 @@ class BaseProject:
             co2_revenue=co2_revenue,
         )
 
+        oil_capital_expenditures_pre_tax = self._require_array(
+            self._oil_capital_expenditures_pre_tax,
+            "_oil_capital_expenditures_pre_tax",
+        )
+        oil_intangible_expenditures_pre_tax = self._require_array(
+            self._oil_intangible_expenditures_pre_tax,
+            "_oil_intangible_expenditures_pre_tax",
+        )
+        oil_opex_expenditures_pre_tax = self._require_array(
+            self._oil_opex_expenditures_pre_tax,
+            "_oil_opex_expenditures_pre_tax",
+        )
+        oil_asr_expenditures_pre_tax = self._require_array(
+            self._oil_asr_expenditures_pre_tax,
+            "_oil_asr_expenditures_pre_tax",
+        )
+        oil_lbt_expenditures_pre_tax = self._require_array(
+            self._oil_lbt_expenditures_pre_tax,
+            "_oil_lbt_expenditures_pre_tax",
+        )
+        oil_cost_of_sales_expenditures_pre_tax = self._require_array(
+            self._oil_cost_of_sales_expenditures_pre_tax,
+            "_oil_cost_of_sales_expenditures_pre_tax",
+        )
+
         # Total OIL pre-tax expenditures
         self._oil_total_expenditures_pre_tax = (
-            self._oil_capital_expenditures_pre_tax
-            + self._oil_intangible_expenditures_pre_tax
-            + self._oil_opex_expenditures_pre_tax
-            + self._oil_asr_expenditures_pre_tax
-            + self._oil_lbt_expenditures_pre_tax
-            + self._oil_cost_of_sales_expenditures_pre_tax
+            oil_capital_expenditures_pre_tax
+            + oil_intangible_expenditures_pre_tax
+            + oil_opex_expenditures_pre_tax
+            + oil_asr_expenditures_pre_tax
+            + oil_lbt_expenditures_pre_tax
+            + oil_cost_of_sales_expenditures_pre_tax
+        )
+
+        gas_capital_expenditures_pre_tax = self._require_array(
+            self._gas_capital_expenditures_pre_tax,
+            "_gas_capital_expenditures_pre_tax",
+        )
+        gas_intangible_expenditures_pre_tax = self._require_array(
+            self._gas_intangible_expenditures_pre_tax,
+            "_gas_intangible_expenditures_pre_tax",
+        )
+        gas_opex_expenditures_pre_tax = self._require_array(
+            self._gas_opex_expenditures_pre_tax,
+            "_gas_opex_expenditures_pre_tax",
+        )
+        gas_asr_expenditures_pre_tax = self._require_array(
+            self._gas_asr_expenditures_pre_tax,
+            "_gas_asr_expenditures_pre_tax",
+        )
+        gas_lbt_expenditures_pre_tax = self._require_array(
+            self._gas_lbt_expenditures_pre_tax,
+            "_gas_lbt_expenditures_pre_tax",
+        )
+        gas_cost_of_sales_expenditures_pre_tax = self._require_array(
+            self._gas_cost_of_sales_expenditures_pre_tax,
+            "_gas_cost_of_sales_expenditures_pre_tax",
         )
 
         # Total GAS pre-tax expenditures
         self._gas_total_expenditures_pre_tax = (
-            self._gas_capital_expenditures_pre_tax
-            + self._gas_intangible_expenditures_pre_tax
-            + self._gas_opex_expenditures_pre_tax
-            + self._gas_asr_expenditures_pre_tax
-            + self._gas_lbt_expenditures_pre_tax
-            + self._gas_cost_of_sales_expenditures_pre_tax
+            gas_capital_expenditures_pre_tax
+            + gas_intangible_expenditures_pre_tax
+            + gas_opex_expenditures_pre_tax
+            + gas_asr_expenditures_pre_tax
+            + gas_lbt_expenditures_pre_tax
+            + gas_cost_of_sales_expenditures_pre_tax
+        )
+
+        oil_capital_indirect_tax = self._require_array(
+            self._oil_capital_indirect_tax, "_oil_capital_indirect_tax"
+        )
+        oil_intangible_indirect_tax = self._require_array(
+            self._oil_intangible_indirect_tax, "_oil_intangible_indirect_tax"
+        )
+        oil_opex_indirect_tax = self._require_array(
+            self._oil_opex_indirect_tax, "_oil_opex_indirect_tax"
+        )
+        oil_asr_indirect_tax = self._require_array(
+            self._oil_asr_indirect_tax, "_oil_asr_indirect_tax"
+        )
+        oil_lbt_indirect_tax = self._require_array(
+            self._oil_lbt_indirect_tax, "_oil_lbt_indirect_tax"
+        )
+        oil_cost_of_sales_indirect_tax = self._require_array(
+            self._oil_cost_of_sales_indirect_tax,
+            "_oil_cost_of_sales_indirect_tax",
         )
 
         # Total OIL indirect taxes
         self._oil_total_indirect_tax = (
-            self._oil_capital_indirect_tax
-            + self._oil_intangible_indirect_tax
-            + self._oil_opex_indirect_tax
-            + self._oil_asr_indirect_tax
-            + self._oil_lbt_indirect_tax
-            + self._oil_cost_of_sales_indirect_tax
+            oil_capital_indirect_tax
+            + oil_intangible_indirect_tax
+            + oil_opex_indirect_tax
+            + oil_asr_indirect_tax
+            + oil_lbt_indirect_tax
+            + oil_cost_of_sales_indirect_tax
+        )
+
+        gas_capital_indirect_tax = self._require_array(
+            self._gas_capital_indirect_tax, "_gas_capital_indirect_tax"
+        )
+        gas_intangible_indirect_tax = self._require_array(
+            self._gas_intangible_indirect_tax, "_gas_intangible_indirect_tax"
+        )
+        gas_opex_indirect_tax = self._require_array(
+            self._gas_opex_indirect_tax, "_gas_opex_indirect_tax"
+        )
+        gas_asr_indirect_tax = self._require_array(
+            self._gas_asr_indirect_tax, "_gas_asr_indirect_tax"
+        )
+        gas_lbt_indirect_tax = self._require_array(
+            self._gas_lbt_indirect_tax, "_gas_lbt_indirect_tax"
+        )
+        gas_cost_of_sales_indirect_tax = self._require_array(
+            self._gas_cost_of_sales_indirect_tax,
+            "_gas_cost_of_sales_indirect_tax",
         )
 
         # Total GAS indirect taxes
         self._gas_total_indirect_tax = (
-            self._gas_capital_indirect_tax
-            + self._gas_intangible_indirect_tax
-            + self._gas_opex_indirect_tax
-            + self._gas_asr_indirect_tax
-            + self._gas_lbt_indirect_tax
-            + self._gas_cost_of_sales_indirect_tax
+            gas_capital_indirect_tax
+            + gas_intangible_indirect_tax
+            + gas_opex_indirect_tax
+            + gas_asr_indirect_tax
+            + gas_lbt_indirect_tax
+            + gas_cost_of_sales_indirect_tax
+        )
+
+        oil_capital_expenditures_post_tax = self._require_array(
+            self._oil_capital_expenditures_post_tax,
+            "_oil_capital_expenditures_post_tax",
+        )
+        oil_intangible_expenditures_post_tax = self._require_array(
+            self._oil_intangible_expenditures_post_tax,
+            "_oil_intangible_expenditures_post_tax",
+        )
+        oil_opex_expenditures_post_tax = self._require_array(
+            self._oil_opex_expenditures_post_tax,
+            "_oil_opex_expenditures_post_tax",
+        )
+        oil_asr_expenditures_post_tax = self._require_array(
+            self._oil_asr_expenditures_post_tax,
+            "_oil_asr_expenditures_post_tax",
+        )
+        oil_lbt_expenditures_post_tax = self._require_array(
+            self._oil_lbt_expenditures_post_tax,
+            "_oil_lbt_expenditures_post_tax",
+        )
+        oil_cost_of_sales_expenditures_post_tax = self._require_array(
+            self._oil_cost_of_sales_expenditures_post_tax,
+            "_oil_cost_of_sales_expenditures_post_tax",
         )
 
         # Total OIL post-tax expenditures
         self._oil_total_expenditures_post_tax = (
-            self._oil_capital_expenditures_post_tax
-            + self._oil_intangible_expenditures_post_tax
-            + self._oil_opex_expenditures_post_tax
-            + self._oil_asr_expenditures_post_tax
-            + self._oil_lbt_expenditures_post_tax
-            + self._oil_cost_of_sales_expenditures_post_tax
+            oil_capital_expenditures_post_tax
+            + oil_intangible_expenditures_post_tax
+            + oil_opex_expenditures_post_tax
+            + oil_asr_expenditures_post_tax
+            + oil_lbt_expenditures_post_tax
+            + oil_cost_of_sales_expenditures_post_tax
+        )
+
+        gas_capital_expenditures_post_tax = self._require_array(
+            self._gas_capital_expenditures_post_tax,
+            "_gas_capital_expenditures_post_tax",
+        )
+        gas_intangible_expenditures_post_tax = self._require_array(
+            self._gas_intangible_expenditures_post_tax,
+            "_gas_intangible_expenditures_post_tax",
+        )
+        gas_opex_expenditures_post_tax = self._require_array(
+            self._gas_opex_expenditures_post_tax,
+            "_gas_opex_expenditures_post_tax",
+        )
+        gas_asr_expenditures_post_tax = self._require_array(
+            self._gas_asr_expenditures_post_tax,
+            "_gas_asr_expenditures_post_tax",
+        )
+        gas_lbt_expenditures_post_tax = self._require_array(
+            self._gas_lbt_expenditures_post_tax,
+            "_gas_lbt_expenditures_post_tax",
+        )
+        gas_cost_of_sales_expenditures_post_tax = self._require_array(
+            self._gas_cost_of_sales_expenditures_post_tax,
+            "_gas_cost_of_sales_expenditures_post_tax",
         )
 
         # Total GAS post-tax expenditures
         self._gas_total_expenditures_post_tax = (
-            self._gas_capital_expenditures_post_tax
-            + self._gas_intangible_expenditures_post_tax
-            + self._gas_opex_expenditures_post_tax
-            + self._gas_asr_expenditures_post_tax
-            + self._gas_lbt_expenditures_post_tax
-            + self._gas_cost_of_sales_expenditures_post_tax
+            gas_capital_expenditures_post_tax
+            + gas_intangible_expenditures_post_tax
+            + gas_opex_expenditures_post_tax
+            + gas_asr_expenditures_post_tax
+            + gas_lbt_expenditures_post_tax
+            + gas_cost_of_sales_expenditures_post_tax
         )
 
         # Prepare sunk costs and preonstream costs
@@ -4058,21 +4459,40 @@ class BaseProject:
         # Prepare capital, non-capital, and total investments
         self._get_investments()
 
+        oil_sunk_cost = self._require_array(self._oil_sunk_cost, "_oil_sunk_cost")
+        gas_sunk_cost = self._require_array(self._gas_sunk_cost, "_gas_sunk_cost")
+        oil_preonstream = self._require_array(
+            self._oil_preonstream, "_oil_preonstream"
+        )
+        gas_preonstream = self._require_array(
+            self._gas_preonstream, "_gas_preonstream"
+        )
+        oil_total_expenditures_post_tax = self._require_array(
+            self._oil_total_expenditures_post_tax,
+            "_oil_total_expenditures_post_tax",
+        )
+        gas_total_expenditures_post_tax = self._require_array(
+            self._gas_total_expenditures_post_tax,
+            "_gas_total_expenditures_post_tax",
+        )
+
         # Configure base cashflow for OIL and GAS
         self._oil_cashflow = self._oil_revenue - (
-            self._oil_sunk_cost
-            + self._oil_preonstream
-            + self._oil_total_expenditures_post_tax
+            oil_sunk_cost
+            + oil_preonstream
+            + oil_total_expenditures_post_tax
         )
 
         self._gas_cashflow = self._gas_revenue - (
-            self._gas_sunk_cost
-            + self._gas_preonstream
-            + self._gas_total_expenditures_post_tax
+            gas_sunk_cost
+            + gas_preonstream
+            + gas_total_expenditures_post_tax
         )
 
         # Prepare consolidated profiles
         self._get_consolidated_profiles()
+
+        self._has_run = True
 
         # Display warning messages as pandas DataFrame
         # self.warnings_to_dataframe()
@@ -4163,27 +4583,27 @@ class BaseProject:
 
         # Specify messages
         msg_error = (
-            f"Cannot have {obj_name!r} PIS years ({invalid}) before "
+            f"Cannot have {obj_name!r} PIS years ({invalid}) before " +
             f"onstream year ({onstream_year})."
         )
 
         if is_amortization:
             msg_warning = (
-                f"Found {obj_name!r} PIS years ({invalid}) before onstream year "
-                f"({onstream_year}). Please note that PSCnomics will ALWAYS apply amortization "
-                f"charge AT ONSTREAM YEAR, namely after lifting occurs. Although PSCnomics will "
-                f"produce correct calculation when PIS years occur before onstream year, "
-                f"for the sake of being consistent with the underlying concept, we suggest "
-                f"the User to reset PIS years configuration ({invalid}) so that they "
+                f"Found {obj_name!r} PIS years ({invalid}) before onstream year " +
+                f"({onstream_year}). Please note that PSCnomics will ALWAYS apply amortization " +
+                "charge AT ONSTREAM YEAR, namely after lifting occurs. Although PSCnomics will " +
+                "produce correct calculation when PIS years occur before onstream year, " +
+                "for the sake of being consistent with the underlying concept, we suggest " +
+                f"the User to reset PIS years configuration ({invalid}) so that they " +
                 f"prevail exactly at the onstream year ({onstream_year})."
             )
 
         else:
             msg_warning = (
-                f"Found {obj_name!r} PIS years ({invalid}) before onstream year "
-                f"({onstream_year}). PSCnomics will ALWAYS charge {obj_name!r} depreciations "
-                f"at their corresponding PIS years. You may want to reset the configuration "
-                f"of the following PIS years ({invalid}) so that they prevail at the onstream "
+                f"Found {obj_name!r} PIS years ({invalid}) before onstream year " +
+                f"({onstream_year}). PSCnomics will ALWAYS charge {obj_name!r} depreciations " +
+                "at their corresponding PIS years. You may want to reset the configuration " +
+                f"of the following PIS years ({invalid}) so that they prevail at the onstream " +
                 f"year ({onstream_year})."
             )
 
@@ -4254,14 +4674,14 @@ class BaseProject:
 
         # Specify messages
         msg_error = (
-            f"Cannot have {obj_name!r} PIS years ({invalid}) after "
+            f"Cannot have {obj_name!r} PIS years ({invalid}) after " +
             f"onstream year ({onstream_year})."
         )
 
         msg_warning = (
-            f"Found {obj_name!r} PIS years ({invalid}) after onstream year ({onstream_year}). "
-            f"Setting PIS years after onstream year will result in different production to "
-            f"reserve ratios, which will reflect on different amortization charge. You may want "
+            f"Found {obj_name!r} PIS years ({invalid}) after onstream year ({onstream_year}). " +
+            "Setting PIS years after onstream year will result in different production to " +
+            "reserve ratios, which will reflect on different amortization charge. You may want " +
             f"to consider shifting the PIS years ({invalid}) to onstream year ({onstream_year})."
         )
 
@@ -4290,15 +4710,21 @@ class BaseProject:
 
         self.warning_messages = messages
 
+    def _require_run(self) -> None:
+        if not self._has_run:
+            raise BaseProjectSummaryException(
+                "Call run() successfully before requesting a project summary."
+            )
+
     def get_summary(
         self,
         discount_rate: float = 0.1,
         npv_mode: NPVSelection = NPVSelection.NPV_SKK_REAL_TERMS,
         discounting_mode: DiscountingMode = DiscountingMode.END_YEAR,
         discount_rate_start_year: int | None = None,
-        inflation_rate: np.ndarray | float = 0.0,
+        inflation_rate: float = 0.0,
         profitability_discounted: bool = False,
-    ) -> dict:
+    ) -> dict[str, float | np.float64]:
         """
         Compute the economic summary of a petroleum project under various NPV modes.
 
@@ -4358,6 +4784,73 @@ class BaseProject:
         from the reference year onward are considered in NPV and net cashflow calculations.
         """
 
+        self._require_run()
+        gas_wap_price = self._require_array(
+            self._gas_wap_price, "_gas_wap_price"
+        )
+        oil_sunk_cost = self._require_array(self._oil_sunk_cost, "_oil_sunk_cost")
+        gas_sunk_cost = self._require_array(self._gas_sunk_cost, "_gas_sunk_cost")
+        oil_capital_expenditures_post_tax = self._require_array(
+            self._oil_capital_expenditures_post_tax,
+            "_oil_capital_expenditures_post_tax",
+        )
+        gas_capital_expenditures_post_tax = self._require_array(
+            self._gas_capital_expenditures_post_tax,
+            "_gas_capital_expenditures_post_tax",
+        )
+        oil_depreciable_preonstream = self._require_array(
+            self._oil_depreciable_preonstream, "_oil_depreciable_preonstream"
+        )
+        gas_depreciable_preonstream = self._require_array(
+            self._gas_depreciable_preonstream, "_gas_depreciable_preonstream"
+        )
+        oil_intangible_expenditures_post_tax = self._require_array(
+            self._oil_intangible_expenditures_post_tax,
+            "_oil_intangible_expenditures_post_tax",
+        )
+        gas_intangible_expenditures_post_tax = self._require_array(
+            self._gas_intangible_expenditures_post_tax,
+            "_gas_intangible_expenditures_post_tax",
+        )
+        oil_opex_expenditures_post_tax = self._require_array(
+            self._oil_opex_expenditures_post_tax,
+            "_oil_opex_expenditures_post_tax",
+        )
+        gas_opex_expenditures_post_tax = self._require_array(
+            self._gas_opex_expenditures_post_tax,
+            "_gas_opex_expenditures_post_tax",
+        )
+        oil_asr_expenditures_post_tax = self._require_array(
+            self._oil_asr_expenditures_post_tax,
+            "_oil_asr_expenditures_post_tax",
+        )
+        gas_asr_expenditures_post_tax = self._require_array(
+            self._gas_asr_expenditures_post_tax,
+            "_gas_asr_expenditures_post_tax",
+        )
+        oil_lbt_expenditures_post_tax = self._require_array(
+            self._oil_lbt_expenditures_post_tax,
+            "_oil_lbt_expenditures_post_tax",
+        )
+        gas_lbt_expenditures_post_tax = self._require_array(
+            self._gas_lbt_expenditures_post_tax,
+            "_gas_lbt_expenditures_post_tax",
+        )
+        oil_total_indirect_tax = self._require_array(
+            self._oil_total_indirect_tax, "_oil_total_indirect_tax"
+        )
+        gas_total_indirect_tax = self._require_array(
+            self._gas_total_indirect_tax, "_gas_total_indirect_tax"
+        )
+        consolidated_cashflow = self._require_array(
+            self._consolidated_cashflow, "_consolidated_cashflow"
+        )
+        consolidated_revenue = self._require_array(
+            self._consolidated_revenue, "_consolidated_revenue"
+        )
+        oil_capital = self._require_array(self._oil_capital, "_oil_capital")
+        gas_capital = self._require_array(self._gas_capital, "_gas_capital")
+
         # Prepare discount rate start year
         if discount_rate_start_year is None:
             discount_rate_start_year = self.start_date.year
@@ -4365,14 +4858,14 @@ class BaseProject:
         # Cannot have discount rate year before the start year of the project
         if discount_rate_start_year < self.start_date.year:
             raise BaseProjectSummaryException(
-                f"The discounting reference year ({discount_rate_start_year}) "
+                f"The discounting reference year ({discount_rate_start_year}) " +
                 f"is before start year of the project ({self.start_date.year})."
             )
 
         # Cannot have discount rate year after the end year of the project
         if discount_rate_start_year > self.end_date.year:
             raise BaseProjectSummaryException(
-                f"The discounting reference year ({discount_rate_start_year}) "
+                f"The discounting reference year ({discount_rate_start_year}) " +
                 f"is after the end year of the project ({self.end_date.year})."
             )
 
@@ -4387,7 +4880,7 @@ class BaseProject:
         gas_lifting_ghv = self._gas_lifting.get_lifting_rate_ghv_arr()
         gas_lifting_ghv_sum = np.sum(gas_lifting_ghv, dtype=float)
         gas_wap_sum = self._calc_division(
-            numerator=np.sum(self._gas_wap_price * gas_lifting_ghv),
+            numerator=float(np.sum(gas_wap_price * gas_lifting_ghv)),
             denominator=gas_lifting_ghv_sum,
         )
 
@@ -4397,7 +4890,7 @@ class BaseProject:
         total_gross_revenue_sum = oil_gross_revenue_sum + gas_gross_revenue_sum
 
         # Prepare sunk cost summary
-        sunk_cost_sum = np.sum(self._oil_sunk_cost + self._gas_sunk_cost, dtype=float)
+        sunk_cost_sum = np.sum(oil_sunk_cost + gas_sunk_cost, dtype=float)
 
         # Prepare preonstream costs
         preonstream_map = {
@@ -4417,15 +4910,15 @@ class BaseProject:
 
         # Prepare tangible and intangible cost summary
         tangible_cost = (
-            self._oil_capital_expenditures_post_tax
-            + self._gas_capital_expenditures_post_tax
-            + self._oil_depreciable_preonstream
-            + self._gas_depreciable_preonstream
+            oil_capital_expenditures_post_tax
+            + gas_capital_expenditures_post_tax
+            + oil_depreciable_preonstream
+            + gas_depreciable_preonstream
         )
 
         intangible_cost = (
-            self._oil_intangible_expenditures_post_tax
-            + self._gas_intangible_expenditures_post_tax
+            oil_intangible_expenditures_post_tax
+            + gas_intangible_expenditures_post_tax
             + preonstream_costs["oil_intangible"]
             + preonstream_costs["gas_intangible"]
         )
@@ -4439,8 +4932,8 @@ class BaseProject:
 
         # Prepare OPEX summary
         opex_cost = (
-            self._oil_opex_expenditures_post_tax
-            + self._gas_opex_expenditures_post_tax
+            oil_opex_expenditures_post_tax
+            + gas_opex_expenditures_post_tax
             + preonstream_costs["oil_opex"]
             + preonstream_costs["gas_opex"]
         )
@@ -4449,8 +4942,8 @@ class BaseProject:
 
         # Prepare ASR summary
         asr_cost = (
-            self._oil_asr_expenditures_post_tax
-            + self._gas_asr_expenditures_post_tax
+            oil_asr_expenditures_post_tax
+            + gas_asr_expenditures_post_tax
             + preonstream_costs["oil_asr"]
             + preonstream_costs["gas_asr"]
         )
@@ -4459,8 +4952,8 @@ class BaseProject:
 
         # Prepare LBT summary
         lbt_cost = (
-            self._oil_lbt_expenditures_post_tax
-            + self._gas_lbt_expenditures_post_tax
+            oil_lbt_expenditures_post_tax
+            + gas_lbt_expenditures_post_tax
             + preonstream_costs["oil_lbt"]
             + preonstream_costs["gas_lbt"]
         )
@@ -4468,11 +4961,11 @@ class BaseProject:
         lbt_sum = lbt_cost.sum(dtype=float)
 
         # Prepare indirect taxes summary
-        oil_indirect_tax_sum = self._oil_total_indirect_tax.sum(dtype=float)
-        gas_indirect_tax_sum = self._gas_total_indirect_tax.sum(dtype=float)
+        oil_indirect_tax_sum = oil_total_indirect_tax.sum(dtype=float)
+        gas_indirect_tax_sum = gas_total_indirect_tax.sum(dtype=float)
 
         # Calculate IRR
-        ctr_irr = irr(cashflow=self._consolidated_cashflow)
+        ctr_irr = irr(cashflow=consolidated_cashflow)
 
         # Calculate NPV
         # NPV method: SKK real terms
@@ -4480,7 +4973,7 @@ class BaseProject:
 
             # Contractor NPV
             ctr_npv = npv_skk_real_terms(
-                cashflow=self._consolidated_cashflow,
+                cashflow=consolidated_cashflow,
                 cashflow_years=self.project_years,
                 discount_rate=discount_rate,
                 reference_year=discount_rate_start_year,
@@ -4501,7 +4994,7 @@ class BaseProject:
 
             # Contractor NPV
             ctr_npv = npv_skk_nominal_terms(
-                cashflow=self._consolidated_cashflow,
+                cashflow=consolidated_cashflow,
                 cashflow_years=self.project_years,
                 discount_rate=discount_rate,
                 discounting_mode=discounting_mode,
@@ -4520,7 +5013,7 @@ class BaseProject:
 
             # Contractor NPV
             ctr_npv = npv_nominal_terms(
-                cashflow=self._consolidated_cashflow,
+                cashflow=consolidated_cashflow,
                 cashflow_years=self.project_years,
                 discount_rate=discount_rate,
                 reference_year=discount_rate_start_year,
@@ -4541,7 +5034,7 @@ class BaseProject:
 
             # Contractor NPV
             ctr_npv = npv_real_terms(
-                cashflow=self._consolidated_cashflow,
+                cashflow=consolidated_cashflow,
                 cashflow_years=self.project_years,
                 discount_rate=discount_rate,
                 reference_year=discount_rate_start_year,
@@ -4563,7 +5056,7 @@ class BaseProject:
         else:
             # Contractor NPV
             ctr_npv = npv_point_forward(
-                cashflow=self._consolidated_cashflow,
+                cashflow=consolidated_cashflow,
                 cashflow_years=self.project_years,
                 discount_rate=discount_rate,
                 reference_year=discount_rate_start_year,
@@ -4586,14 +5079,14 @@ class BaseProject:
 
         # Profitability Index is calculated using undiscounted investment
         else:
-            investment_pi = np.sum(tangible_cost + intangible_cost)
+            investment_pi = float(np.sum(tangible_cost + intangible_cost))
             ctr_pv_ratio = self._calc_division(numerator=ctr_npv, denominator=investment_pi)
 
         ctr_pi = 1 + ctr_pv_ratio
 
         # Contractor POT
         ctr_pot = pot_psc(
-            cashflow=self._consolidated_cashflow,
+            cashflow=consolidated_cashflow,
             cashflow_years=self.project_years,
             reference_year=discount_rate_start_year,
         )
@@ -4617,16 +5110,16 @@ class BaseProject:
             # Modify contractor net cashflow since the cashflow before discount rate
             # start year is neglected
             ref_year_arr = np.full_like(
-                self._consolidated_cashflow, fill_value=discount_rate_start_year
+                consolidated_cashflow, fill_value=discount_rate_start_year
             )
             cashflow_point_forward = np.where(
                 self.project_years >= ref_year_arr,
-                self._consolidated_cashflow,
+                consolidated_cashflow,
                 0,
             )
             gross_revenue_point_forward = np.where(
                 self.project_years >= ref_year_arr,
-                self._consolidated_revenue,
+                consolidated_revenue,
                 0,
             )
 
@@ -4650,8 +5143,8 @@ class BaseProject:
             "gross_revenue_oil": oil_gross_revenue_sum,
             "gross_revenue_gas": gas_gross_revenue_sum,
             "investment": investment_sum,
-            "oil_capex": self._oil_capital.sum(),
-            "gas_capex": self._gas_capital.sum(),
+            "oil_capex": oil_capital.sum(),
+            "gas_capex": gas_capital.sum(),
             "sunk_cost": sunk_cost_sum,
             "tangible": tangible_sum,
             "intangible": intangible_sum,
@@ -4704,13 +5197,13 @@ class BaseProject:
             if self.oil_onstream_date is not None:
                 if self.oil_onstream_date.year < self.start_date.year:
                     raise BaseProjectException(
-                        f"Oil onstream year ({self.oil_onstream_date.year}) is before "
+                        f"Oil onstream year ({self.oil_onstream_date.year}) is before " +
                         f"the start project year ({self.start_date.year})"
                     )
 
                 if self.oil_onstream_date.year > self.end_date.year:
                     raise BaseProjectException(
-                        f"Oil onstream year ({self.oil_onstream_date.year}) is after "
+                        f"Oil onstream year ({self.oil_onstream_date.year}) is after " +
                         f"the end year of the project ({self.end_date.year})"
                     )
 
@@ -4723,8 +5216,8 @@ class BaseProject:
 
                 if oil_onstream_index != oil_revenue_index[0]:
                     raise BaseProjectException(
-                        f"Oil onstream year ({self.oil_onstream_date.year}) is different "
-                        f"from the starting year of oil production "
+                        f"Oil onstream year ({self.oil_onstream_date.year}) is different " +
+                        f"from the starting year of oil production " +
                         f"({self.project_years[oil_revenue_index[0]]})"
                     )
 
@@ -4743,13 +5236,13 @@ class BaseProject:
             if self.gas_onstream_date is not None:
                 if self.gas_onstream_date.year < self.start_date.year:
                     raise BaseProjectException(
-                        f"Gas onstream year ({self.gas_onstream_date.year}) is before "
+                        f"Gas onstream year ({self.gas_onstream_date.year}) is before " +
                         f"the start project year ({self.start_date.year})"
                     )
 
                 if self.gas_onstream_date.year > self.end_date.year:
                     raise BaseProjectException(
-                        f"Gas onstream year ({self.gas_onstream_date.year}) is after "
+                        f"Gas onstream year ({self.gas_onstream_date.year}) is after " +
                         f"the end year of the project ({self.end_date.year})"
                     )
 
@@ -4762,8 +5255,8 @@ class BaseProject:
 
                 if gas_onstream_index != gas_revenue_index[0]:
                     raise BaseProjectException(
-                        f"Gas onstream year ({self.gas_onstream_date.year}) is different "
-                        f"from the starting year of gas production "
+                        f"Gas onstream year ({self.gas_onstream_date.year}) is different " +
+                        f"from the starting year of gas production " +
                         f"({self.project_years[gas_revenue_index[0]]})"
                     )
 
