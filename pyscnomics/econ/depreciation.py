@@ -4,8 +4,6 @@ Calculate depreciation.
 
 import numpy as np
 import numpy.typing as npt
-import pandas as pd
-
 
 class DepreciationException(Exception):
     """Raise an exception error for a misuse of depreciation method"""
@@ -17,6 +15,19 @@ class UnitOfProductionException(Exception):
     """Exception to be raised for a misuse of unit of production method"""
 
     pass
+
+
+def _as_float_array(
+    value: object, parameter_name: str
+) -> npt.NDArray[np.float64]:
+    """Validate an ndarray input and return a float64 working array."""
+
+    if not isinstance(value, np.ndarray):
+        raise UnitOfProductionException(
+            f"Parameter '{parameter_name}' must be given as a numpy.ndarray, not {value.__class__.__qualname__}."
+        )
+
+    return np.asarray(value, dtype=np.float64)
 
 
 def straight_line_depreciation_rate(
@@ -166,8 +177,9 @@ def declining_balance_depreciation_rate(
     depreciation_factor = decline_factor / useful_life
 
     # Depreciation charge
-    depreciation_charge = (
-        depreciation_factor * cost * np.power(1 - depreciation_factor, periods - 1)
+    depreciation_charge = np.asarray(
+        depreciation_factor * cost * np.power(1 - depreciation_factor, periods - 1),
+        dtype=np.float64,
     )
 
     # Depreciation charge reaches the salvage value
@@ -176,12 +188,13 @@ def declining_balance_depreciation_rate(
         remaining_depreciation_modified = np.where(
             remaining_depreciation < 0, 0, remaining_depreciation
         )
-        remaining_depreciation_unique_sum = np.sum(
-            np.unique(remaining_depreciation_modified)
+        is_fully_paid_mask = np.equal(
+            remaining_depreciation_modified, 0
         )
+        is_fully_paid = np.all(is_fully_paid_mask)
 
         # Depreciation charge is paid off since the first year
-        if remaining_depreciation_unique_sum == 0:
+        if is_fully_paid:
             depreciation_charge_new = np.zeros_like(depreciation_charge)
             depreciation_charge_new[0] = (
                 depreciation_charge[0] + remaining_depreciation[0]
@@ -189,15 +202,15 @@ def declining_balance_depreciation_rate(
             depreciation_charge = depreciation_charge_new.copy()
 
         # Depreciation charge is paid off after the first year
-        elif remaining_depreciation_unique_sum > 0:
+        elif np.any(remaining_depreciation_modified > 0):
             idx = np.argmin(remaining_depreciation_modified)
             depreciation_charge[idx] = remaining_depreciation[idx - 1]
             depreciation_charge[idx + 1:] = 0
 
         else:
             raise DepreciationException(
-                f"Cannot have a negative value in variable remaining_depreciation_unique_sum: "
-                f"{remaining_depreciation_unique_sum}"
+                "Cannot have a negative value in variable "
+                + f"remaining_depreciation_unique_sum: {remaining_depreciation_modified.sum()}"
             )
 
     # Add the remaining charge as the last element of depreciation_charge array
@@ -315,7 +328,7 @@ def psc_declining_balance_depreciation_rate(
     if depreciation_factor > 1 or depreciation_factor < 0:
         raise DepreciationException(
             "The value of depreciation_factor must fall within the following interval: "
-            "0 <= depreciation_factor <= 1"
+            + "0 <= depreciation_factor <= 1"
         )
 
     # Create an array of exponents
@@ -425,37 +438,23 @@ def prepare_amortization(
     """
 
     # Validate "project_years"
-    if not isinstance(project_years, np.ndarray):
+    project_years_array = _as_float_array(project_years, "project_years")
+    project_years_nan = np.isnan(project_years_array)
+    if np.any(project_years_nan):
         raise UnitOfProductionException(
-            f"Parameter 'project_years' must be given as a numpy.ndarray, "
-            f"not {project_years.__class__.__qualname__}."
+            f"Incomplete data for 'project_years': {project_years}."
         )
-
-    else:
-        project_years_nan = pd.isna(project_years)
-        if np.any(project_years_nan):
-            raise UnitOfProductionException(
-                f"Incomplete data for 'project_years': {project_years}."
-            )
 
     # Validate "prod"
-    if not isinstance(prod, np.ndarray):
-        raise UnitOfProductionException(
-            f"Parameter 'prod' must be given as a numpy.ndarray, "
-            f"not {prod.__class__.__qualname__}."
-        )
-
-    else:
-        prod_nan_id = np.argwhere(pd.isna(prod)).ravel()
-        if len(prod_nan_id) > 0:
-            prod[prod_nan_id] = np.zeros(len(prod_nan_id))
-
-    prod = prod.astype(float)
+    prod_array = _as_float_array(prod, "prod")
+    prod_nan_id = np.argwhere(np.isnan(prod_array)).ravel()
+    if len(prod_nan_id) > 0:
+        prod[prod_nan_id] = np.zeros(len(prod_nan_id))
 
     # Raise an error: unequal length of arrays
-    if len(prod) != len(project_years):
+    if len(prod_array) != len(project_years_array):
         raise UnitOfProductionException(
-            f"Unequal number of arrays: project_years: {len(project_years)}, prod: {len(prod)}."
+            f"Unequal number of arrays: project_years: {len(project_years_array)}, prod: {len(prod_array)}."
         )
 
     # Raise an error: salvage value is larger than cost
@@ -467,15 +466,13 @@ def prepare_amortization(
     # Raise an error: PIS year is before the start year of the project
     if pis_year < project_years.min():
         raise UnitOfProductionException(
-            f"Cannot have PIS year ({pis_year}) before the start year of the project "
-            f"({project_years.min()})."
+            f"Cannot have PIS year ({pis_year}) before the start year of the project ({project_years.min()})."
         )
 
     # Raise an error: PIS year is after the end year of the project
     if pis_year > project_years.max():
         raise UnitOfProductionException(
-            f"Cannot have PIS year ({pis_year}) after the end year of the project "
-            f"({project_years.max()})."
+            f"Cannot have PIS year ({pis_year}) after the end year of the project ({project_years.max()})."
         )
 
 
@@ -528,40 +525,47 @@ def unit_of_production_rate(
         salvage_value=salvage_value,
         pis_year=pis_year,
     )
+    project_years_array = _as_float_array(project_years, "project_years")
+    prod_array = _as_float_array(prod, "prod")
 
     # Identify the location of PIS year in array project years (in the form of index)
-    match = np.flatnonzero(project_years == pis_year)
+    match_mask = np.equal(project_years_array, pis_year)
+    match = np.flatnonzero(match_mask)
     if match.size != 1:
         raise UnitOfProductionException(
             f"PIS year ({pis_year}) must appear exactly once in project_years."
         )
-    pis_idx = int(match[0])
+    match_indices: list[int] = list(match)
+    pis_idx = match_indices[0]
 
     # Calculate cumulative production starting from PIS year index
-    cum_prod = prod[pis_idx:].sum(dtype=float)
+    prod_values: list[float] = list(prod_array)
+    cum_prod = sum(prod_values[pis_idx:])
 
     if cum_prod == 0:
-        amortization_charge = np.zeros_like(project_years, dtype=float)
+        amortization_charge = np.zeros_like(project_years_array, dtype=float)
         return amortization_charge
 
     # Calculate prod / cum_prod
-    ratio = np.zeros_like(project_years, dtype=float)
-    ratio[pis_idx:] = prod[pis_idx:] / cum_prod
+    ratio = np.zeros_like(project_years_array, dtype=np.float64)
+    ratio[pis_idx:] = prod_array[pis_idx:] / cum_prod
 
     # Calculate amortization charge = 2 * Unit of Production
-    base_uop_charge = ratio * (cost - salvage_value)
-    amortization_charge = 2.0 * base_uop_charge
+    amortization_charge = 2.0 * (ratio * (cost - salvage_value))
 
     # Calculate remaining amortization
     remaining_amortization = cost - salvage_value - np.cumsum(amortization_charge)
     remaining_amortization_modified = np.where(
         remaining_amortization < 0, 0, remaining_amortization
     )
-    is_fully_paid = np.all(remaining_amortization_modified == 0)
+    is_fully_paid_mask = np.equal(
+        remaining_amortization_modified, 0
+    )
+    is_fully_paid = np.all(is_fully_paid_mask)
 
     # Amortization charge is paid off since the first year
     if is_fully_paid:
-        amortization_charge_new = np.zeros_like(project_years, dtype=float)
+        amortization_charge_new = np.zeros_like(project_years_array, dtype=float)
         amortization_charge_new[0] = amortization_charge[0] + remaining_amortization[0]
         amortization_charge = amortization_charge_new.copy()
 

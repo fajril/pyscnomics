@@ -3,7 +3,6 @@ Handles calculations associated with the economic indicators of the project.
 """
 
 from datetime import date
-from typing import TypeAlias
 
 import numpy as np
 import numpy.typing as npt
@@ -11,37 +10,10 @@ import pyxirr
 
 from pyscnomics.econ.selection import DiscountingMode
 
-_NumericScalar: TypeAlias = (
-    np.bool_
-    | np.int8
-    | np.int16
-    | np.int32
-    | np.int64
-    | np.uint8
-    | np.uint16
-    | np.uint32
-    | np.uint64
-    | np.float16
-    | np.float32
-    | np.float64
-)
-_NumericArray: TypeAlias = npt.NDArray[_NumericScalar]
-_IntegerScalar: TypeAlias = (
-    np.int8
-    | np.int16
-    | np.int32
-    | np.int64
-    | np.uint8
-    | np.uint16
-    | np.uint32
-    | np.uint64
-)
-_IntegerArray: TypeAlias = npt.NDArray[_IntegerScalar]
-
 
 def pot(
-    cashflow: _NumericArray,
-) -> npt.NDArray[np.float64]:
+    cashflow: npt.NDArray[np.float64],
+) -> float:
     """
     Calculate the payout time (POT) for a series of cashflows.
 
@@ -67,14 +39,17 @@ def pot(
       the function will return an index of 0, indicating that no payout
       has occurred.
     """
-    sum_cf = np.cumsum(cashflow)
-    idx: npt.NDArray[np.intp] = np.argwhere(sum_cf > 0)[0]
+    sum_cf: npt.NDArray[np.float64] = np.cumsum(cashflow, dtype=np.float64)
+    positive_indices = np.nonzero(sum_cf > 0)[0]
+    idx = positive_indices.item(0)
+    previous_sum = sum_cf.item(idx - 1)
+    current_sum = sum_cf.item(idx)
 
-    return sum_cf[idx - 1] / (sum_cf[idx] - sum_cf[idx - 1]) + idx
+    return previous_sum / (current_sum - previous_sum) + idx
 
 
 def npv(
-    cashflow: _NumericArray,
+    cashflow: npt.NDArray[np.float64],
     disc_rate: float = 0.1,
 ) -> float:
     """
@@ -103,11 +78,14 @@ def npv(
       investment or project is financially viable (positive NPV) or not
       (negative NPV).
     """
-    return pyxirr.npv(disc_rate, amounts=cashflow)
+    result = pyxirr.npv(disc_rate, amounts=cashflow)
+    if result is None or np.isnan(result):
+        raise ValueError("NPV calculation returned no result.")
+    return result
 
 
 def xnpv(
-    cashflow: _NumericArray,
+    cashflow: npt.NDArray[np.float64],
     start_date: date,
     end_date: date | None = None,
     disc_rate: float = 0.1,
@@ -146,10 +124,13 @@ def xnpv(
     dates = _date_arange(
         start_date=start_date, end_date=end_date, arr_length=len(cashflow)
     )
-    return pyxirr.xnpv(disc_rate, dates=dates, amounts=cashflow)
+    result = pyxirr.xnpv(dates=dates, amounts=cashflow, rate=disc_rate)
+    if result is None or np.isnan(result):
+        raise ValueError("XNPV calculation returned no result.")
+    return result
 
 
-def irr(cashflow: _NumericArray) -> float:
+def irr(cashflow: npt.NDArray[np.float64]) -> float:
     """
     Calculate the Internal Rate of Return (IRR) of a series of cashflows.
 
@@ -190,7 +171,7 @@ def irr(cashflow: _NumericArray) -> float:
 
 
 def xirr(
-    cashflow: _NumericArray,
+    cashflow: npt.NDArray[np.float64],
     start_date: date,
     end_date: date | None = None,
 ) -> float:
@@ -223,7 +204,10 @@ def xirr(
     dates = _date_arange(
         start_date=start_date, end_date=end_date, arr_length=len(cashflow)
     )
-    return pyxirr.xirr(dates=dates, amounts=cashflow)
+    result = pyxirr.xirr(dates=dates, amounts=cashflow)
+    if result is None or np.isnan(result):
+        raise ValueError("XIRR calculation returned no result.")
+    return result
 
 
 def _date_arange(
@@ -278,8 +262,8 @@ def _date_arange(
 
 
 def npv_nominal_terms(
-    cashflow: _NumericArray,
-    cashflow_years: _IntegerArray,
+    cashflow: npt.NDArray[np.float64],
+    cashflow_years: npt.NDArray[np.int64],
     discount_rate: float,
     reference_year: int,
     discounting_mode: DiscountingMode,
@@ -320,7 +304,7 @@ def npv_nominal_terms(
     t_arr = cashflow_years - reference_year_arr
 
     if discounting_mode is DiscountingMode.END_YEAR:
-        year_factor = 0
+        year_factor = 0.0
     else:
         year_factor = 0.5
 
@@ -331,8 +315,8 @@ def npv_nominal_terms(
 
 
 def npv_real_terms(
-    cashflow: _NumericArray,
-    cashflow_years: _IntegerArray,
+    cashflow: npt.NDArray[np.float64],
+    cashflow_years: npt.NDArray[np.int64],
     discount_rate: float,
     reference_year: int,
     inflation_rate: float,
@@ -369,30 +353,34 @@ def npv_real_terms(
     applied at the mid-year of each period.
     """
     # Condition when the cashflow is all zeros
-    if np.all(cashflow == 0):
+    if not cashflow.any():
         return 0.0
-    reference_year_arr = np.full_like(cashflow, fill_value=reference_year)
-    t_arr = cashflow_years - reference_year_arr
+    t_arr: npt.NDArray[np.float64] = (
+        np.asarray(cashflow_years, dtype=np.float64) - reference_year
+    )
 
     if discounting_mode is DiscountingMode.END_YEAR:
-        year_factor = 0
+        year_factor = 0.0
     else:
         year_factor = 0.5
 
-    dcf = np.where(t_arr > 0, 1 / (np.power(1 + discount_rate, t_arr + year_factor)), 1)
+    dcf: npt.NDArray[np.float64] = np.where(
+        t_arr > 0, 1 / np.power(1 + discount_rate, t_arr + year_factor), 1
+    )
+    last_year = int(np.max(cashflow_years))
+    inflation_factor = (1 + inflation_rate) ** (last_year - reference_year)
 
-    discounted_cashflow = np.where(
-        t_arr > 0,
+    discounted_cashflow: npt.NDArray[np.float64] = np.where(
+        t_arr > 0.0,
         dcf * cashflow,
-        cashflow
-        * np.power((1 + inflation_rate), np.max(cashflow_years) - reference_year),
+        cashflow * inflation_factor,
     )
     return float(np.sum(discounted_cashflow))
 
 
 def npv_skk_nominal_terms(
-    cashflow: _NumericArray,
-    cashflow_years: _IntegerArray,
+    cashflow: npt.NDArray[np.float64],
+    cashflow_years: npt.NDArray[np.int64],
     discount_rate: float,
     discounting_mode: DiscountingMode,
 ) -> float:
@@ -427,7 +415,7 @@ def npv_skk_nominal_terms(
     """
 
     if discounting_mode is DiscountingMode.END_YEAR:
-        year_factor = 0
+        year_factor = 0.0
     else:
         year_factor = 0.5
 
@@ -440,8 +428,8 @@ def npv_skk_nominal_terms(
 
 
 def npv_skk_real_terms(
-    cashflow: _NumericArray,
-    cashflow_years: _IntegerArray,
+    cashflow: npt.NDArray[np.float64],
+    cashflow_years: npt.NDArray[np.int64],
     discount_rate: float,
     reference_year: int,
     discounting_mode: DiscountingMode,
@@ -479,38 +467,42 @@ def npv_skk_real_terms(
 
     """
     # Condition when the cashflow is all zeros
-    if np.all(cashflow == 0):
+    if not cashflow.any():
         return 0.0
 
-    reference_year_arr = np.full_like(cashflow, fill_value=reference_year)
-    t_arr = cashflow_years - reference_year_arr
+    t_arr: npt.NDArray[np.float64] = (
+        np.asarray(cashflow_years, dtype=np.float64) - reference_year
+    )
 
+    year_factor: float
     if discounting_mode is DiscountingMode.END_YEAR:
-        year_factor = 0
+        year_factor = 0.0
     else:
         year_factor = 0.5
 
-    dcf = np.where(
+    dcf: npt.NDArray[np.float64] = np.where(
         t_arr >= 0, 1 / np.power((1 + discount_rate), t_arr + year_factor), 1
     )
+    last_year = int(np.max(cashflow_years))
+    discount_factor = (1 + discount_rate) ** (last_year - reference_year)
 
-    discounted_cashflow = np.where(
+    discounted_cashflow: npt.NDArray[np.float64] = np.where(
         cashflow_years > reference_year,
         dcf * cashflow,
         dcf
         * cashflow
-        * np.power((1 + discount_rate), np.max(cashflow_years) - reference_year)
+        * discount_factor
         + year_factor,
     )
     return float(np.sum(discounted_cashflow))
 
 
 def npv_point_forward(
-    cashflow: _NumericArray,
-    cashflow_years: _IntegerArray,
+    cashflow: npt.NDArray[np.float64],
+    cashflow_years: npt.NDArray[np.int64],
     discount_rate: float,
     reference_year: int,
-    discounting_mode: DiscountingMode,
+    discounting_mode: DiscountingMode = DiscountingMode.END_YEAR,
 ) -> float:
     """
     Calculate the Net Present Value (NPV) of a series of cashflows using a point-forward approach.
@@ -542,25 +534,27 @@ def npv_point_forward(
 
     [2] The point-forward approach is that any cashflow prior to the reference year will be neglected..
     """
-    reference_year_arr = np.full_like(cashflow, fill_value=reference_year)
-    t_arr = cashflow_years - reference_year_arr
+    t_arr: npt.NDArray[np.float64] = (
+        np.asarray(cashflow_years, dtype=np.float64) - reference_year
+    )
 
+    year_factor: float
     if discounting_mode is DiscountingMode.END_YEAR:
-        year_factor = 0
+        year_factor = 0.0
     else:
         year_factor = 0.5
 
-    dcf = np.where(
+    dcf: npt.NDArray[np.float64] = np.where(
         t_arr >= 0, 1 / np.power((1 + discount_rate), t_arr + year_factor), 1
     )
 
-    discounted_cashflow = np.where(t_arr < 0, 0, dcf * cashflow)
+    discounted_cashflow: npt.NDArray[np.float64] = np.where(t_arr < 0, 0, dcf * cashflow)
     return float(np.sum(discounted_cashflow))
 
 
 def pot_psc(
-    cashflow: _NumericArray,
-    cashflow_years: _IntegerArray,
+    cashflow: npt.NDArray[np.float64],
+    cashflow_years: npt.NDArray[np.int64],
     reference_year: int,
 ) -> float:
     """
@@ -584,10 +578,10 @@ def pot_psc(
     project_year = np.concatenate(
         (np.zeros(reference_year - np.min(cashflow_years)), project_year)
     )
-    cum_cashflow = np.cumsum(cashflow)
+    cum_cashflow: npt.NDArray[np.float64] = np.cumsum(cashflow, dtype=np.float64)
 
     # Create an array of zeros with the same length as cum_cashflow
-    pot = np.zeros_like(cum_cashflow, dtype=float)
+    pot: npt.NDArray[np.float64] = np.zeros_like(cum_cashflow, dtype=np.float64)
 
     # Find indices where cum_cashflow changes sign from negative to positive
     positive_change_indices = np.where(
@@ -606,32 +600,3 @@ def pot_psc(
     )
 
     return float(np.max(pot))
-
-
-# def pot_psc(cashflow: np.ndarray,
-#             cashflow_years: np.ndarray,
-#             reference_year: int):
-#
-#     project_year = np.arange(1, (np.max(cashflow_years) - reference_year + 1) + 1)
-#     project_year = np.concatenate((np.zeros(reference_year - np.min(cashflow_years)), project_year))
-#     cum_cashflow = np.cumsum(cashflow)
-#
-#     pot = []
-#     for index, cash in enumerate(cum_cashflow):
-#         print(index, cash)
-#         if index == 0 or index == len(cum_cashflow) - 1:
-#             value = 0
-#             pot.append(float(value))
-#         else:
-#             value = (
-#                 np.where(np.logical_and(cum_cashflow[index] < 0, cum_cashflow[index + 1] > 0),
-#                          project_year[index] + np.divide((project_year[index + 1] - project_year[index]),
-#                                                          (cum_cashflow[index + 1] - cum_cashflow[index]),
-#                                                          where=(cum_cashflow[index + 1] -
-#                                                                 cum_cashflow[index]) != 0)
-#                          * (0 - cum_cashflow[index]),
-#                          0)
-#             )
-#             pot.append(float(value))
-#
-#     return float(np.max(pot))

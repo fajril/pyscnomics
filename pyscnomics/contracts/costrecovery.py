@@ -2681,6 +2681,9 @@ class CostRecovery(BaseProject):
             + preonstream_costs["oil_intangible"]
             + preonstream_costs["gas_intangible"]
         )
+        investment_cashflow = (tangible_cost + intangible_cost).astype(
+            np.float64, copy=False
+        )
 
         tangible_sum = tangible_cost.sum(dtype=float)
         intangible_sum = intangible_cost.sum(dtype=float)
@@ -2771,7 +2774,7 @@ class CostRecovery(BaseProject):
 
             # Contractor investment NPV
             investment_npv = npv_skk_real_terms(
-                cashflow=tangible_cost + intangible_cost,
+                cashflow=investment_cashflow,
                 cashflow_years=self.project_years,
                 discount_rate=discount_rate,
                 reference_year=discount_rate_start_year,
@@ -2800,7 +2803,7 @@ class CostRecovery(BaseProject):
 
             # Contractor investment NPV
             investment_npv = npv_skk_nominal_terms(
-                cashflow=tangible_cost + intangible_cost,
+                cashflow=investment_cashflow,
                 cashflow_years=self.project_years,
                 discount_rate=discount_rate,
                 discounting_mode=discounting_mode,
@@ -2828,7 +2831,7 @@ class CostRecovery(BaseProject):
 
             # Contractor investment NPV
             investment_npv = npv_nominal_terms(
-                cashflow=tangible_cost + intangible_cost,
+                cashflow=investment_cashflow,
                 cashflow_years=self.project_years,
                 discount_rate=discount_rate,
                 reference_year=discount_rate_start_year,
@@ -2859,7 +2862,7 @@ class CostRecovery(BaseProject):
 
             # Contractor investment NPV
             investment_npv = npv_real_terms(
-                cashflow=tangible_cost + intangible_cost,
+                cashflow=investment_cashflow,
                 cashflow_years=self.project_years,
                 discount_rate=discount_rate,
                 reference_year=discount_rate_start_year,
@@ -2890,7 +2893,7 @@ class CostRecovery(BaseProject):
 
             # Contractor investment NPV
             investment_npv = npv_point_forward(
-                cashflow=tangible_cost + intangible_cost,
+                cashflow=investment_cashflow,
                 cashflow_years=self.project_years,
                 discount_rate=discount_rate,
                 reference_year=discount_rate_start_year,

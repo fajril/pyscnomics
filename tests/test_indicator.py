@@ -1,19 +1,20 @@
 from datetime import date
 
 import numpy as np
+import pytest
 
 import pyscnomics.econ.indicator as indicator
 
 cashflow = np.array(
     [
-        -100,
-        50,
-        50,
-        50,
-        50,
-        50,
-        50,
-        50,
+        -100.0,
+        50.0,
+        50.0,
+        50.0,
+        50.0,
+        50.0,
+        50.0,
+        50.0,
     ]
 )
 start_date = date(2023, 7, 15)
@@ -22,8 +23,9 @@ end_date = date(2030, 7, 14)
 
 def test_pot():
     result = 2.5
-    cash = np.array([-100, 50, 40, 20])
+    cash = np.array([-100.0, 50.0, 40.0, 20.0])
     calc = indicator.pot(cashflow=cash)
+    assert isinstance(calc, float)
     np.testing.assert_allclose(calc, result)
 
 
@@ -57,3 +59,26 @@ def test_xirr():
         end_date=end_date,
     )
     np.testing.assert_allclose(calc, result)
+
+
+def test_invalid_calculations_do_not_become_zero():
+    invalid_cashflow = np.array([-100.0, np.nan, 150.0])
+    start_date = date(2020, 1, 1)
+    end_date = date(2022, 1, 1)
+
+    with pytest.raises(ValueError):
+        _ = indicator.npv(cashflow=np.array([np.nan]))
+
+    with pytest.raises(ValueError):
+        _ = indicator.xnpv(
+            cashflow=invalid_cashflow,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+    with pytest.raises(ValueError):
+        _ = indicator.xirr(
+            cashflow=invalid_cashflow,
+            start_date=start_date,
+            end_date=end_date,
+        )

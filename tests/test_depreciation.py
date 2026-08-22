@@ -3,13 +3,18 @@ A unit testing for depreciation module.
 """
 
 import numpy as np
+import numpy.typing as npt
+import pytest
 from pyscnomics.econ.depreciation import (
+    UnitOfProductionException,
     straight_line_depreciation_rate,
     declining_balance_depreciation_rate,
     psc_declining_balance_depreciation_rate,
     straight_line_book_value,
     declining_balance_book_value,
     psc_declining_balance_book_value,
+    unit_of_production_book_value,
+    unit_of_production_rate,
 )
 
 
@@ -278,3 +283,56 @@ def test_psc_decline_balance_depreciation():
         cost - np.sum(calc_depre2), np.array([0]), atol=tolerance
     )
     np.testing.assert_allclose(book2, calc_book2)
+
+
+def test_unit_of_production_normalizes_missing_production():
+    """Missing production is zero before UOP rate and book value calculation."""
+
+    project_years = np.array([2020, 2021, 2022])
+    expected_rate = [0.0, 100.0, 0.0]
+    expected_book_value = [100.0, 0.0, 0.0]
+
+    for prod in (
+        np.array([np.nan, 100.0, 100.0]),
+        np.array([None, 100.0, 100.0], dtype=object),
+    ):
+        rate_prod = prod.copy()
+        np.testing.assert_allclose(
+            unit_of_production_rate(project_years, rate_prod, 100.0, 0.0, 2020),
+            expected_rate,
+        )
+        assert rate_prod[0] == 0.0
+
+        book_value_prod = prod.copy()
+        np.testing.assert_allclose(
+            unit_of_production_book_value(
+                project_years, book_value_prod, 100.0, 0.0, 2020
+            ),
+            expected_book_value,
+        )
+        assert book_value_prod[0] == 0.0
+
+
+@pytest.mark.parametrize(
+    "project_years",
+    [
+        np.array([2020.0, np.nan, 2022.0]),
+        np.array([2020, None, 2022], dtype=object),
+    ],
+)
+def test_unit_of_production_rejects_missing_project_years(
+    project_years: npt.NDArray[np.generic],
+):
+    """Missing project years retain the UOP validation error."""
+
+    with pytest.raises(
+        UnitOfProductionException,
+        match=r"^Incomplete data for 'project_years':",
+    ):
+        _ = unit_of_production_rate(
+            project_years,
+            np.array([100.0, 100.0, 100.0]),
+            100.0,
+            0.0,
+            2020,
+        )

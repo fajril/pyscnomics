@@ -2,27 +2,11 @@
 Collection of functions to carry out some operations related to module costs.py
 """
 
-from typing import TypeAlias
+from collections.abc import Sized
+from typing import cast
 
 import numpy as np
 import numpy.typing as npt
-
-
-_NumericScalar: TypeAlias = (
-    np.bool_
-    | np.int8
-    | np.int16
-    | np.int32
-    | np.int64
-    | np.uint8
-    | np.uint16
-    | np.uint32
-    | np.uint64
-    | np.float16
-    | np.float32
-    | np.float64
-)
-_NumericArray: TypeAlias = npt.NDArray[_NumericScalar]
 
 
 class TaxInflationException(Exception):
@@ -31,7 +15,10 @@ class TaxInflationException(Exception):
     pass
 
 
-def check_input(target_func, param: _NumericArray | float | int) -> _NumericArray:
+def check_input(
+    target_func: Sized,
+    param: object,
+) -> npt.NDArray[np.float64]:
     """
     Check and prepare input parameters for subsequent analysis.
 
@@ -58,39 +45,35 @@ def check_input(target_func, param: _NumericArray | float | int) -> _NumericArra
     of 'target_func'. If not, it raises an exception.
     """
 
-    if not isinstance(param, (float, int, np.ndarray)):
-        raise TaxInflationException(
-            f"Input parameter must be given as a float, int, or numpy.ndarray, "
-            f"not as a/an {param.__class__.__qualname__}"
-        )
+    if isinstance(param, np.ndarray):
+        param_arr = np.asarray(param, dtype=np.float64)
+        if len(param_arr) != len(target_func):
+            raise TaxInflationException(
+                "Unequal length of arrays: "
+                + f"numpy.ndarray({param_arr}): ({len(param_arr)}), "
+                + f"{target_func.__class__.__qualname__}({target_func}): "
+                + f"({len(target_func)})."
+            )
+        return param_arr
 
-    else:
-        param_arr = None
+    if isinstance(param, (float, int)):
+        return np.full(len(target_func), param, dtype=np.float64)
 
-        if isinstance(param, np.ndarray):
-            if len(param) != len(target_func):
-                raise TaxInflationException(
-                    f"Unequal length of arrays: "
-                    f"{param.__class__.__qualname__}({param}): ({len(param)}), "
-                    f"{target_func.__class__.__qualname__}({target_func}): ({len(target_func)})."
-                )
-            param_arr = param
-
-        elif isinstance(param, (float, int)):
-            param_arr = np.repeat(param, len(target_func))
-
-    return param_arr
+    raise TaxInflationException(
+        "Input parameter must be given as a float, int, or numpy.ndarray, "
+        + f"not as a/an {param.__class__.__qualname__}"
+    )
 
 
 def get_cost_adjustment_by_tax(
     start_year: int,
-    cost: _NumericArray,
-    expense_year: _NumericArray,
-    project_years: _NumericArray,
-    tax_portion: _NumericArray,
-    tax_rate: _NumericArray | float,
+    cost: npt.NDArray[np.float64],
+    expense_year: npt.NDArray[np.int64],
+    project_years: npt.NDArray[np.int64],
+    tax_portion: npt.NDArray[np.float64],
+    tax_rate: npt.NDArray[np.float64] | float,
     tax_discount: float,
-) -> _NumericArray:
+) -> npt.NDArray[np.float64]:
     """
     Adjust cost based on tax scheme over the prescribed time period.
 
@@ -140,12 +123,12 @@ def get_cost_adjustment_by_tax(
 def get_cost_adjustment_by_inflation(
     start_year: int,
     end_year: int,
-    cost: _NumericArray,
-    expense_year: _NumericArray,
-    project_years: _NumericArray,
-    year_inflation: _NumericArray | None,
-    inflation_rate: _NumericArray | float,
-) -> _NumericArray:
+    cost: npt.NDArray[np.float64],
+    expense_year: npt.NDArray[np.int64],
+    project_years: npt.NDArray[np.int64],
+    year_inflation: npt.NDArray[np.int64] | None,
+    inflation_rate: npt.NDArray[np.float64] | float,
+) -> npt.NDArray[np.float64]:
     """
     Adjusts costs for inflation over the project years.
 
@@ -201,17 +184,16 @@ def get_cost_adjustment_by_inflation(
         year_inflation = np.repeat(start_year, len(cost))
 
     else:
-        if not isinstance(year_inflation, np.ndarray):
+        if not isinstance(cast(object, year_inflation), np.ndarray):
             raise TaxInflationException(
-                f"Attribute year_inflation must be given as a numpy.ndarray, "
-                f"not as a/an {year_inflation.__class__.__qualname__}"
+                "Attribute year_inflation must be given as a numpy.ndarray, "
+                + f"not as a/an {year_inflation.__class__.__qualname__}"
             )
 
         if len(year_inflation) != len(cost):
             raise TaxInflationException(
-                f"Unequal length of arrays: "
-                f"cost: {len(cost)}, "
-                f"year_inflation: {len(year_inflation)}"
+                f"Unequal length of arrays: cost: {len(cost)}, "
+                + f"year_inflation: {len(year_inflation)}"
             )
 
     year_inflation = year_inflation.astype(np.int64)
@@ -220,14 +202,14 @@ def get_cost_adjustment_by_inflation(
     if np.min(year_inflation) < start_year:
         raise TaxInflationException(
             f"year_inflation ({np.min(year_inflation)}) is before the start year "
-            f"of the project ({start_year})"
+            + f"of the project ({start_year})"
         )
 
     # Raise an error: year_inflation is after the end year of the project
     if np.max(year_inflation) > end_year:
         raise TaxInflationException(
             f"year_inflation ({np.max(year_inflation)}) is after the end year "
-            f"of the project ({end_year})"
+            + f"of the project ({end_year})"
         )
 
     # Create an array of inflation_rate
@@ -237,8 +219,8 @@ def get_cost_adjustment_by_inflation(
     id_start = (
         np.array(
             [
-                np.argwhere(year_inflation[i] == project_years).ravel()
-                for i, _ in enumerate(year_inflation)
+                np.argwhere(year_inflation.item(i) == project_years).ravel()
+                for i in range(len(year_inflation))
             ]
         ).ravel()
         + 1
@@ -252,8 +234,9 @@ def get_cost_adjustment_by_inflation(
     mult = np.array(
         [
             np.prod(1.0 + inflation_rate_arr[id_start[i]:id_end[i]])
-            for i, _ in enumerate(id_start)
-        ]
+            for i in range(len(id_start))
+        ],
+        dtype=np.float64,
     )
 
     return cost * mult
@@ -261,15 +244,15 @@ def get_cost_adjustment_by_inflation(
 
 def apply_cost_adjustment(
     start_year: int,
-    cost: _NumericArray,
-    expense_year: _NumericArray,
-    project_years: _NumericArray,
-    tax_portion: _NumericArray,
-    tax_rate: _NumericArray | float,
+    cost: npt.NDArray[np.float64],
+    expense_year: npt.NDArray[np.int64],
+    project_years: npt.NDArray[np.int64],
+    tax_portion: npt.NDArray[np.float64],
+    tax_rate: npt.NDArray[np.float64] | float,
     tax_discount: float,
-    inflation_rate: _NumericArray | float,
-    year_ref: _NumericArray,
-) -> _NumericArray:
+    inflation_rate: npt.NDArray[np.float64] | float,
+    year_ref: npt.NDArray[np.int64],
+) -> npt.NDArray[np.float64]:
     """
     Adjusts cost based on inflation and tax scheme over the specified time period.
 
@@ -337,9 +320,10 @@ def apply_cost_adjustment(
     # Specify the start and end indices to slice the inflation_rate array
     id_start = np.array(
         [
-            np.argwhere(year_ref[i] == project_years).ravel()[0] + 1
-            for i, val in enumerate(year_ref)
-        ]
+            np.argwhere(year_ref.item(i) == project_years).ravel()[0] + 1
+            for i in range(len(year_ref))
+        ],
+        dtype=np.int64,
     )
 
     id_end = ((expense_year - year_ref) + (year_ref - start_year) + 1).astype("int")
@@ -348,8 +332,9 @@ def apply_cost_adjustment(
     mult = np.array(
         [
             np.prod(1.0 + inflation_rate_arr[id_start[i]:id_end[i]])
-            for i, val in enumerate(id_start)
-        ]
+            for i in range(len(id_start))
+        ],
+        dtype=np.float64,
     )
 
     return cost_adjusted * mult
@@ -357,13 +342,13 @@ def apply_cost_adjustment(
 
 def calc_indirect_tax(
     start_year: int,
-    cost: _NumericArray,
-    expense_year: _NumericArray,
-    project_years: _NumericArray,
-    tax_portion: _NumericArray,
-    tax_rate: _NumericArray | float,
-    tax_discount: _NumericArray | float | int,
-) -> _NumericArray:
+    cost: npt.NDArray[np.float64],
+    expense_year: npt.NDArray[np.int64],
+    project_years: npt.NDArray[np.int64],
+    tax_portion: npt.NDArray[np.float64],
+    tax_rate: npt.NDArray[np.float64] | float,
+    tax_discount: npt.NDArray[np.float64] | float | int,
+) -> npt.NDArray[np.float64]:
     """
     Calculate the indirect tax on project costs.
 
@@ -405,10 +390,10 @@ def calc_indirect_tax(
     """
 
     # Prepare attribute tax rate
-    if not isinstance(tax_rate, (np.ndarray, float)):
+    if not isinstance(cast(object, tax_rate), (np.ndarray, float)):
         raise TaxInflationException(
-            f"Attribute tax rate must be given as a float or as a numpy.ndarray, "
-            f"not as a/an {tax_rate.__class__.__qualname__}"
+            "Attribute tax rate must be given as a float or as a numpy.ndarray, "
+            + f"not as a/an {tax_rate.__class__.__qualname__}"
         )
 
     else:
@@ -422,12 +407,12 @@ def calc_indirect_tax(
 
 
 def calc_distributed_cost(
-    cost: _NumericArray,
-    expense_year: _NumericArray,
-    final_year: _NumericArray,
-    project_years: _NumericArray,
+    cost: npt.NDArray[np.float64],
+    expense_year: npt.NDArray[np.int64],
+    final_year: npt.NDArray[np.int64],
+    project_years: npt.NDArray[np.int64],
     project_duration: int,
-) -> _NumericArray:
+) -> npt.NDArray[np.float64]:
     """
     Distribute the cost evenly over the project duration based on the expense and final years.
 
@@ -465,25 +450,24 @@ def calc_distributed_cost(
     """
 
     # Prepare attribute cost
-    if not isinstance(cost, np.ndarray):
+    if not isinstance(cast(object, cost), np.ndarray):
         raise TaxInflationException(
-            f"Argument cost must be given as a numpy.ndarray, "
-            f"not as a/an {cost.__class__.__qualname__}"
+            "Argument cost must be given as a numpy.ndarray, "
+            + f"not as a/an {cost.__class__.__qualname__}"
         )
 
     # Prepare attribute expense_year
-    if not isinstance(expense_year, np.ndarray):
+    if not isinstance(cast(object, expense_year), np.ndarray):
         raise TaxInflationException(
-            f"Argument expense_year must be given as a numpy.ndarray, "
-            f"not as a/an {expense_year.__class__.__qualname__}"
+            "Argument expense_year must be given as a numpy.ndarray, "
+            + f"not as a/an {expense_year.__class__.__qualname__}"
         )
 
     # Unequal length of arrays
     if len(cost) != len(expense_year):
         raise TaxInflationException(
-            f"Unequal length of arrays: "
-            f"Expected: {len(expense_year)}, "
-            f"Given: {len(cost)}"
+            f"Unequal length of arrays: Expected: {len(expense_year)}, "
+            + f"Given: {len(cost)}"
         )
 
     cost = cost.astype(np.float64)
@@ -497,8 +481,8 @@ def calc_distributed_cost(
     # The start and end indices to distribute each cost elements
     id_start = np.array(
         [
-            np.argwhere(expense_year[i] == project_years).ravel()
-            for i, _ in enumerate(expense_year)
+            np.argwhere(expense_year.item(i) == project_years).ravel()
+            for i in range(len(expense_year))
         ]
     ).ravel()
 
@@ -507,7 +491,7 @@ def calc_distributed_cost(
     # Distributed values for each cost elements
     distributed_cost = np.zeros([project_duration, len(expense_year)], dtype=np.float64)
 
-    for i, _ in enumerate(expense_year):
+    for i in range(len(expense_year)):
         distributed_cost[id_start[i]:id_end[i], i] = cost_split[i]
 
     return distributed_cost

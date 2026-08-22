@@ -68,9 +68,6 @@ from .indicator import (
 
 from . import limit as limit
 from .limit import (
-    Callable as Callable,
-    Dict as Dict,
-    FuncType as FuncType,
     LimitMethod as LimitMethod,
     econ_limit as econ_limit,
     np as np,

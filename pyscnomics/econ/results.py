@@ -4,40 +4,13 @@ Configure a CashFlow class to handle calculations of cashflow indicators.
 
 from dataclasses import dataclass, field
 from datetime import date
-from typing import TypeAlias
+from typing_extensions import override
 
 import numpy as np
 import numpy.typing as npt
 
 from pyscnomics.econ.selection import FluidType
 from pyscnomics.econ import indicator
-
-_NumericScalar: TypeAlias = (
-    np.int8
-    | np.int16
-    | np.int32
-    | np.int64
-    | np.uint8
-    | np.uint16
-    | np.uint32
-    | np.uint64
-    | np.float16
-    | np.float32
-    | np.float64
-)
-_NumericArray: TypeAlias = npt.NDArray[_NumericScalar]
-_IntegerScalar: TypeAlias = (
-    np.int8
-    | np.int16
-    | np.int32
-    | np.int64
-    | np.uint8
-    | np.uint16
-    | np.uint32
-    | np.uint64
-)
-_IntegerArray: TypeAlias = npt.NDArray[_IntegerScalar]
-
 
 class CashFlowException(Exception):
     """Exception to raise for a misuse of CashFlow class"""
@@ -67,54 +40,54 @@ class CashFlow:
 
     start_date: date
     end_date: date
-    cash: _NumericArray
-    cashed_year: _IntegerArray
+    cash: npt.NDArray[np.float64]
+    cashed_year: npt.NDArray[np.int64]
     cash_allocation: FluidType = field(default=FluidType.ALL)
 
     # Attributes to be defined later
-    project_duration: int | None = field(default=None, init=False, repr=False)
-    project_years: _IntegerArray | None = field(default=None, init=False, repr=False)
+    project_duration: int = field(init=False, repr=False)
+    project_years: npt.NDArray[np.int64] = field(init=False, repr=False)
 
     def __post_init__(self):
         # Specify project duration and project years, raise error for inappropriate start date
         if self.start_date <= self.end_date:
             self.project_duration = self.end_date.year - self.start_date.year + 1
             self.project_years = np.arange(
-                self.start_date.year, self.end_date.year + 1, 1
+                self.start_date.year, self.end_date.year + 1, 1, dtype=np.int64
             )
 
         else:
             raise CashFlowException(
-                f"start date {self.start_date} "
-                f"is after the end date: {self.end_date}"
+                f"start date {self.start_date} " + f"is after the end date: {self.end_date}"
             )
 
         # Check input data for unequal length of arrays
         if len(self.cash) != len(self.cashed_year):
             raise CashFlowException(
-                f"Unequal length of array: "
-                f"cash: {len(self.cash)}, "
-                f"cash_year: {len(self.cashed_year)}, "
+                "Unequal length of array: "
+                + f"cash: {len(self.cash)}, "
+                + f"cash_year: {len(self.cashed_year)}, "
             )
 
         # Raise an error message: cashed_year is after the end year of the project
         if np.max(self.cashed_year) > self.end_date.year:
             raise CashFlowException(
                 f"Cashed year ({np.max(self.cashed_year)}) "
-                f"is after the end year of the project ({self.end_date.year})"
+                + f"is after the end year of the project ({self.end_date.year})"
             )
 
         # Raise an error message: cashed_year is before the start year of the project
         if np.min(self.cashed_year) < self.start_date.year:
             raise CashFlowException(
                 f"Cashed year ({np.min(self.cashed_year)}) "
-                f"is before the start year of the project ({self.start_date.year})"
+                + f"is before the start year of the project ({self.start_date.year})"
             )
 
-    def __len__(self):
+    def __len__(self) -> int:
         return self.project_duration
 
-    def __eq__(self, other):
+    @override
+    def __eq__(self, other: object) -> bool:
         # Between two instances of CashFlow
         if isinstance(other, CashFlow):
             return all(
@@ -134,7 +107,7 @@ class CashFlow:
         else:
             return False
 
-    def __lt__(self, other):
+    def __lt__(self, other: object):
         # Between two instances of CashFlow
         if isinstance(other, CashFlow):
             return np.sum(self.cash) < np.sum(other.cash)
@@ -146,10 +119,10 @@ class CashFlow:
         else:
             raise CashFlowException(
                 "Must compare an instance of CashFlow with another instance of "
-                "CashFlow, an integer, or a float. "
+                + "CashFlow, an integer, or a float. "
             )
 
-    def __le__(self, other):
+    def __le__(self, other: object):
         # Between two instances of CashFlow
         if isinstance(other, CashFlow):
             return np.sum(self.cash) <= np.sum(other.cash)
@@ -161,10 +134,10 @@ class CashFlow:
         else:
             raise CashFlowException(
                 "Must compare an instance of CashFlow with another instance of "
-                "CashFlow, an integer, or a float. "
+                + "CashFlow, an integer, or a float. "
             )
 
-    def __gt__(self, other):
+    def __gt__(self, other: object):
         # Between two instances of CashFlow
         if isinstance(other, CashFlow):
             return np.sum(self.cash) > np.sum(other.cash)
@@ -176,10 +149,10 @@ class CashFlow:
         else:
             raise CashFlowException(
                 "Must compare an instance of CashFlow with another instance of "
-                "CashFlow, an integer, or a float."
+                + "CashFlow, an integer, or a float."
             )
 
-    def __ge__(self, other):
+    def __ge__(self, other: object):
         # Between two instances of CashFlow
         if isinstance(other, CashFlow):
             return np.sum(self.cash) >= np.sum(other.cash)
@@ -191,10 +164,10 @@ class CashFlow:
         else:
             raise CashFlowException(
                 "Must compare an instance of CashFlow with another instance of "
-                "CashFlow, an integer, or a float."
+                + "CashFlow, an integer, or a float."
             )
 
-    def __add__(self, other):
+    def __add__(self, other: object):
         # Between an instance of CashFlow and another instance of CashFlow
         if isinstance(other, CashFlow):
             start_year = min(self.start_date.year, other.start_date.year)
@@ -218,13 +191,13 @@ class CashFlow:
 
         else:
             raise CashFlowException(
-                f"Must add between an instance of CashFlow "
-                f"with another instance of CashFlow or an integer/float. "
-                f"{other}({other.__class__.__qualname__}) is not "
-                f"an instance of Cashflow nor an integer/float."
+                "Must add between an instance of CashFlow "
+                + "with another instance of CashFlow or an integer/float. "
+                + f"{other}({other.__class__.__qualname__}) is not "
+                + "an instance of Cashflow nor an integer/float."
             )
 
-    def __sub__(self, other):
+    def __sub__(self, other: object):
         # Between an instance of CashFlow and another instance of CashFlow
         if isinstance(other, CashFlow):
             start_year = min(self.start_date.year, other.start_date.year)
@@ -248,16 +221,16 @@ class CashFlow:
 
         else:
             raise CashFlowException(
-                f"Must subtract between an instance of CashFlow "
-                f"with another instance of CashFlow or an integer/float. "
-                f"{other}({other.__class__.__qualname__}) is not "
-                f"an instance of Cashflow nor an integer/float."
+                "Must subtract between an instance of CashFlow "
+                + "with another instance of CashFlow or an integer/float. "
+                + f"{other}({other.__class__.__qualname__}) is not "
+                + "an instance of Cashflow nor an integer/float."
             )
 
-    def __rsub__(self, other):
+    def __rsub__(self, other: object):
         return self.__sub__(other)
 
-    def __mul__(self, other):
+    def __mul__(self, other: object):
         # Multiplication is allowed only with an integer/float
         if isinstance(other, (int, float)):
             return CashFlow(
@@ -270,14 +243,14 @@ class CashFlow:
 
         else:
             raise CashFlowException(
-                f"Must multiply with an integer or a float; "
-                f"{other}({other.__class__.__qualname__}) is not an integer nor a float."
+                "Must multiply with an integer or a float; "
+                + f"{other}({other.__class__.__qualname__}) is not an integer nor a float."
             )
 
-    def __rmul__(self, other):
+    def __rmul__(self, other: object):
         return self.__mul__(other)
 
-    def __truediv__(self, other):
+    def __truediv__(self, other: object):
         # Between an instance of CashFlow and another instance of CashFlow
         if isinstance(other, CashFlow):
             return np.sum(self.cash) / np.sum(other.cash)
@@ -299,12 +272,12 @@ class CashFlow:
 
         else:
             raise CashFlowException(
-                f"Must divide with an instance of CashFlow, integer or a float; "
-                f"{other}({other.__class__.__qualname__}) is not an instance "
-                f"of CashFlow nor an integer/float."
+                "Must divide with an instance of CashFlow, integer or a float; "
+                + f"{other}({other.__class__.__qualname__}) is not an instance "
+                + "of CashFlow nor an integer/float."
             )
 
-    def allocate(self) -> _NumericArray:
+    def allocate(self) -> npt.NDArray[np.float64]:
         """
         Allocates cash flows over the project duration.
 
@@ -331,14 +304,17 @@ class CashFlow:
             cash_allocation array by adding zeros to the last elements as many as the difference
             between the initial length of cash_allocation and the project duration.
         """
-        cash_allocation = np.bincount(
-            self.cashed_year - self.start_date.year, weights=self.cash
+        cash_allocation = np.asarray(
+            np.bincount(self.cashed_year - self.start_date.year, weights=self.cash),
+            dtype=np.float64,
         )
-        zeros = np.zeros(self.project_duration - len(cash_allocation))
+        zeros = np.zeros(
+            self.project_duration - len(cash_allocation), dtype=np.float64
+        )
 
         return np.concatenate((cash_allocation, zeros))
 
-    def npv(self, disc_rate: float = 0.1):
+    def npv(self, disc_rate: float = 0.1) -> float:
         """
         Calculate the net present value (NPV) of the cash flows.
 
@@ -354,7 +330,7 @@ class CashFlow:
         """
         return indicator.npv(cashflow=self.cash, disc_rate=disc_rate)
 
-    def xnpv(self, disc_rate: float = 0.1):
+    def xnpv(self, disc_rate: float = 0.1) -> float:
         """
         Calculate the NPV of cash flows at irregular intervals.
 
@@ -375,7 +351,7 @@ class CashFlow:
             disc_rate=disc_rate,
         )
 
-    def irr(self):
+    def irr(self) -> float:
         """
         Calculate the internal rate of return (IRR) of the cash flows.
 
@@ -386,7 +362,7 @@ class CashFlow:
         """
         return indicator.irr(cashflow=self.cash)
 
-    def xirr(self):
+    def xirr(self) -> float:
         """
         Calculate the IRR of cash flows at irregular intervals.
 
@@ -401,7 +377,7 @@ class CashFlow:
             end_date=self.end_date,
         )
 
-    def pot(self):
+    def pot(self) -> float:
         """
         Calculate the potential investment return of the cash flows.
         (pay out time)

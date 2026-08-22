@@ -738,6 +738,11 @@ class Summary:
         return self._to_dataframe()
 
     def _calc_npv(self):
+        investment_cashflow = (
+            self.consolidated_capital_expenditures_post_tax
+            + self.consolidated_intangible_expenditures_post_tax
+        ).astype(np.float64, copy=False)
+
         # NPV Calculation for SKK Real Terms
         if self.npv_mode == NPVSelection.NPV_SKK_REAL_TERMS:
             # Contractor NPV
@@ -751,10 +756,7 @@ class Summary:
 
             # Contractor Investment NPV
             self.investment_npv = npv_skk_real_terms(
-                cashflow=(
-                        self.consolidated_capital_expenditures_post_tax +
-                        self.consolidated_intangible_expenditures_post_tax
-                ),
+                cashflow=investment_cashflow,
                 cashflow_years=self.years,
                 discount_rate=self.discount_rate,
                 reference_year=self.reference_year,
@@ -782,10 +784,7 @@ class Summary:
 
             # Contractor Investment NPV
             self.investment_npv = npv_skk_nominal_terms(
-                cashflow=(
-                        self.consolidated_capital_expenditures_post_tax +
-                        self.consolidated_intangible_expenditures_post_tax
-                ),
+                cashflow=investment_cashflow,
                 cashflow_years=self.years,
                 discount_rate=self.discount_rate,
                 discounting_mode=self.discounting_mode
@@ -812,10 +811,7 @@ class Summary:
 
             # Contractor Investment NPV
             self.investment_npv = npv_nominal_terms(
-                cashflow=(
-                    self.consolidated_capital_expenditures_post_tax +
-                    self.consolidated_intangible_expenditures_post_tax
-            ),
+                cashflow=investment_cashflow,
                 cashflow_years=self.years,
                 discount_rate=self.discount_rate,
                 reference_year=self.reference_year,
@@ -845,10 +841,7 @@ class Summary:
 
             # Contractor Investment NPV
             self.investment_npv = npv_real_terms(
-                cashflow=(
-                        self.consolidated_capital_expenditures_post_tax +
-                        self.consolidated_intangible_expenditures_post_tax
-                ),
+                cashflow=investment_cashflow,
                 cashflow_years=self.years,
                 discount_rate=self.discount_rate,
                 reference_year=self.reference_year,
@@ -879,10 +872,7 @@ class Summary:
 
             # Contractor Investment NPV
             self.investment_npv = npv_point_forward(
-                cashflow=(
-                    self.consolidated_capital_expenditures_post_tax +
-                    self.consolidated_intangible_expenditures_post_tax
-            ),
+                cashflow=investment_cashflow,
                 cashflow_years=self.years,
                 discount_rate=self.discount_rate,
                 reference_year=self.reference_year,

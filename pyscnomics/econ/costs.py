@@ -9,9 +9,15 @@ The associated cost components are:
 (6) CostOfSales.
 """
 
-import numpy as np
-import pandas as pd
+from __future__ import annotations
+
 from dataclasses import dataclass, field
+from typing import cast
+
+from typing_extensions import override
+
+import numpy as np
+import numpy.typing as npt
 
 import pyscnomics.econ.depreciation as depr
 from pyscnomics.econ.selection import (
@@ -25,6 +31,34 @@ from pyscnomics.econ.costs_tools import (
     calc_indirect_tax,
     calc_distributed_cost,
 )
+
+def _default_none() -> object:
+    return None
+
+
+def _is_missing(value: object) -> bool:
+    if value is None:
+        return True
+    if isinstance(value, (float, np.floating)):
+        return bool(value != value)
+    return False
+
+
+def _missing_indices(
+    values: npt.NDArray[np.generic],
+) -> npt.NDArray[np.intp]:
+    missing = np.fromiter(
+        (
+            _is_missing(cast(object, values.item(i)))
+            for i in range(values.size)
+        ),
+        dtype=np.bool_,
+        count=values.size,
+    )
+    return np.flatnonzero(missing)
+
+
+_DEFAULT_NONE = _default_none()
 
 
 class GeneralCostException(Exception):
@@ -117,23 +151,31 @@ class GeneralCost:
 
     start_year: int
     end_year: int
-    expense_year: np.ndarray
-    cost: np.ndarray
-    cost_allocation: list[FluidType] = field(default=None)
-    cost_type: list[CostType] = field(default=None)
-    description: list[str] = field(default=None)
-    tax_portion: np.ndarray = field(default=None)
-    tax_discount: np.ndarray | float | int = field(default=0.0)
+    expense_year: npt.NDArray[np.int64]
+    cost: npt.NDArray[np.float64]
+    cost_allocation: list[FluidType] = field(
+        default=cast(list[FluidType], _DEFAULT_NONE)
+    )
+    cost_type: list[CostType | None] = field(
+        default=cast(list[CostType | None], _DEFAULT_NONE)
+    )
+    description: list[str] = field(default=cast(list[str], _DEFAULT_NONE))
+    tax_portion: npt.NDArray[np.float64] = field(
+        default=cast(npt.NDArray[np.float64], _DEFAULT_NONE)
+    )
+    tax_discount: npt.NDArray[np.float64] | float | int = field(default=0.0)
 
     # Attributes to be defined in the __post_init__
-    project_duration: int = field(default=None, init=False)
-    project_years: np.ndarray = field(default=None, init=False)
+    project_duration: int = field(default=cast(int, _DEFAULT_NONE), init=False)
+    project_years: npt.NDArray[np.int64] = field(
+        default=cast(npt.NDArray[np.int64], _DEFAULT_NONE), init=False
+    )
 
     def expenditures_pre_tax(
         self,
-        year_inflation: np.ndarray = None,
-        inflation_rate: np.ndarray | int | float = 0.0,
-    ) -> np.ndarray:
+        year_inflation: npt.NDArray[np.int64] | None = None,
+        inflation_rate: npt.NDArray[np.float64] | int | float = 0.0,
+    ) -> npt.NDArray[np.float64]:
         """
         Calculate pre-tax expenditures adjusted by inflation.
 
@@ -182,12 +224,14 @@ class GeneralCost:
         # Allocate adjusted costs by their associated expense year
         expenses = np.bincount(
             self.expense_year - self.start_year, weights=cost_adjusted_by_inflation
-        )
-        zeros = np.zeros(self.project_duration - len(expenses))
+        ).astype(np.float64, copy=False)
+        zeros = np.zeros(self.project_duration - len(expenses), dtype=np.float64)
 
         return np.concatenate((expenses, zeros))
 
-    def indirect_taxes(self, tax_rate: np.ndarray | float = 0.0) -> np.ndarray:
+    def indirect_taxes(
+        self, tax_rate: npt.NDArray[np.float64] | float = 0.0
+    ) -> npt.NDArray[np.float64]:
         """
         Calculate and allocate indirect taxes on project costs.
 
@@ -230,17 +274,17 @@ class GeneralCost:
         # Allocate indirect tax by their associated expense year
         expenses = np.bincount(
             self.expense_year - self.start_year, weights=indirect_tax
-        )
-        zeros = np.zeros(self.project_duration - len(expenses))
+        ).astype(np.float64, copy=False)
+        zeros = np.zeros(self.project_duration - len(expenses), dtype=np.float64)
 
         return np.concatenate((expenses, zeros))
 
     def expenditures_post_tax(
         self,
-        year_inflation: np.ndarray = None,
-        inflation_rate: np.ndarray | int | float = 0.0,
-        tax_rate: np.ndarray | float = 0.0,
-    ) -> np.ndarray:
+        year_inflation: npt.NDArray[np.int64] | None = None,
+        inflation_rate: npt.NDArray[np.float64] | int | float = 0.0,
+        tax_rate: npt.NDArray[np.float64] | float = 0.0,
+    ) -> npt.NDArray[np.float64]:
         """
         Calculate post-tax expenditures, adjusted for inflation and indirect taxes.
 
@@ -284,7 +328,7 @@ class GeneralCost:
             year_inflation=year_inflation, inflation_rate=inflation_rate
         ) + self.indirect_taxes(tax_rate=tax_rate)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.expense_year)
 
 
@@ -311,11 +355,19 @@ class CapitalCost(GeneralCost):
         Whether investment credit is applied for each corresponding capital assets.
     """
 
-    pis_year: np.ndarray = field(default=None)
-    salvage_value: np.ndarray = field(default=None)
-    useful_life: np.ndarray = field(default=None)
-    depreciation_factor: np.ndarray = field(default=None)
-    is_ic_applied: list[bool] = field(default=None)
+    pis_year: npt.NDArray[np.int64] = field(
+        default=cast(npt.NDArray[np.int64], _DEFAULT_NONE)
+    )
+    salvage_value: npt.NDArray[np.float64] = field(
+        default=cast(npt.NDArray[np.float64], _DEFAULT_NONE)
+    )
+    useful_life: npt.NDArray[np.float64] = field(
+        default=cast(npt.NDArray[np.float64], _DEFAULT_NONE)
+    )
+    depreciation_factor: npt.NDArray[np.float64] = field(
+        default=cast(npt.NDArray[np.float64], _DEFAULT_NONE)
+    )
+    is_ic_applied: list[bool] = field(default=cast(list[bool], _DEFAULT_NONE))
 
     def __post_init__(self):
         """
@@ -339,6 +391,16 @@ class CapitalCost(GeneralCost):
         -   Raise an error: expense_year is before the start year of the project,
         """
 
+        self.project_duration: int
+        self.project_years: npt.NDArray[np.int64]
+        self.expense_year: npt.NDArray[np.int64]
+        self.cost: npt.NDArray[np.float64]
+        self.cost_allocation: list[FluidType]
+        self.cost_type: list[CostType | None]
+        self.description: list[str]
+        self.tax_portion: npt.NDArray[np.float64]
+        self.tax_discount: npt.NDArray[np.float64] | float | int
+
         # Prepare attributes project_duration and project_years
         if self.end_year >= self.start_year:
             self.project_duration = self.end_year - self.start_year + 1
@@ -350,69 +412,69 @@ class CapitalCost(GeneralCost):
             )
 
         # Prepare attribute expense_year
-        if not isinstance(self.expense_year, np.ndarray):
+        if not isinstance(cast(object, self.expense_year), np.ndarray):
             raise CapitalException(
-                f"Attribute expense_year must be provided as a numpy.ndarray, "
+                "Attribute expense_year must be provided as a numpy.ndarray, " +
                 f"not as a/an {self.expense_year.__class__.__qualname__}"
             )
 
         else:
-            expense_year_nan_sum = np.sum(pd.isna(self.expense_year), dtype=np.float64)
+            expense_year_nan_sum = len(_missing_indices(self.expense_year))
             if expense_year_nan_sum > 0:
                 raise CapitalException(
                     f"Missing values in array expense_year: {self.expense_year}"
                 )
 
-        self.expense_year = self.expense_year.astype(int)
+        self.expense_year = self.expense_year.astype(np.int64)
 
         # Prepare attribute cost
-        if not isinstance(self.cost, np.ndarray):
+        if not isinstance(cast(object, self.cost), np.ndarray):
             raise CapitalException(
-                f"Attribute cost must be provided as a numpy.ndarray, "
+                "Attribute cost must be provided as a numpy.ndarray, " +
                 f"not as a/an {self.cost.__class__.__qualname__}"
             )
 
         else:
-            cost_nan_id = np.argwhere(pd.isna(self.cost)).ravel()
+            cost_nan_id = _missing_indices(self.cost)
             if len(cost_nan_id) > 0:
                 self.cost[cost_nan_id] = np.zeros(len(cost_nan_id))
 
         self.cost = self.cost.astype(np.float64)
 
         # Prepare attribute cost_allocation
-        if self.cost_allocation is None:
+        if cast(object, self.cost_allocation) is None:
             self.cost_allocation = [FluidType.OIL for _ in range(len(self.expense_year))]
 
         else:
-            if not isinstance(self.cost_allocation, list):
+            if not isinstance(cast(object, self.cost_allocation), list):
                 raise CapitalException(
-                    f"Attribute cost_allocation must be given as a list, "
+                    "Attribute cost_allocation must be given as a list, " +
                     f"not as a/an {self.cost_allocation.__class__.__qualname__}"
                 )
 
             self.cost_allocation = [
-                FluidType.OIL if pd.isna(val) else val
+                FluidType.OIL if _is_missing(val) else val
                 for _, val in enumerate(self.cost_allocation)
             ]
 
         # Prepare attribute cost_type
-        if self.cost_type is None:
+        if cast(object, self.cost_type) is None:
             self.cost_type = [None for _ in range(len(self.expense_year))]
 
         else:
-            if not isinstance(self.cost_type, list):
+            if not isinstance(cast(object, self.cost_type), list):
                 raise CapitalException(
-                    f"Attribute cost_type must be given as a list, not "
+                    "Attribute cost_type must be given as a list, not " +
                     f"as a/an {self.cost_type.__class__.__qualname__}"
                 )
 
             self.cost_type = [
-                None if pd.isna(val) else val for _, val in enumerate(self.cost_type)
+                None if _is_missing(val) else val for _, val in enumerate(self.cost_type)
             ]
 
             incorrect_cost_type = np.array(
                 [
-                    1 if not isinstance(val, CostType | None) else 0
+                    1 if not isinstance(cast(object, val), CostType | None) else 0
                     for _, val in enumerate(self.cost_type)
                 ]
             )
@@ -421,49 +483,49 @@ class CapitalCost(GeneralCost):
                 raise CapitalException("Must insert CostType in list cost_type")
 
         # Prepare attribute description
-        if self.description is None:
+        if cast(object, self.description) is None:
             self.description = [" " for _ in range(len(self.expense_year))]
 
         else:
-            if not isinstance(self.description, list):
+            if not isinstance(cast(object, self.description), list):
                 raise CapitalException(
-                    f"Attribute description must be given as a list, "
+                    "Attribute description must be given as a list, " +
                     f"not as a/an {self.description.__class__.__qualname__}"
                 )
 
             self.description = [
-                " " if pd.isna(val) else val for _, val in enumerate(self.description)
+                " " if _is_missing(val) else val for _, val in enumerate(self.description)
             ]
 
         # Prepare attribute pis_year
-        if self.pis_year is None:
+        if cast(object, self.pis_year) is None:
             self.pis_year = self.expense_year.copy()
 
         else:
-            if not isinstance(self.pis_year, np.ndarray):
+            if not isinstance(cast(object, self.pis_year), np.ndarray):
                 raise CapitalException(
-                    f"Attribute pis_year must be provided as a numpy.ndarray, "
+                    "Attribute pis_year must be provided as a numpy.ndarray, " +
                     f"not as a/an {self.pis_year.__class__.__qualname__}"
                 )
 
-            pis_year_nan_id = np.argwhere(pd.isna(self.pis_year)).ravel()
+            pis_year_nan_id = _missing_indices(self.pis_year)
             if len(pis_year_nan_id) > 0:
                 self.pis_year[pis_year_nan_id] = self.expense_year[pis_year_nan_id].copy()
 
-        self.pis_year = self.pis_year.astype(int)
+        self.pis_year = self.pis_year.astype(np.int64)
 
         # Prepare attribute salvage_value
-        if self.salvage_value is None:
-            self.salvage_value = np.zeros_like(self.expense_year)
+        if cast(object, self.salvage_value) is None:
+            self.salvage_value = np.zeros_like(self.expense_year, dtype=np.float64)
 
         else:
-            if not isinstance(self.salvage_value, np.ndarray):
+            if not isinstance(cast(object, self.salvage_value), np.ndarray):
                 raise CapitalException(
-                    f"Attribute salvage_value must be provided as a numpy.ndarray, "
+                    "Attribute salvage_value must be provided as a numpy.ndarray, " +
                     f"not as a/an {self.salvage_value.__class__.__qualname__}"
                 )
 
-            salvage_value_nan_id = np.argwhere(pd.isna(self.salvage_value)).ravel()
+            salvage_value_nan_id = _missing_indices(self.salvage_value)
             if len(salvage_value_nan_id) > 0:
                 self.salvage_value[salvage_value_nan_id] = np.zeros(len(salvage_value_nan_id))
 
@@ -472,33 +534,33 @@ class CapitalCost(GeneralCost):
         # Prepare attribute useful_life
         life = min(5.0, self.project_duration)
 
-        if self.useful_life is None:
+        if cast(object, self.useful_life) is None:
             self.useful_life = np.repeat(life, len(self.expense_year))
 
         else:
-            if not isinstance(self.useful_life, np.ndarray):
+            if not isinstance(cast(object, self.useful_life), np.ndarray):
                 raise CapitalException(
-                    f"Attribute useful_life must be provided as a numpy.ndarray, "
+                    "Attribute useful_life must be provided as a numpy.ndarray, " +
                     f"not as a/an {self.useful_life.__class__.__qualname__}"
                 )
-            useful_life_nan_id = np.argwhere(pd.isna(self.useful_life)).ravel()
+            useful_life_nan_id = _missing_indices(self.useful_life)
             if len(useful_life_nan_id) > 0:
                 self.useful_life[useful_life_nan_id] = np.repeat(life, len(useful_life_nan_id))
 
         self.useful_life = self.useful_life.astype(np.float64)
 
         # Prepare attribute depreciation_factor
-        if self.depreciation_factor is None:
+        if cast(object, self.depreciation_factor) is None:
             self.depreciation_factor = np.repeat(0.5, len(self.expense_year))
 
         else:
-            if not isinstance(self.depreciation_factor, np.ndarray):
+            if not isinstance(cast(object, self.depreciation_factor), np.ndarray):
                 raise CapitalException(
-                    f"Attribute depreciation_factor must be provided as a numpy.ndarray, "
+                    "Attribute depreciation_factor must be provided as a numpy.ndarray, " +
                     f"not as a/an {self.depreciation_factor.__class__.__qualname__}"
                 )
 
-            depreciation_factor_nan_id = np.argwhere(pd.isna(self.depreciation_factor)).ravel()
+            depreciation_factor_nan_id = _missing_indices(self.depreciation_factor)
             if len(depreciation_factor_nan_id) > 0:
                 self.depreciation_factor[depreciation_factor_nan_id] = np.repeat(
                     0.5, len(depreciation_factor_nan_id)
@@ -507,23 +569,23 @@ class CapitalCost(GeneralCost):
         self.depreciation_factor = self.depreciation_factor.astype(np.float64)
 
         # Prepare attribute is_ic_applied
-        if self.is_ic_applied is None:
+        if cast(object, self.is_ic_applied) is None:
             self.is_ic_applied = [False for _ in range(len(self.expense_year))]
 
         else:
-            if not isinstance(self.is_ic_applied, list):
+            if not isinstance(cast(object, self.is_ic_applied), list):
                 raise CapitalException(
-                    f"Attribute is_ic_applied must be given as a list, "
+                    "Attribute is_ic_applied must be given as a list, " +
                     f"not as a/an {self.is_ic_applied.__class__.__qualname__}"
                 )
 
             self.is_ic_applied = [
-                False if pd.isna(val) else val for _, val in enumerate(self.is_ic_applied)
+                False if _is_missing(val) else val for _, val in enumerate(self.is_ic_applied)
             ]
 
             is_ic_applied_not_boolean = np.array(
                 [
-                    1 if not isinstance(val, bool) else 0
+                    1 if not isinstance(cast(object, val), bool) else 0
                     for _, val in enumerate(self.is_ic_applied)
                 ]
             )
@@ -532,34 +594,34 @@ class CapitalCost(GeneralCost):
                 raise CapitalException("Must insert boolean in list is_ic_applied")
 
         # Prepare attribute tax_portion
-        if self.tax_portion is None:
-            self.tax_portion = np.zeros_like(self.expense_year)
+        if cast(object, self.tax_portion) is None:
+            self.tax_portion = np.zeros_like(self.expense_year, dtype=np.float64)
 
         else:
-            if not isinstance(self.tax_portion, np.ndarray):
+            if not isinstance(cast(object, self.tax_portion), np.ndarray):
                 raise CapitalException(
-                    f"Attribute tax_portion must be given as a numpy.ndarray, "
+                    "Attribute tax_portion must be given as a numpy.ndarray, " +
                     f"not as a/an {self.tax_portion.__class__.__qualname__}"
                 )
 
-            tax_portion_nan_id = np.argwhere(pd.isna(self.tax_portion)).ravel()
+            tax_portion_nan_id = _missing_indices(self.tax_portion)
             if len(tax_portion_nan_id) > 0:
                 self.tax_portion[tax_portion_nan_id] = np.zeros(len(tax_portion_nan_id))
 
-            tax_portion_large = np.sum(self.tax_portion > 1.0, dtype=np.float64)
-            tax_portion_negative = np.sum(self.tax_portion < 0.0, dtype=np.float64)
+            tax_portion_large = np.count_nonzero(self.tax_portion > 1.0)
+            tax_portion_negative = np.count_nonzero(self.tax_portion < 0.0)
             if tax_portion_large > 0 or tax_portion_negative > 0:
                 raise CapitalException(
-                    f"The value of tax_portion must be: 0 < tax_portion < 1, "
+                    "The value of tax_portion must be: 0 < tax_portion < 1, " +
                     f"tax_portion: {self.tax_portion}"
                 )
 
         self.tax_portion = self.tax_portion.astype(np.float64)
 
         # Prepare attribute tax_discount
-        if not isinstance(self.tax_discount, (float, int, np.ndarray)):
+        if not isinstance(cast(object, self.tax_discount), (float, int, np.ndarray)):
             raise CapitalException(
-                f"Attribute tax_discount must be provided as a float/int or as a numpy.ndarray, "
+                "Attribute tax_discount must be provided as a float/int or as a numpy.ndarray, " +
                 f"not as a/an {self.tax_discount.__class__.__qualname__}"
             )
 
@@ -571,18 +633,18 @@ class CapitalCost(GeneralCost):
 
             self.tax_discount = np.repeat(self.tax_discount, len(self.cost))
 
-        elif isinstance(self.tax_discount, np.ndarray):
-            tax_discount_nan_id = np.argwhere(pd.isna(self.tax_discount)).ravel()
+        else:
+            tax_discount_nan_id = _missing_indices(self.tax_discount)
             if len(tax_discount_nan_id) > 0:
                 self.tax_discount[tax_discount_nan_id] = np.zeros(
                     len(tax_discount_nan_id)
                 )
 
-            tax_discount_large = np.sum(self.tax_discount > 1.0, dtype=np.float64)
-            tax_discount_negative = np.sum(self.tax_discount < 0.0, dtype=np.float64)
+            tax_discount_large = np.count_nonzero(self.tax_discount > 1.0)
+            tax_discount_negative = np.count_nonzero(self.tax_discount < 0.0)
             if tax_discount_large > 0 or tax_discount_negative > 0:
                 raise CapitalException(
-                    f"The value of tax_discount must be: 0 < tax_discount < 1, "
+                    "The value of tax_discount must be: 0 < tax_discount < 1, " +
                     f"tax_discount: {self.tax_discount}"
                 )
 
@@ -608,39 +670,50 @@ class CapitalCost(GeneralCost):
             ]
         ):
             raise CapitalException(
-                f"Unequal length of arrays: "
+                "Unequal length of arrays: " +
                 f"cost: {len(self.cost)}, "
+                +
                 f"expense_year: {len(self.expense_year)}, "
+                +
                 f"cost_allocation: {len(self.cost_allocation)}, "
+                +
                 f"cost_type: {len(self.cost_type)}, "
+                +
                 f"description: {len(self.description)}, "
+                +
                 f"tax_portion: {len(self.tax_portion)}, "
+                +
                 f"tax_discount: {len(self.tax_discount)}, "
+                +
                 f"pis_year: {len(self.pis_year)}, "
+                +
                 f"salvage_value: {len(self.salvage_value)}, "
+                +
                 f"useful_life: {len(self.useful_life)}, "
+                +
                 f"depreciation_factor: {len(self.depreciation_factor)}, "
+                +
                 f"is_ic_applied: {len(self.is_ic_applied)} "
             )
 
         # Raise an exception: salvage_value magnitude exceeds associated cost magnitude
-        if np.sum(np.abs(self.salvage_value) > np.abs(self.cost)) > 0:  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]
+        if np.sum(np.abs(self.salvage_value) > np.abs(self.cost)) > 0:
             raise CapitalException(
-                f"Salvage value magnitude ({np.abs(self.salvage_value)}) exceeds "
+                f"Salvage value magnitude ({np.abs(self.salvage_value)}) exceeds " +
                 f"associated cost magnitude ({np.abs(self.cost)})."
             )
 
         # Raise an error: expense year is after the end year of the project
         if np.max(self.expense_year) > self.end_year:
             raise CapitalException(
-                f"Expense year ({np.max(self.expense_year)}) "
+                f"Expense year ({np.max(self.expense_year)}) " +
                 f"is after the end year of the project ({self.end_year})"
             )
 
         # Raise an error: expense year is before the start year of the project
         if np.min(self.expense_year) < self.start_year:
             raise CapitalException(
-                f"Expense year ({np.min(self.expense_year)}) "
+                f"Expense year ({np.min(self.expense_year)}) " +
                 f"is before the start year of the project ({self.start_year})"
             )
 
@@ -648,11 +721,11 @@ class CapitalCost(GeneralCost):
         self,
         depr_method: DeprMethod = DeprMethod.PSC_DB,
         decline_factor: float | int = 2,
-        year_inflation: np.ndarray = None,
-        inflation_rate: np.ndarray | int | float = 0.0,
-        tax_rate: np.ndarray | float = 0.0,
+        year_inflation: npt.NDArray[np.int64] | None = None,
+        inflation_rate: npt.NDArray[np.float64] | int | float = 0.0,
+        tax_rate: npt.NDArray[np.float64] | float = 0.0,
         inflation_rate_applied_to: InflationAppliedTo | None = None,
-    ) -> tuple:
+    ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
         """
         Compute total annual depreciation charges for all assets, with optional
         inflation and indirect tax adjustments.
@@ -706,10 +779,10 @@ class CapitalCost(GeneralCost):
         """
 
         # Prepare parameter "inflation_rate_applied_to"
-        if not isinstance(inflation_rate_applied_to, (InflationAppliedTo, type(None))):
+        if not isinstance(cast(object, inflation_rate_applied_to), (InflationAppliedTo, type(None))):
             raise CapitalException(
-                f"Invalid inflation_rate_applied_to: "
-                f"({inflation_rate_applied_to.__class__.__qualname__}). "
+                "Invalid inflation_rate_applied_to: " +
+                f"({inflation_rate_applied_to.__class__.__qualname__}). " +
                 f"Expected one of {list(InflationAppliedTo)} or None."
             )
 
@@ -748,67 +821,82 @@ class CapitalCost(GeneralCost):
             )
         )
 
-        cost_adjusted = {
+        cost_adjusted: npt.NDArray[np.float64] = np.asarray({
             InflationAppliedTo.CAPEX: cost_adjusted_by_inflation_and_tax,
             InflationAppliedTo.CAPEX_AND_OPEX: cost_adjusted_by_inflation_and_tax,
             InflationAppliedTo.OPEX: cost_adjusted_only_by_tax,
             None: cost_adjusted_only_by_tax,
-        }[inflation_rate_applied_to]
+        }[inflation_rate_applied_to], dtype=np.float64)
+        adjusted_costs: np.ndarray[tuple[int], np.dtype[np.float64]] = np.asarray(
+            cost_adjusted, dtype=np.float64
+        )
+        salvage_values: np.ndarray[tuple[int], np.dtype[np.float64]] = np.asarray(
+            self.salvage_value, dtype=np.float64
+        )
+        useful_lives: np.ndarray[tuple[int], np.dtype[np.int64]] = np.asarray(
+            self.useful_life, dtype=np.int64
+        )
+        depreciation_factors: np.ndarray[tuple[int], np.dtype[np.float64]] = np.asarray(
+            self.depreciation_factor, dtype=np.float64
+        )
 
         # Calculate depreciation
         # Depreciation method is straight line
         if depr_method == DeprMethod.SL:
-            depreciation_charge = np.array(
-                [
+            depreciation_rates: list[npt.NDArray[np.float64]] = []
+            for i in range(len(adjusted_costs)):
+                cost = cast(float, adjusted_costs[i])
+                salvage_value = cast(float, salvage_values[i])
+                useful_life = cast(int, useful_lives[i])
+                depreciation_rates.append(
                     depr.straight_line_depreciation_rate(
-                        cost=c,
-                        salvage_value=sv,
-                        useful_life=ul,
+                        cost=cost,
+                        salvage_value=salvage_value,
+                        useful_life=useful_life,
                         depreciation_len=self.project_duration,
                     )
-                    for c, sv, ul in zip(
-                        cost_adjusted,
-                        self.salvage_value,
-                        self.useful_life,
-                    )
-                ]
+                )
+            depreciation_charge: npt.NDArray[np.float64] = np.asarray(
+                depreciation_rates, dtype=np.float64
             )
 
         # Depreciation method is declining balance
         elif depr_method == DeprMethod.DB:
-            depreciation_charge = np.array(
-                [
+            depreciation_rates = []
+            for i in range(len(adjusted_costs)):
+                cost = cast(float, adjusted_costs[i])
+                salvage_value = cast(float, salvage_values[i])
+                useful_life = cast(int, useful_lives[i])
+                depreciation_rates.append(
                     depr.declining_balance_depreciation_rate(
-                        cost=c,
-                        salvage_value=sv,
-                        useful_life=ul,
+                        cost=cost,
+                        salvage_value=salvage_value,
+                        useful_life=useful_life,
                         decline_factor=decline_factor,
                         depreciation_len=self.project_duration,
                     )
-                    for c, sv, ul in zip(
-                        cost_adjusted,
-                        self.salvage_value,
-                        self.useful_life,
-                    )
-                ]
+                )
+            depreciation_charge = np.asarray(
+                depreciation_rates, dtype=np.float64
             )
 
         # Depreciation method is PSC declining balance
         elif depr_method == DeprMethod.PSC_DB:
-            depreciation_charge = np.array(
-                [
+            depreciation_rates = []
+            for i in range(len(adjusted_costs)):
+                cost = cast(float, adjusted_costs[i])
+                depreciation_factor = cast(float, depreciation_factors[i])
+                useful_life = cast(float, useful_lives[i])
+                depreciation_rates.append(
                     depr.psc_declining_balance_depreciation_rate(
-                        cost=c,
-                        depreciation_factor=dr,
-                        useful_life=ul,
+                        cost=cost,
+                        depreciation_factor=depreciation_factor,
+                        useful_life=useful_life,
                         depreciation_len=self.project_duration,
                     )
-                    for c, dr, ul in zip(
-                        cost_adjusted,
-                        self.depreciation_factor,
-                        self.useful_life,
-                    )
-                ]
+                )
+            depreciation_charge = np.asarray(
+                depreciation_rates, dtype=np.float64
             )
 
         else:
@@ -817,11 +905,15 @@ class CapitalCost(GeneralCost):
             )
 
         # Specify indices to place the first element of depreciation
-        shift_indices = self.pis_year - self.start_year
+        shift_indices: npt.NDArray[np.int64] = np.asarray(
+            self.pis_year - self.start_year, dtype=np.int64
+        )
 
         # Prepare assets with overdue depreciation, namely those that
         # have not been fully depreciated by the end of the project
-        overdues = (self.pis_year + self.useful_life - self.end_year - 1).astype(int)
+        overdues: npt.NDArray[np.int64] = np.asarray(
+            self.pis_year + self.useful_life - self.end_year - 1, dtype=np.int64
+        )
 
         is_overdue = overdues > 0
 
@@ -830,39 +922,55 @@ class CapitalCost(GeneralCost):
             # These assets are overdue by {overdue[is_overdue]} years.
             max_overdue = int(np.max(overdues[is_overdue]))
 
-            full_depr_charge = np.zeros(
-                [depreciation_charge.shape[0], depreciation_charge.shape[1] + max_overdue]
+            full_depr_charge: npt.NDArray[np.float64] = np.zeros(
+                (depreciation_charge.shape[0], depreciation_charge.shape[1] + max_overdue),
+                dtype=np.float64,
             )
-            # useful_life = self.useful_life.astype(int)
+            # useful_life = self.useful_life.astype(np.int64)
 
-            for i, charge in enumerate(depreciation_charge):
+            for i in range(depreciation_charge.shape[0]):
                 # (
                 #     full_depr_charge[i, shift_indices[i]:shift_indices[i] + useful_life[i]]
                 # ) = charge[useful_life[i]]
 
-                if shift_indices[i] + charge.shape[0] > full_depr_charge.shape[1]:
-                    max_idx = full_depr_charge.shape[1] - shift_indices[i]
+                shift_index = shift_indices.item(i)
+                charge: npt.NDArray[np.float64] = np.asarray(
+                    depreciation_charge[i], dtype=np.float64
+                )
+                if shift_index + charge.shape[0] > full_depr_charge.shape[1]:
+                    max_idx = full_depr_charge.shape[1] - shift_index
                     charge = charge[:max_idx]
 
-                full_depr_charge[i, shift_indices[i]:shift_indices[i] + charge.shape[0]] = charge
+                full_depr_charge[i, shift_index:shift_index + charge.shape[0]] = charge
 
             overdue_depr_charge = full_depr_charge[:, self.end_year - self.start_year + 1:]
 
         else:
-            overdue_depr_charge = np.zeros([1, 1])
+            overdue_depr_charge = np.zeros((1, 1), dtype=np.float64)
 
         # Modify depreciation_charge so that expenditures are aligned with
         # the corresponding pis_year (or expense_year)
-        depreciation_charge = np.array(
+        depreciation_charge = np.asarray(
             [
-                np.concatenate((np.zeros(i), row[:-i])) if i > 0 else row
-                for row, i in zip(depreciation_charge, shift_indices)
-            ]
+                np.concatenate(
+                    (
+                        np.zeros(shift_indices.item(i)),
+                        depreciation_charge[i][:-shift_indices.item(i)],
+                    )
+                )
+                if shift_indices.item(i) > 0
+                else depreciation_charge[i]
+                for i in range(depreciation_charge.shape[0])
+            ], dtype=np.float64
         )
 
         # Calculate total depreciation charge and undepreciated asset
-        total_depreciation_charge = depreciation_charge.sum(axis=0)
-        undepreciated_asset = overdue_depr_charge.sum(axis=0)
+        total_depreciation_charge: npt.NDArray[np.float64] = np.asarray(
+            depreciation_charge.sum(axis=0), dtype=np.float64
+        )
+        undepreciated_asset: npt.NDArray[np.float64] = np.asarray(
+            overdue_depr_charge.sum(axis=0), dtype=np.float64
+        )
 
         return total_depreciation_charge, undepreciated_asset
 
@@ -870,11 +978,11 @@ class CapitalCost(GeneralCost):
         self,
         depr_method: DeprMethod = DeprMethod.PSC_DB,
         decline_factor: float | int = 2,
-        year_inflation: np.ndarray = None,
-        inflation_rate: np.ndarray | int | float = 0.0,
-        tax_rate: np.ndarray | float = 0.0,
+        year_inflation: npt.NDArray[np.int64] | None = None,
+        inflation_rate: npt.NDArray[np.float64] | int | float = 0.0,
+        tax_rate: npt.NDArray[np.float64] | float = 0.0,
         inflation_rate_applied_to: InflationAppliedTo | None = None,
-    ) -> np.ndarray:
+    ) -> npt.NDArray[np.float64]:
         """
         Compute the cumulative book value of project assets after depreciation.
 
@@ -934,12 +1042,12 @@ class CapitalCost(GeneralCost):
 
     def total_amortization_rate(
         self,
-        prod: np.ndarray,
-        year_inflation: np.ndarray,
-        inflation_rate: np.ndarray | int | float,
-        tax_rate: np.ndarray | float,
+        prod: npt.NDArray[np.float64],
+        year_inflation: npt.NDArray[np.int64],
+        inflation_rate: npt.NDArray[np.float64] | int | float,
+        tax_rate: npt.NDArray[np.float64] | float,
         inflation_rate_applied_to: InflationAppliedTo | None,
-    ) -> np.ndarray:
+    ) -> npt.NDArray[np.float64]:
         """
         Compute total unit-of-production amortization rate for all capital elements.
 
@@ -969,10 +1077,10 @@ class CapitalCost(GeneralCost):
         """
 
         # Prepare parameter "inflation_rate_applied_to"
-        if not isinstance(inflation_rate_applied_to, (InflationAppliedTo, type(None))):
+        if not isinstance(cast(object, inflation_rate_applied_to), (InflationAppliedTo, type(None))):
             raise CapitalException(
-                f"Invalid inflation_rate_applied_to: "
-                f"({inflation_rate_applied_to.__class__.__qualname__}). "
+                "Invalid inflation_rate_applied_to: " +
+                f"({inflation_rate_applied_to.__class__.__qualname__}). " +
                 f"Expected one of {list(InflationAppliedTo)} or None."
             )
 
@@ -1011,35 +1119,46 @@ class CapitalCost(GeneralCost):
             )
         )
 
-        cost_adjusted = {
+        cost_adjusted: npt.NDArray[np.float64] = np.asarray({
             InflationAppliedTo.CAPEX: cost_adjusted_by_inflation_and_tax,
             InflationAppliedTo.CAPEX_AND_OPEX: cost_adjusted_by_inflation_and_tax,
             InflationAppliedTo.OPEX: cost_adjusted_only_by_tax,
             None: cost_adjusted_only_by_tax,
-        }[inflation_rate_applied_to]
+        }[inflation_rate_applied_to], dtype=np.float64)
+        adjusted_costs: np.ndarray[tuple[int], np.dtype[np.float64]] = np.asarray(
+            cost_adjusted, dtype=np.float64
+        )
+        salvage_values: np.ndarray[tuple[int], np.dtype[np.float64]] = np.asarray(
+            self.salvage_value, dtype=np.float64
+        )
+        pis_years: np.ndarray[tuple[int], np.dtype[np.int64]] = np.asarray(
+            self.pis_year, dtype=np.int64
+        )
 
         # Calculate amortization charges
-        amortization_charges = np.array(
-            [
+        amortization_rates: list[npt.NDArray[np.float64]] = []
+        for i in range(len(adjusted_costs)):
+            cost = cast(float, adjusted_costs[i])
+            salvage_value = cast(float, salvage_values[i])
+            pis_year = cast(int, pis_years[i])
+            amortization_rates.append(
                 depr.unit_of_production_rate(
                     project_years=self.project_years,
                     prod=prod,
-                    cost=c,
-                    salvage_value=sv,
-                    pis_year=pis,
+                    cost=cost,
+                    salvage_value=salvage_value,
+                    pis_year=pis_year,
                 )
-                for c, sv, pis in zip(
-                    cost_adjusted,
-                    self.salvage_value,
-                    self.pis_year,
-                )
-            ]
+            )
+        amortization_charges: npt.NDArray[np.float64] = np.asarray(
+            amortization_rates, dtype=np.float64
         )
 
         # Returns total amortization charge for all cost elements
-        return amortization_charges.sum(axis=0)
+        return np.asarray(amortization_charges.sum(axis=0), dtype=np.float64)
 
-    def __eq__(self, other):
+    @override
+    def __eq__(self, other: object) -> bool:
         # Between two instances of CapitalCost
         if isinstance(other, CapitalCost):
             return all(
@@ -1062,76 +1181,76 @@ class CapitalCost(GeneralCost):
 
         # Between an instance of CapitalCost and an integer/float
         elif isinstance(other, (int, float)):
-            return np.sum(self.cost) == other
+            return float(np.sum(self.cost)) == other
 
         else:
             return False
 
-    def __lt__(self, other):
+    def __lt__(self, other: object) -> bool:
         # Between an instance of CapitalCost with another instance of
         # CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales
         if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales)):
-            return np.sum(self.cost) < np.sum(other.cost)
+            return bool(np.sum(self.cost) < np.sum(other.cost))
 
         # Between an instance of CapitalCost and an integer/float
         elif isinstance(other, (int, float)):
-            return np.sum(self.cost) < other
+            return bool(np.sum(self.cost) < other)
 
         else:
             raise CapitalException(
-                "Must compare an instance of CapitalCost with another instance of "
+                "Must compare an instance of CapitalCost with another instance of " +
                 "CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
             )
 
-    def __le__(self, other):
+    def __le__(self, other: object) -> bool:
         # Between an instance of CapitalCost with another instance of
         # CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales
         if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales)):
-            return np.sum(self.cost) <= np.sum(other.cost)
+            return bool(np.sum(self.cost) <= np.sum(other.cost))
 
         # Between an instance of CapitalCost and an integer/float
         elif isinstance(other, (int, float)):
-            return np.sum(self.cost) <= other
+            return bool(np.sum(self.cost) <= other)
 
         else:
             raise CapitalException(
-                "Must compare an instance of CapitalCost with another instance of "
+                "Must compare an instance of CapitalCost with another instance of " +
                 "CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
             )
 
-    def __gt__(self, other):
+    def __gt__(self, other: object) -> bool:
         # Between an instance of CapitalCost with another instance of
         # CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales
         if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales)):
-            return np.sum(self.cost) > np.sum(other.cost)
+            return bool(np.sum(self.cost) > np.sum(other.cost))
 
         # Between an instance of CapitalCost and an integer/float
         elif isinstance(other, (int, float)):
-            return np.sum(self.cost) > other
+            return bool(np.sum(self.cost) > other)
 
         else:
             raise CapitalException(
-                "Must compare an instance of CapitalCost with another instance of "
+                "Must compare an instance of CapitalCost with another instance of " +
                 "CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
             )
 
-    def __ge__(self, other):
+    def __ge__(self, other: object) -> bool:
         # Between an instance of CapitalCost with another instance of
         # CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales
         if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales)):
-            return np.sum(self.cost) >= np.sum(other.cost)
+            return bool(np.sum(self.cost) >= np.sum(other.cost))
 
         # Between an instance of CapitalCost and an integer/float
         elif isinstance(other, (int, float)):
-            return np.sum(self.cost) >= other
+            return bool(np.sum(self.cost) >= other)
 
         else:
             raise CapitalException(
-                "Must compare an instance of CapitalCost with another instance of "
+                "Must compare an instance of CapitalCost with another instance of " +
                 "CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
             )
 
-    def __add__(self, other):
+    def __add__(self, other: object) -> CapitalCost:
         # Only allows addition between an instance of CapitalCost
         # and another instance of CapitalCost
         if isinstance(other, CapitalCost):
@@ -1171,14 +1290,14 @@ class CapitalCost(GeneralCost):
 
         else:
             raise CapitalException(
-                f"Must add an instance of CapitalCost with another instance of CapitalCost. "
+                "Must add an instance of CapitalCost with another instance of CapitalCost. " +
                 f"{other}({other.__class__.__qualname__}) is not an instance of CapitalCost."
             )
 
-    def __iadd__(self, other):
+    def __iadd__(self, other: object) -> CapitalCost:
         return self.__add__(other)
 
-    def __sub__(self, other):
+    def __sub__(self, other: object) -> CapitalCost:
         # Only allows subtraction between an instance of CapitalCost
         # and another instance of CapitalCost
         if isinstance(other, CapitalCost):
@@ -1187,7 +1306,7 @@ class CapitalCost(GeneralCost):
             expense_year_combined = np.concatenate((self.expense_year, other.expense_year))
             cost_combined = np.concatenate((self.cost, -other.cost))
             pis_year_combined = np.concatenate((self.pis_year, other.pis_year))
-            salvage_value_combined = np.concatenate((self.salvage_value, -other.salvage_value))  # pyright: ignore[reportUnknownVariableType, reportUnknownArgumentType, reportUnknownMemberType]
+            salvage_value_combined = np.concatenate((self.salvage_value, -other.salvage_value))
             useful_life_combined = np.concatenate((self.useful_life, other.useful_life))
             depreciation_factor_combined = np.concatenate(
                 (self.depreciation_factor, other.depreciation_factor)
@@ -1218,16 +1337,16 @@ class CapitalCost(GeneralCost):
 
         else:
             raise CapitalException(
-                f"Must subtract between an instance of CapitalCost "
-                f"with another instance of CapitalCost. "
-                f"{other}({other.__class__.__qualname__}) is not "
-                f"an instance of CapitalCost."
+                "Must subtract between an instance of CapitalCost " +
+                "with another instance of CapitalCost. " +
+                f"{other}({other.__class__.__qualname__}) is not " +
+                "an instance of CapitalCost."
             )
 
-    def __rsub__(self, other):
+    def __rsub__(self, other: object) -> CapitalCost:
         return self.__sub__(other)
 
-    def __mul__(self, other):
+    def __mul__(self, other: object) -> CapitalCost:
         # Multiplication is allowed only with an integer/a float
         if isinstance(other, (int, float)):
             return CapitalCost(
@@ -1241,7 +1360,7 @@ class CapitalCost(GeneralCost):
                 tax_portion=self.tax_portion,
                 tax_discount=self.tax_discount,
                 pis_year=self.pis_year,
-                salvage_value=self.salvage_value * other,  # pyright: ignore[reportUnknownMemberType]
+                salvage_value=self.salvage_value * other,
                 useful_life=self.useful_life,
                 depreciation_factor=self.depreciation_factor,
                 is_ic_applied=self.is_ic_applied,
@@ -1249,19 +1368,19 @@ class CapitalCost(GeneralCost):
 
         else:
             raise CapitalException(
-                f"Must multiply with an integer or a float. "
-                f"{other}({other.__class__.__qualname__}) "
-                f"is not an integer nor a float."
+                "Must multiply with an integer or a float. " +
+                f"{other}({other.__class__.__qualname__}) " +
+                "is not an integer nor a float."
             )
 
-    def __rmul__(self, other):
+    def __rmul__(self, other: object) -> CapitalCost:
         return self.__mul__(other)
 
-    def __truediv__(self, other):
+    def __truediv__(self, other: object) -> CapitalCost | float:
         # Between an instance of CapitalCost with another instance of
         # CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales
         if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales)):
-            return np.sum(self.cost) / np.sum(other.cost)
+            return float(np.sum(self.cost) / np.sum(other.cost))
 
         # Between an instance of CapitalCost and an integer/a float
         elif isinstance(other, (int, float)):
@@ -1281,7 +1400,7 @@ class CapitalCost(GeneralCost):
                     tax_portion=self.tax_portion,
                     tax_discount=self.tax_discount,
                     pis_year=self.pis_year,
-                    salvage_value=self.salvage_value / other,  # pyright: ignore[reportUnknownMemberType]
+                    salvage_value=self.salvage_value / other,
                     useful_life=self.useful_life,
                     depreciation_factor=self.depreciation_factor,
                     is_ic_applied=self.is_ic_applied,
@@ -1289,10 +1408,11 @@ class CapitalCost(GeneralCost):
 
         else:
             raise CapitalException(
-                f"Must divide with an instance of CapitalCost/Intangible/OPEX/ASR/LBT"
-                f"/CostOfSales, integer or a float. {other}({other.__class__.__qualname__}) "
-                f"is not an instance of CapitalCost/Intangible/OPEX/ASR/LBT not an integer "
-                f"nor a float."
+                "Must divide with an instance of CapitalCost/Intangible/OPEX/ASR/LBT" +
+                f"/CostOfSales, integer or a float. {other}({other.__class__.__qualname__}) " +
+                "is not an instance of CapitalCost/Intangible/OPEX/ASR/LBT not an integer "
+                +
+                "nor a float."
             )
 
 
@@ -1323,6 +1443,16 @@ class Intangible(GeneralCost):
         -   Raise an error: expense_year is before the start year of the project,
         """
 
+        self.project_duration: int
+        self.project_years: npt.NDArray[np.int64]
+        self.expense_year: npt.NDArray[np.int64]
+        self.cost: npt.NDArray[np.float64]
+        self.cost_allocation: list[FluidType]
+        self.cost_type: list[CostType | None]
+        self.description: list[str]
+        self.tax_portion: npt.NDArray[np.float64]
+        self.tax_discount: npt.NDArray[np.float64] | float | int
+
         # Prepare attributes project_duration and project_years
         if self.end_year >= self.start_year:
             self.project_duration = self.end_year - self.start_year + 1
@@ -1334,69 +1464,69 @@ class Intangible(GeneralCost):
             )
 
         # Prepare attribute expense_year
-        if not isinstance(self.expense_year, np.ndarray):
+        if not isinstance(cast(object, self.expense_year), np.ndarray):
             raise IntangibleException(
-                f"Attribute expense_year must be provided as a numpy.ndarray, "
+                "Attribute expense_year must be provided as a numpy.ndarray, " +
                 f"not as a/an {self.expense_year.__class__.__qualname__}"
             )
 
         else:
-            expense_year_nan = np.sum(pd.isna(self.expense_year), dtype=np.float64)
+            expense_year_nan = len(_missing_indices(self.expense_year))
             if expense_year_nan > 0:
                 raise IntangibleException(
                     f"Missing values in array expense_year: {self.expense_year}"
                 )
 
-        self.expense_year = self.expense_year.astype(int)
+        self.expense_year = self.expense_year.astype(np.int64)
 
         # Prepare attribute cost
-        if not isinstance(self.cost, np.ndarray):
+        if not isinstance(cast(object, self.cost), np.ndarray):
             raise IntangibleException(
-                f"Attribute cost must be provided as a numpy.ndarray, "
+                "Attribute cost must be provided as a numpy.ndarray, " +
                 f"not as a/an {self.cost.__class__.__qualname__}"
             )
 
         else:
-            cost_nan_id = np.argwhere(pd.isna(self.cost)).ravel()
+            cost_nan_id = _missing_indices(self.cost)
             if len(cost_nan_id) > 0:
                 self.cost[cost_nan_id] = np.zeros(len(cost_nan_id))
 
         self.cost = self.cost.astype(np.float64)
 
         # Prepare attribute cost_allocation
-        if self.cost_allocation is None:
+        if cast(object, self.cost_allocation) is None:
             self.cost_allocation = [FluidType.OIL for _ in range(len(self.expense_year))]
 
         else:
-            if not isinstance(self.cost_allocation, list):
+            if not isinstance(cast(object, self.cost_allocation), list):
                 raise IntangibleException(
-                    f"Attribute cost_allocation must be given as a list, "
+                    "Attribute cost_allocation must be given as a list, " +
                     f"not as a/an {self.cost_allocation.__class__.__qualname__}"
                 )
 
             self.cost_allocation = [
-                FluidType.OIL if pd.isna(val) else val
+                FluidType.OIL if _is_missing(val) else val
                 for _, val in enumerate(self.cost_allocation)
             ]
 
         # Prepare attribute cost_type
-        if self.cost_type is None:
+        if cast(object, self.cost_type) is None:
             self.cost_type = [None for _ in range(len(self.expense_year))]
 
         else:
-            if not isinstance(self.cost_type, list):
+            if not isinstance(cast(object, self.cost_type), list):
                 raise IntangibleException(
-                    f"Attribute cost_type must be given as a list, not "
+                    "Attribute cost_type must be given as a list, not " +
                     f"as a/an {self.cost_type.__class__.__qualname__}"
                 )
 
             self.cost_type = [
-                None if pd.isna(val) else val for _, val in enumerate(self.cost_type)
+                None if _is_missing(val) else val for _, val in enumerate(self.cost_type)
             ]
 
             incorrect_cost_type = np.array(
                 [
-                    1 if not isinstance(val, CostType | None) else 0
+                    1 if not isinstance(cast(object, val), CostType | None) else 0
                     for _, val in enumerate(self.cost_type)
                 ]
             )
@@ -1405,49 +1535,49 @@ class Intangible(GeneralCost):
                 raise IntangibleException("Must insert CostType in list cost_type")
 
         # Prepare attribute description
-        if self.description is None:
+        if cast(object, self.description) is None:
             self.description = [" " for _ in range(len(self.expense_year))]
 
         else:
-            if not isinstance(self.description, list):
+            if not isinstance(cast(object, self.description), list):
                 raise IntangibleException(
-                    f"Attribute description must be given as a list, "
+                    "Attribute description must be given as a list, " +
                     f"not as a/an {self.description.__class__.__qualname__}"
                 )
 
             self.description = [
-                " " if pd.isna(val) else val for _, val in enumerate(self.description)
+                " " if _is_missing(val) else val for _, val in enumerate(self.description)
             ]
 
         # Prepare attribute tax_portion
-        if self.tax_portion is None:
-            self.tax_portion = np.zeros_like(self.expense_year)
+        if cast(object, self.tax_portion) is None:
+            self.tax_portion = np.zeros_like(self.expense_year, dtype=np.float64)
 
         else:
-            if not isinstance(self.tax_portion, np.ndarray):
+            if not isinstance(cast(object, self.tax_portion), np.ndarray):
                 raise IntangibleException(
-                    f"Attribute tax_portion must be given as a numpy.ndarray, "
+                    "Attribute tax_portion must be given as a numpy.ndarray, " +
                     f"not as a/an {self.tax_portion.__class__.__qualname__}"
                 )
 
-            tax_portion_nan_id = np.argwhere(pd.isna(self.tax_portion)).ravel()
+            tax_portion_nan_id = _missing_indices(self.tax_portion)
             if len(tax_portion_nan_id) > 0:
                 self.tax_portion[tax_portion_nan_id] = np.zeros(len(tax_portion_nan_id))
 
-            tax_portion_large = np.sum(self.tax_portion > 1.0, dtype=np.float64)
-            tax_portion_negative = np.sum(self.tax_portion < 0.0, dtype=np.float64)
+            tax_portion_large = np.count_nonzero(self.tax_portion > 1.0)
+            tax_portion_negative = np.count_nonzero(self.tax_portion < 0.0)
             if tax_portion_large > 0 or tax_portion_negative > 0:
                 raise IntangibleException(
-                    f"The value of tax_portion must be: 0 < tax_portion < 1, "
+                    "The value of tax_portion must be: 0 < tax_portion < 1, " +
                     f"tax_portion: {self.tax_portion}"
                 )
 
         self.tax_portion = self.tax_portion.astype(np.float64)
 
         # Prepare attribute tax_discount
-        if not isinstance(self.tax_discount, (float, int, np.ndarray)):
+        if not isinstance(cast(object, self.tax_discount), (float, int, np.ndarray)):
             raise IntangibleException(
-                f"Attribute tax_discount must be provided as a float/int or as a numpy.ndarray, "
+                "Attribute tax_discount must be provided as a float/int or as a numpy.ndarray, " +
                 f"not as a/an {self.tax_discount.__class__.__qualname__}"
             )
 
@@ -1459,18 +1589,18 @@ class Intangible(GeneralCost):
 
             self.tax_discount = np.repeat(self.tax_discount, len(self.cost))
 
-        elif isinstance(self.tax_discount, np.ndarray):
-            tax_discount_nan_id = np.argwhere(pd.isna(self.tax_discount)).ravel()
+        else:
+            tax_discount_nan_id = _missing_indices(self.tax_discount)
             if len(tax_discount_nan_id) > 0:
                 self.tax_discount[tax_discount_nan_id] = np.zeros(
                     len(tax_discount_nan_id)
                 )
 
-            tax_discount_large = np.sum(self.tax_discount > 1.0, dtype=np.float64)
-            tax_discount_negative = np.sum(self.tax_discount < 0.0, dtype=np.float64)
+            tax_discount_large = np.count_nonzero(self.tax_discount > 1.0)
+            tax_discount_negative = np.count_nonzero(self.tax_discount < 0.0)
             if tax_discount_large > 0 or tax_discount_negative > 0:
                 raise IntangibleException(
-                    f"The value of tax_discount must be: 0 < tax_discount < 1, "
+                    "The value of tax_discount must be: 0 < tax_discount < 1, " +
                     f"tax_discount: {self.tax_discount}"
                 )
 
@@ -1491,30 +1621,31 @@ class Intangible(GeneralCost):
             ]
         ):
             raise IntangibleException(
-                f"Unequal length of arrays: "
-                f"cost: {len(self.cost)}, "
-                f"expense_year: {len(self.expense_year)}, "
-                f"cost_allocation: {len(self.cost_allocation)}, "
-                f"cost_type: {len(self.cost_type)}, "
-                f"description: {len(self.description)}, "
-                f"tax_portion: {len(self.tax_portion)}, "
+                "Unequal length of arrays: " +
+                f"cost: {len(self.cost)}, " +
+                f"expense_year: {len(self.expense_year)}, " +
+                f"cost_allocation: {len(self.cost_allocation)}, " +
+                f"cost_type: {len(self.cost_type)}, " +
+                f"description: {len(self.description)}, " +
+                f"tax_portion: {len(self.tax_portion)}, " +
                 f"tax_discount: {len(self.tax_discount)}, "
             )
 
         # Raise an error: expense year is after the end year of the project
         if np.max(self.expense_year) > self.end_year:
             raise IntangibleException(
-                f"Expense year ({np.max(self.expense_year)}) "
+                f"Expense year ({np.max(self.expense_year)}) " +
                 f"is after the end year of the project ({self.end_year})"
             )
 
         if np.min(self.expense_year) < self.start_year:
             raise IntangibleException(
-                f"Expense year ({np.min(self.expense_year)}) "
+                f"Expense year ({np.min(self.expense_year)}) " +
                 f"is before the start year of the project ({self.start_year})"
             )
 
-    def __eq__(self, other):
+    @override
+    def __eq__(self, other: object) -> bool:
         # Between two instances of Intangible
         if isinstance(other, Intangible):
             return all(
@@ -1532,76 +1663,76 @@ class Intangible(GeneralCost):
 
         # Between an instance of Intangible and an integer/a float
         elif isinstance(other, (int, float)):
-            return np.sum(self.cost) == other
+            return float(np.sum(self.cost)) == other
 
         else:
             return False
 
-    def __lt__(self, other):
+    def __lt__(self, other: object) -> bool:
         # Between an instance of Intangible with another instance of
         # CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales
         if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales)):
-            return np.sum(self.cost) < np.sum(other.cost)
+            return bool(np.sum(self.cost) < np.sum(other.cost))
 
         # Between an instance of Intangible and an integer/a float
         elif isinstance(other, (int, float)):
-            return np.sum(self.cost) < other
+            return bool(np.sum(self.cost) < other)
 
         else:
             raise IntangibleException(
-                "Must compare an instance of Intangible with another instance of "
+                "Must compare an instance of Intangible with another instance of " +
                 "CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
             )
 
-    def __le__(self, other):
+    def __le__(self, other: object) -> bool:
         # Between an instance of Intangible with another instance of
         # CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales
         if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales)):
-            return np.sum(self.cost) <= np.sum(other.cost)
+            return bool(np.sum(self.cost) <= np.sum(other.cost))
 
         # Between an instance of Intangible and an integer/a float
         elif isinstance(other, (int, float)):
-            return np.sum(self.cost) <= other
+            return bool(np.sum(self.cost) <= other)
 
         else:
             raise IntangibleException(
-                "Must compare an instance of Intangible with another instance of "
+                "Must compare an instance of Intangible with another instance of " +
                 "CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
             )
 
-    def __gt__(self, other):
+    def __gt__(self, other: object) -> bool:
         # Between an instance of Intangible with another instance of
         # CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales
         if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales)):
-            return np.sum(self.cost) > np.sum(other.cost)
+            return bool(np.sum(self.cost) > np.sum(other.cost))
 
         # Between an instance of Intangible and an integer/a float
         elif isinstance(other, (int, float)):
-            return np.sum(self.cost) > other
+            return bool(np.sum(self.cost) > other)
 
         else:
             raise IntangibleException(
-                "Must compare an instance of Intangible with another instance of "
+                "Must compare an instance of Intangible with another instance of " +
                 "CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
             )
 
-    def __ge__(self, other):
+    def __ge__(self, other: object) -> bool:
         # Between an instance of Intangible with another instance of
         # CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales
         if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales)):
-            return np.sum(self.cost) >= np.sum(other.cost)
+            return bool(np.sum(self.cost) >= np.sum(other.cost))
 
         # Between an instance of Intangible and an integer/a float
         elif isinstance(other, (int, float)):
-            return np.sum(self.cost) >= other
+            return bool(np.sum(self.cost) >= other)
 
         else:
             raise IntangibleException(
-                "Must compare an instance of Intangible with another instance of "
+                "Must compare an instance of Intangible with another instance of " +
                 "CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
             )
 
-    def __add__(self, other):
+    def __add__(self, other: object) -> Intangible:
         # Only allows addition between an instance of Intangible
         # and another instance of Intangible
         if isinstance(other, Intangible):
@@ -1629,14 +1760,14 @@ class Intangible(GeneralCost):
 
         else:
             raise IntangibleException(
-                f"Must add an instance of Intangible with another instance of Intangible. "
+                "Must add an instance of Intangible with another instance of Intangible. " +
                 f"{other}({other.__class__.__qualname__}) is not an instance of Intangible."
             )
 
-    def __iadd__(self, other):
+    def __iadd__(self, other: object) -> Intangible:
         return self.__add__(other)
 
-    def __sub__(self, other):
+    def __sub__(self, other: object) -> Intangible:
         # Only allows subtraction between an instance of Intangible
         # and another instance of Intangible
         if isinstance(other, Intangible):
@@ -1664,14 +1795,14 @@ class Intangible(GeneralCost):
 
         else:
             raise IntangibleException(
-                f"Must subtract an instance of Intangible with another instance of Intangible. "
+                "Must subtract an instance of Intangible with another instance of Intangible. " +
                 f"{other}({other.__class__.__qualname__}) is not an instance of Intangible."
             )
 
-    def __rsub__(self, other):
+    def __rsub__(self, other: object) -> Intangible:
         return self.__sub__(other)
 
-    def __mul__(self, other):
+    def __mul__(self, other: object) -> Intangible:
         # Multiplication is allowed only with an integer/a float
         if isinstance(other, (int, float)):
             return Intangible(
@@ -1688,19 +1819,19 @@ class Intangible(GeneralCost):
 
         else:
             raise IntangibleException(
-                f"Must multiply with an integer or a float. "
-                f"{other}({other.__class__.__qualname__}) "
-                f"is not an integer nor a float."
+                "Must multiply with an integer or a float. " +
+                f"{other}({other.__class__.__qualname__}) " +
+                "is not an integer nor a float."
             )
 
-    def __rmul__(self, other):
+    def __rmul__(self, other: object) -> Intangible:
         return self.__mul__(other)
 
-    def __truediv__(self, other):
+    def __truediv__(self, other: object) -> Intangible | float:
         # Between an instance of Intangible with another instance of
         # CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales
         if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales)):
-            return np.sum(self.cost) / np.sum(other.cost)
+            return float(np.sum(self.cost) / np.sum(other.cost))
 
         # Between an instance of Intangible and an integer/a float
         elif isinstance(other, (int, float)):
@@ -1723,10 +1854,10 @@ class Intangible(GeneralCost):
 
         else:
             raise IntangibleException(
-                f"Must divide with an instance of CapitalCost/Intangible/OPEX/ASR/LBT"
-                f"/CostOfSales, integer or a float. {other}({other.__class__.__qualname__}) "
-                f"is not an instance of CapitalCost/Intangible/OPEX/ASR/LBT nor an integer "
-                f"nor a float."
+                "Must divide with an instance of CapitalCost/Intangible/OPEX/ASR/LBT" +
+                f"/CostOfSales, integer or a float. {other}({other.__class__.__qualname__}) " +
+                "is not an instance of CapitalCost/Intangible/OPEX/ASR/LBT nor an integer " +
+                "nor a float."
             )
 
 
@@ -1748,13 +1879,23 @@ class OPEX(GeneralCost):
         Cost associated with production of a particular fluid type.
     """
 
-    fixed_cost: np.ndarray = field(default=None)
-    prod_rate: np.ndarray = field(default=None)
-    cost_per_volume: np.ndarray = field(default=None)
+    fixed_cost: npt.NDArray[np.float64] = field(
+        default=cast(npt.NDArray[np.float64], _DEFAULT_NONE)
+    )
+    prod_rate: npt.NDArray[np.float64] = field(
+        default=cast(npt.NDArray[np.float64], _DEFAULT_NONE)
+    )
+    cost_per_volume: npt.NDArray[np.float64] = field(
+        default=cast(npt.NDArray[np.float64], _DEFAULT_NONE)
+    )
 
     # Attributes to be defined later
-    variable_cost: np.ndarray = field(default=None, init=False)
-    cost: np.ndarray = field(default=None, init=False)
+    variable_cost: npt.NDArray[np.float64] = field(
+        default=cast(npt.NDArray[np.float64], _DEFAULT_NONE), init=False
+    )
+    cost: npt.NDArray[np.float64] = field(
+        default=cast(npt.NDArray[np.float64], _DEFAULT_NONE), init=False
+    )
 
     def __post_init__(self):
         """
@@ -1776,6 +1917,15 @@ class OPEX(GeneralCost):
         -   Raise an error: expense_year is before the start year of the project,
         """
 
+        self.project_duration: int
+        self.project_years: npt.NDArray[np.int64]
+        self.expense_year: npt.NDArray[np.int64]
+        self.cost_allocation: list[FluidType]
+        self.cost_type: list[CostType | None]
+        self.description: list[str]
+        self.tax_portion: npt.NDArray[np.float64]
+        self.tax_discount: npt.NDArray[np.float64] | float | int
+
         # Prepare attributes project_duration and project_years
         if self.end_year >= self.start_year:
             self.project_duration = self.end_year - self.start_year + 1
@@ -1787,34 +1937,34 @@ class OPEX(GeneralCost):
             )
 
         # Prepare attribute expense_year
-        if not isinstance(self.expense_year, np.ndarray):
+        if not isinstance(cast(object, self.expense_year), np.ndarray):
             raise OPEXException(
-                f"Attribute expense_year must be provided as a numpy.ndarray, "
+                "Attribute expense_year must be provided as a numpy.ndarray, " +
                 f"not as a/an {self.expense_year.__class__.__qualname__}"
             )
 
         else:
-            expense_year_nan = np.sum(pd.isna(self.expense_year), dtype=np.float64)
+            expense_year_nan = len(_missing_indices(self.expense_year))
             if expense_year_nan > 0:
                 raise OPEXException(
                     f"Missing values in array expense_year: {self.expense_year}"
                 )
 
-        self.expense_year = self.expense_year.astype(int)
+        self.expense_year = self.expense_year.astype(np.int64)
 
         # Prepare attribute fixed_cost
-        if self.fixed_cost is None:
-            self.fixed_cost = np.zeros_like(self.expense_year)
+        if cast(object, self.fixed_cost) is None:
+            self.fixed_cost = np.zeros_like(self.expense_year, dtype=np.float64)
 
         else:
-            if not isinstance(self.fixed_cost, np.ndarray):
+            if not isinstance(cast(object, self.fixed_cost), np.ndarray):
                 raise OPEXException(
-                    f"Attribute fixed_cost must be provided as a numpy.ndarray, "
+                    "Attribute fixed_cost must be provided as a numpy.ndarray, " +
                     f"not as a/an {self.fixed_cost.__class__.__qualname__}"
                 )
 
             else:
-                fixed_cost_nan_id = np.argwhere(pd.isna(self.fixed_cost)).ravel()
+                fixed_cost_nan_id = _missing_indices(self.fixed_cost)
                 if len(fixed_cost_nan_id) > 0:
                     self.fixed_cost[fixed_cost_nan_id] = np.zeros(
                         len(fixed_cost_nan_id)
@@ -1823,39 +1973,39 @@ class OPEX(GeneralCost):
         self.fixed_cost = self.fixed_cost.astype(np.float64)
 
         # Prepare attribute cost_allocation
-        if self.cost_allocation is None:
+        if cast(object, self.cost_allocation) is None:
             self.cost_allocation = [FluidType.OIL for _ in range(len(self.expense_year))]
 
         else:
-            if not isinstance(self.cost_allocation, list):
+            if not isinstance(cast(object, self.cost_allocation), list):
                 raise OPEXException(
-                    f"Attribute cost_allocation must be given as a list, "
+                    "Attribute cost_allocation must be given as a list, " +
                     f"not as a/an {self.cost_allocation.__class__.__qualname__}"
                 )
 
             self.cost_allocation = [
-                FluidType.OIL if pd.isna(val) else val
+                FluidType.OIL if _is_missing(val) else val
                 for _, val in enumerate(self.cost_allocation)
             ]
 
         # Prepare attribute cost_type
-        if self.cost_type is None:
+        if cast(object, self.cost_type) is None:
             self.cost_type = [None for _ in range(len(self.expense_year))]
 
         else:
-            if not isinstance(self.cost_type, list):
+            if not isinstance(cast(object, self.cost_type), list):
                 raise OPEXException(
-                    f"Attribute cost_type must be given as a list, not "
+                    "Attribute cost_type must be given as a list, not " +
                     f"as a/an {self.cost_type.__class__.__qualname__}"
                 )
 
             self.cost_type = [
-                None if pd.isna(val) else val for _, val in enumerate(self.cost_type)
+                None if _is_missing(val) else val for _, val in enumerate(self.cost_type)
             ]
 
             incorrect_cost_type = np.array(
                 [
-                    1 if not isinstance(val, CostType | None) else 0
+                    1 if not isinstance(cast(object, val), CostType | None) else 0
                     for _, val in enumerate(self.cost_type)
                 ]
             )
@@ -1864,49 +2014,49 @@ class OPEX(GeneralCost):
                 raise OPEXException("Must insert CostType in list cost_type")
 
         # Prepare attribute description
-        if self.description is None:
+        if cast(object, self.description) is None:
             self.description = [" " for _ in range(len(self.expense_year))]
 
         else:
-            if not isinstance(self.description, list):
+            if not isinstance(cast(object, self.description), list):
                 raise OPEXException(
-                    f"Attribute description must be given as a list, "
+                    "Attribute description must be given as a list, " +
                     f"not as a/an {self.description.__class__.__qualname__}"
                 )
 
             self.description = [
-                " " if pd.isna(val) else val for _, val in enumerate(self.description)
+                " " if _is_missing(val) else val for _, val in enumerate(self.description)
             ]
 
         # Prepare attribute tax_portion
-        if self.tax_portion is None:
-            self.tax_portion = np.zeros_like(self.expense_year)
+        if cast(object, self.tax_portion) is None:
+            self.tax_portion = np.zeros_like(self.expense_year, dtype=np.float64)
 
         else:
-            if not isinstance(self.tax_portion, np.ndarray):
+            if not isinstance(cast(object, self.tax_portion), np.ndarray):
                 raise OPEXException(
-                    f"Attribute tax_portion must be given as a numpy.ndarray, "
+                    "Attribute tax_portion must be given as a numpy.ndarray, " +
                     f"not as a/an {self.tax_portion.__class__.__qualname__}"
                 )
 
-            tax_portion_nan_id = np.argwhere(pd.isna(self.tax_portion)).ravel()
+            tax_portion_nan_id = _missing_indices(self.tax_portion)
             if len(tax_portion_nan_id) > 0:
                 self.tax_portion[tax_portion_nan_id] = np.zeros(len(tax_portion_nan_id))
 
-            tax_portion_large = np.sum(self.tax_portion > 1.0, dtype=np.float64)
-            tax_portion_negative = np.sum(self.tax_portion < 0.0, dtype=np.float64)
+            tax_portion_large = np.count_nonzero(self.tax_portion > 1.0)
+            tax_portion_negative = np.count_nonzero(self.tax_portion < 0.0)
             if tax_portion_large > 0 or tax_portion_negative > 0:
                 raise OPEXException(
-                    f"The value of tax_portion must be: 0 < tax_portion < 1, "
+                    "The value of tax_portion must be: 0 < tax_portion < 1, " +
                     f"tax_portion: {self.tax_portion}"
                 )
 
         self.tax_portion = self.tax_portion.astype(np.float64)
 
         # Prepare attribute tax_discount
-        if not isinstance(self.tax_discount, (float, int, np.ndarray)):
+        if not isinstance(cast(object, self.tax_discount), (float, int, np.ndarray)):
             raise OPEXException(
-                f"Attribute tax_discount must be provided as a float/int or as a numpy.ndarray, "
+                "Attribute tax_discount must be provided as a float/int or as a numpy.ndarray, " +
                 f"not as a/an {self.tax_discount.__class__.__qualname__}"
             )
 
@@ -1916,56 +2066,54 @@ class OPEX(GeneralCost):
 
             self.tax_discount = np.repeat(self.tax_discount, len(self.expense_year))
 
-        elif isinstance(self.tax_discount, np.ndarray):
-            tax_discount_nan_id = np.argwhere(pd.isna(self.tax_discount)).ravel()
+        else:
+            tax_discount_nan_id = _missing_indices(self.tax_discount)
             if len(tax_discount_nan_id) > 0:
                 self.tax_discount[tax_discount_nan_id] = np.zeros(
                     len(tax_discount_nan_id)
                 )
 
-            tax_discount_large = np.sum(self.tax_discount > 1.0, dtype=np.float64)
-            tax_discount_negative = np.sum(self.tax_discount < 0.0, dtype=np.float64)
+            tax_discount_large = np.count_nonzero(self.tax_discount > 1.0)
+            tax_discount_negative = np.count_nonzero(self.tax_discount < 0.0)
             if tax_discount_large > 0 or tax_discount_negative > 0:
                 raise OPEXException(
-                    f"The value of tax_discount must be: 0 < tax_discount < 1, "
+                    "The value of tax_discount must be: 0 < tax_discount < 1, " +
                     f"tax_discount: {self.tax_discount}"
                 )
 
         self.tax_discount = self.tax_discount.astype(np.float64)
 
         # Prepare attribute prod_rate
-        if self.prod_rate is None:
-            self.prod_rate = np.zeros_like(self.expense_year)
+        if cast(object, self.prod_rate) is None:
+            self.prod_rate = np.zeros_like(self.expense_year, dtype=np.float64)
 
         else:
-            if not isinstance(self.prod_rate, np.ndarray):
+            if not isinstance(cast(object, self.prod_rate), np.ndarray):
                 raise OPEXException(
-                    f"Attribute prod_rate must be provided as a numpy.ndarray, "
+                    "Attribute prod_rate must be provided as a numpy.ndarray, " +
                     f"not as a/an {self.prod_rate.__class__.__qualname__}"
                 )
 
             else:
-                prod_rate_nan_id = np.argwhere(pd.isna(self.prod_rate)).ravel()
+                prod_rate_nan_id = _missing_indices(self.prod_rate)
                 if len(prod_rate_nan_id) > 0:
                     self.prod_rate[prod_rate_nan_id] = np.zeros(len(prod_rate_nan_id))
 
         self.prod_rate = self.prod_rate.astype(np.float64)
 
         # Prepare attribute cost_per_volume
-        if self.cost_per_volume is None:
-            self.cost_per_volume = np.zeros_like(self.expense_year)
+        if cast(object, self.cost_per_volume) is None:
+            self.cost_per_volume = np.zeros_like(self.expense_year, dtype=np.float64)
 
         else:
-            if not isinstance(self.cost_per_volume, np.ndarray):
+            if not isinstance(cast(object, self.cost_per_volume), np.ndarray):
                 raise OPEXException(
-                    "Attribute cost_per_volume must be provided as a numpy.ndarray, "
+                    "Attribute cost_per_volume must be provided as a numpy.ndarray, " +
                     f"not as a/an {self.cost_per_volume.__class__.__qualname__}"
                 )
 
             else:
-                cost_per_volume_nan_id = np.argwhere(
-                    pd.isna(self.cost_per_volume)
-                ).ravel()
+                cost_per_volume_nan_id = _missing_indices(self.cost_per_volume)
                 if len(cost_per_volume_nan_id) > 0:
                     self.cost_per_volume[cost_per_volume_nan_id] = np.zeros(
                         len(cost_per_volume_nan_id)
@@ -1990,15 +2138,15 @@ class OPEX(GeneralCost):
             ]
         ):
             raise OPEXException(
-                f"Unequal length of arrays: "
-                f"expense_year: {len(self.expense_year)}, "
-                f"fixed_cost: {len(self.fixed_cost)}, "
-                f"cost_allocation: {len(self.cost_allocation)}, "
-                f"cost_type: {len(self.cost_type)}, "
-                f"description: {len(self.description)}, "
-                f"tax_portion: {len(self.tax_portion)}, "
-                f"tax_discount: {len(self.tax_discount)}, "
-                f"prod_rate: {len(self.prod_rate)}, "
+                "Unequal length of arrays: " +
+                f"expense_year: {len(self.expense_year)}, " +
+                f"fixed_cost: {len(self.fixed_cost)}, " +
+                f"cost_allocation: {len(self.cost_allocation)}, " +
+                f"cost_type: {len(self.cost_type)}, " +
+                f"description: {len(self.description)}, " +
+                f"tax_portion: {len(self.tax_portion)}, " +
+                f"tax_discount: {len(self.tax_discount)}, " +
+                f"prod_rate: {len(self.prod_rate)}, " +
                 f"cost_per_volume: {len(self.cost_per_volume)}, "
             )
 
@@ -2011,18 +2159,19 @@ class OPEX(GeneralCost):
         # Raise an error: expense year is after the end year of the project
         if np.max(self.expense_year) > self.end_year:
             raise OPEXException(
-                f"Expense year ({np.max(self.expense_year)}) "
+                f"Expense year ({np.max(self.expense_year)}) " +
                 f"is after the end year of the project ({self.end_year})"
             )
 
         # Raise an error: expense year is before the start year of the project
         if np.min(self.expense_year) < self.start_year:
             raise OPEXException(
-                f"Expense year ({np.min(self.expense_year)}) "
+                f"Expense year ({np.min(self.expense_year)}) " +
                 f"is before the start year of the project ({self.start_year})"
             )
 
-    def __eq__(self, other):
+    @override
+    def __eq__(self, other: object) -> bool:
         # Between two instances of OPEX
         if isinstance(other, OPEX):
             return all(
@@ -2042,76 +2191,76 @@ class OPEX(GeneralCost):
 
         # Between an instance of OPEX and an integer/a float
         elif isinstance(other, (int, float)):
-            return np.sum(self.cost) == other
+            return float(np.sum(self.cost)) == other
 
         else:
             return False
 
-    def __lt__(self, other):
+    def __lt__(self, other: object) -> bool:
         # Between an instance of OPEX with another instance of
         # CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales
         if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales)):
-            return np.sum(self.cost) < np.sum(other.cost)
+            return bool(np.sum(self.cost) < np.sum(other.cost))
 
         # Between an instance of OPEX and an integer/float
         elif isinstance(other, (int, float)):
-            return np.sum(self.cost) < other
+            return bool(np.sum(self.cost) < other)
 
         else:
             raise OPEXException(
-                "Must compare an instance of OPEX with another instance of "
+                "Must compare an instance of OPEX with another instance of " +
                 "CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
             )
 
-    def __le__(self, other):
+    def __le__(self, other: object) -> bool:
         # Between an instance of OPEX with another instance of
         # CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales
         if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales)):
-            return np.sum(self.cost) <= np.sum(other.cost)
+            return bool(np.sum(self.cost) <= np.sum(other.cost))
 
         # Between an instance of OPEX and an integer/float
         elif isinstance(other, (int, float)):
-            return np.sum(self.cost) <= other
+            return bool(np.sum(self.cost) <= other)
 
         else:
             raise OPEXException(
-                "Must compare an instance of OPEX with another instance of "
+                "Must compare an instance of OPEX with another instance of " +
                 "CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
             )
 
-    def __gt__(self, other):
+    def __gt__(self, other: object) -> bool:
         # Between an instance of OPEX with another instance of
         # CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales
         if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales)):
-            return np.sum(self.cost) > np.sum(other.cost)
+            return bool(np.sum(self.cost) > np.sum(other.cost))
 
         # Between an instance of OPEX and an integer/float
         elif isinstance(other, (int, float)):
-            return np.sum(self.cost) > other
+            return bool(np.sum(self.cost) > other)
 
         else:
             raise OPEXException(
-                "Must compare an instance of OPEX with another instance of "
+                "Must compare an instance of OPEX with another instance of " +
                 "CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
             )
 
-    def __ge__(self, other):
+    def __ge__(self, other: object) -> bool:
         # Between an instance of OPEX with another instance of
         # CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales
         if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales)):
-            return np.sum(self.cost) >= np.sum(other.cost)
+            return bool(np.sum(self.cost) >= np.sum(other.cost))
 
         # Between an instance of OPEX and an integer/float
         elif isinstance(other, (int, float)):
-            return np.sum(self.cost) >= other
+            return bool(np.sum(self.cost) >= other)
 
         else:
             raise OPEXException(
-                "Must compare an instance of OPEX with another instance of "
+                "Must compare an instance of OPEX with another instance of " +
                 "CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
             )
 
-    def __add__(self, other):
+    def __add__(self, other: object) -> OPEX:
         # Only allows addition between an instance of OPEX
         # and another instance of OPEX
         if isinstance(other, OPEX):
@@ -2145,14 +2294,14 @@ class OPEX(GeneralCost):
 
         else:
             raise OPEXException(
-                f"Must add an instance of OPEX with another instance of OPEX. "
+                "Must add an instance of OPEX with another instance of OPEX. " +
                 f"{other}({other.__class__.__qualname__}) is not an instance of OPEX."
             )
 
-    def __iadd__(self, other):
+    def __iadd__(self, other: object) -> OPEX:
         return self.__add__(other)
 
-    def __sub__(self, other):
+    def __sub__(self, other: object) -> OPEX:
         # Only allows subtraction between an instance of OPEX
         # and another instance of OPEX
         if isinstance(other, OPEX):
@@ -2186,14 +2335,14 @@ class OPEX(GeneralCost):
 
         else:
             raise OPEXException(
-                f"Must subtract an instance of OPEX with another instance of OPEX. "
+                "Must subtract an instance of OPEX with another instance of OPEX. " +
                 f"{other}({other.__class__.__qualname__}) is not an instance of OPEX."
             )
 
-    def __rsub__(self, other):
+    def __rsub__(self, other: object) -> OPEX:
         return self.__sub__(other)
 
-    def __mul__(self, other):
+    def __mul__(self, other: object) -> OPEX:
         # Multiplication is only allowed with an integer/a float
         if isinstance(other, (int, float)):
             return OPEX(
@@ -2212,19 +2361,19 @@ class OPEX(GeneralCost):
 
         else:
             raise OPEXException(
-                f"Must multiply with an integer or a float. "
-                f"{other}({other.__class__.__qualname__}) "
-                f"is not an integer nor a float."
+                "Must multiply with an integer or a float. " +
+                f"{other}({other.__class__.__qualname__}) " +
+                "is not an integer nor a float."
             )
 
-    def __rmul__(self, other):
+    def __rmul__(self, other: object) -> OPEX:
         return self.__mul__(other)
 
-    def __truediv__(self, other):
+    def __truediv__(self, other: object) -> OPEX | float:
         # Between an instance of OPEX with another instance of
         # CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales
         if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales)):
-            return np.sum(self.cost) / np.sum(other.cost)
+            return float(np.sum(self.cost) / np.sum(other.cost))
 
         # Between an instance of OPEX and an integer/a float
         elif isinstance(other, (int, float)):
@@ -2249,10 +2398,11 @@ class OPEX(GeneralCost):
 
         else:
             raise OPEXException(
-                f"Must divide with an instance of CapitalCost/Intangible/OPEX/ASR/LBT"
-                f"/CostOfSales, integer or a float. {other}({other.__class__.__qualname__}) "
-                f"is not an instance of CapitalCost/Intangible/OPEX/ASR/LBT not an integer "
-                f"nor a float."
+                "Must divide with an instance of CapitalCost/Intangible/OPEX/ASR/LBT" +
+                f"/CostOfSales, integer or a float. {other}({other.__class__.__qualname__}) " +
+                "is not an instance of CapitalCost/Intangible/OPEX/ASR/LBT not an integer "
+                +
+                "nor a float."
             )
 
 
@@ -2272,8 +2422,12 @@ class ASR(GeneralCost):
         Future rates applied to costs for each year, defaulting to a rate of 0%.
     """
 
-    final_year: np.ndarray = field(default=None)
-    future_rate: float | np.ndarray = field(default=None)
+    final_year: npt.NDArray[np.int64] = field(
+        default=cast(npt.NDArray[np.int64], _DEFAULT_NONE)
+    )
+    future_rate: float | npt.NDArray[np.float64] = field(
+        default=cast(float | npt.NDArray[np.float64], _DEFAULT_NONE)
+    )
 
     def __post_init__(self):
         """
@@ -2293,6 +2447,16 @@ class ASR(GeneralCost):
         -   Raise an exception: expense year is before the start year of the project,
         """
 
+        self.project_duration: int
+        self.project_years: npt.NDArray[np.int64]
+        self.expense_year: npt.NDArray[np.int64]
+        self.cost: npt.NDArray[np.float64]
+        self.cost_allocation: list[FluidType]
+        self.cost_type: list[CostType | None]
+        self.description: list[str]
+        self.tax_portion: npt.NDArray[np.float64]
+        self.tax_discount: npt.NDArray[np.float64] | float | int
+
         # Prepare attributes project_duration and project_years
         if self.end_year >= self.start_year:
             self.project_duration = self.end_year - self.start_year + 1
@@ -2304,69 +2468,69 @@ class ASR(GeneralCost):
             )
 
         # Prepare attribute expense_year
-        if not isinstance(self.expense_year, np.ndarray):
+        if not isinstance(cast(object, self.expense_year), np.ndarray):
             raise ASRException(
-                f"Attribute expense_year must be provided as a numpy.ndarray, "
+                "Attribute expense_year must be provided as a numpy.ndarray, " +
                 f"not as a/an {self.expense_year.__class__.__qualname__}"
             )
 
         else:
-            expense_year_nan_sum = np.sum(pd.isna(self.expense_year), dtype=np.float64)
+            expense_year_nan_sum = len(_missing_indices(self.expense_year))
             if expense_year_nan_sum > 0:
                 raise ASRException(
                     f"Missing values in array expense_year: {self.expense_year}"
                 )
 
-        self.expense_year = self.expense_year.astype(int)
+        self.expense_year = self.expense_year.astype(np.int64)
 
         # Prepare attribute cost
-        if not isinstance(self.cost, np.ndarray):
+        if not isinstance(cast(object, self.cost), np.ndarray):
             raise ASRException(
-                f"Attribute cost must be provided as a numpy.ndarray, "
+                "Attribute cost must be provided as a numpy.ndarray, " +
                 f"not as a/an {self.cost.__class__.__qualname__}"
             )
 
         else:
-            cost_nan_id = np.argwhere(pd.isna(self.cost)).ravel()
+            cost_nan_id = _missing_indices(self.cost)
             if len(cost_nan_id) > 0:
                 self.cost[cost_nan_id] = np.zeros(len(cost_nan_id))
 
         self.cost = self.cost.astype(np.float64)
 
         # Prepare attribute cost_allocation
-        if self.cost_allocation is None:
+        if cast(object, self.cost_allocation) is None:
             self.cost_allocation = [FluidType.OIL for _ in range(len(self.expense_year))]
 
         else:
-            if not isinstance(self.cost_allocation, list):
+            if not isinstance(cast(object, self.cost_allocation), list):
                 raise ASRException(
-                    f"Attribute cost_allocation must be given as a list, "
+                    "Attribute cost_allocation must be given as a list, " +
                     f"not as a/an {self.cost_allocation.__class__.__qualname__}"
                 )
 
             self.cost_allocation = [
-                FluidType.OIL if pd.isna(val) else val
+                FluidType.OIL if _is_missing(val) else val
                 for _, val in enumerate(self.cost_allocation)
             ]
 
         # Prepare attribute cost_type
-        if self.cost_type is None:
+        if cast(object, self.cost_type) is None:
             self.cost_type = [None for _ in range(len(self.expense_year))]
 
         else:
-            if not isinstance(self.cost_type, list):
+            if not isinstance(cast(object, self.cost_type), list):
                 raise ASRException(
-                    f"Attribute cost_type must be given as a list, not "
+                    "Attribute cost_type must be given as a list, not " +
                     f"as a/an {self.cost_type.__class__.__qualname__}"
                 )
 
             self.cost_type = [
-                None if pd.isna(val) else val for _, val in enumerate(self.cost_type)
+                None if _is_missing(val) else val for _, val in enumerate(self.cost_type)
             ]
 
             incorrect_cost_type = np.array(
                 [
-                    1 if not isinstance(val, CostType | None) else 0
+                    1 if not isinstance(cast(object, val), CostType | None) else 0
                     for _, val in enumerate(self.cost_type)
                 ]
             )
@@ -2375,49 +2539,49 @@ class ASR(GeneralCost):
                 raise ASRException("Must insert CostType in list cost_type")
 
         # Prepare attribute description
-        if self.description is None:
+        if cast(object, self.description) is None:
             self.description = [" " for _ in range(len(self.expense_year))]
 
         else:
-            if not isinstance(self.description, list):
+            if not isinstance(cast(object, self.description), list):
                 raise ASRException(
-                    f"Attribute description must be given as a list, "
+                    "Attribute description must be given as a list, " +
                     f"not as a/an {self.description.__class__.__qualname__}"
                 )
 
             self.description = [
-                " " if pd.isna(val) else val for _, val in enumerate(self.description)
+                " " if _is_missing(val) else val for _, val in enumerate(self.description)
             ]
 
         # Prepare attribute tax_portion
-        if self.tax_portion is None:
-            self.tax_portion = np.zeros_like(self.cost)
+        if cast(object, self.tax_portion) is None:
+            self.tax_portion = np.zeros_like(self.cost, dtype=np.float64)
 
         else:
-            if not isinstance(self.tax_portion, np.ndarray):
+            if not isinstance(cast(object, self.tax_portion), np.ndarray):
                 raise ASRException(
-                    f"Attribute tax_portion must be given as a numpy.ndarray, "
+                    "Attribute tax_portion must be given as a numpy.ndarray, " +
                     f"not as a/an {self.tax_portion.__class__.__qualname__}"
                 )
 
-            tax_portion_nan_id = np.argwhere(pd.isna(self.tax_portion)).ravel()
+            tax_portion_nan_id = _missing_indices(self.tax_portion)
             if len(tax_portion_nan_id) > 0:
                 self.tax_portion[tax_portion_nan_id] = np.zeros(len(tax_portion_nan_id))
 
-            tax_portion_large = np.sum(self.tax_portion > 1.0, dtype=np.float64)
-            tax_portion_negative = np.sum(self.tax_portion < 0.0, dtype=np.float64)
+            tax_portion_large = np.count_nonzero(self.tax_portion > 1.0)
+            tax_portion_negative = np.count_nonzero(self.tax_portion < 0.0)
             if tax_portion_large > 0 or tax_portion_negative > 0:
                 raise ASRException(
-                    f"The value of tax_portion must be: 0 < tax_portion < 1, "
+                    "The value of tax_portion must be: 0 < tax_portion < 1, " +
                     f"tax_portion: {self.tax_portion}"
                 )
 
         self.tax_portion = self.tax_portion.astype(np.float64)
 
         # Prepare attribute tax_discount
-        if not isinstance(self.tax_discount, (float, int, np.ndarray)):
+        if not isinstance(cast(object, self.tax_discount), (float, int, np.ndarray)):
             raise ASRException(
-                f"Attribute tax_discount must be provided as a float/int or as a numpy.ndarray, "
+                "Attribute tax_discount must be provided as a float/int or as a numpy.ndarray, " +
                 f"not as a/an {self.tax_discount.__class__.__qualname__}"
             )
 
@@ -2427,31 +2591,31 @@ class ASR(GeneralCost):
 
             self.tax_discount = np.repeat(self.tax_discount, len(self.cost))
 
-        elif isinstance(self.tax_discount, np.ndarray):
-            tax_discount_nan_id = np.argwhere(pd.isna(self.tax_discount)).ravel()
+        else:
+            tax_discount_nan_id = _missing_indices(self.tax_discount)
             if len(tax_discount_nan_id) > 0:
                 self.tax_discount[tax_discount_nan_id] = np.zeros(
                     len(tax_discount_nan_id)
                 )
 
-            tax_discount_large = np.sum(self.tax_discount > 1.0, dtype=np.float64)
-            tax_discount_negative = np.sum(self.tax_discount < 0.0, dtype=np.float64)
+            tax_discount_large = np.count_nonzero(self.tax_discount > 1.0)
+            tax_discount_negative = np.count_nonzero(self.tax_discount < 0.0)
             if tax_discount_large > 0 or tax_discount_negative > 0:
                 raise ASRException(
-                    f"The value of tax_discount must be: 0 < tax_discount < 1, "
+                    "The value of tax_discount must be: 0 < tax_discount < 1, " +
                     f"tax_discount: {self.tax_discount}"
                 )
 
         self.tax_discount = self.tax_discount.astype(np.float64)
 
         # Prepare attribute future_rate
-        if self.future_rate is None:
-            self.future_rate = np.zeros_like(self.cost)
+        if cast(object, self.future_rate) is None:
+            self.future_rate = np.zeros_like(self.cost, dtype=np.float64)
 
         else:
-            if not isinstance(self.future_rate, (float, np.ndarray)):
+            if not isinstance(cast(object, self.future_rate), (float, np.ndarray)):
                 raise ASRException(
-                    f"Attribute future_rate must be provided as a numpy ndarray, "
+                    "Attribute future_rate must be provided as a numpy ndarray, " +
                     f"not as an/a {self.future_rate.__class__.__qualname__}"
                 )
 
@@ -2462,55 +2626,55 @@ class ASR(GeneralCost):
                     self.future_rate = np.repeat(self.future_rate, len(self.cost))
 
             elif isinstance(self.future_rate, np.ndarray):
-                future_rate_nan_id = np.argwhere(pd.isna(self.future_rate)).ravel()
+                future_rate_nan_id = _missing_indices(self.future_rate)
                 if len(future_rate_nan_id) > 0:
                     self.future_rate[future_rate_nan_id] = np.zeros(
                         len(future_rate_nan_id)
                     )
 
-                future_rate_negative = np.sum(self.future_rate < 0.0)
-                future_rate_large = np.sum(self.future_rate > 1.0)
+                future_rate_negative = np.count_nonzero(self.future_rate < 0.0)
+                future_rate_large = np.count_nonzero(self.future_rate > 1.0)
                 if future_rate_negative > 0 or future_rate_large > 0:
                     raise ASRException(
-                        f"The value of future_rate must fall within the following "
+                        "The value of future_rate must fall within the following " +
                         f"interval: 0 < future_rate < 1 (future_rate: {self.future_rate})"
                     )
 
-        self.future_rate = self.future_rate.astype(np.float64)
+        self.future_rate = np.asarray(self.future_rate, dtype=np.float64)
 
         # Prepare attribute final_year
-        if self.final_year is None:
+        if cast(object, self.final_year) is None:
             self.final_year = self.expense_year.copy()
 
         else:
-            if not isinstance(self.final_year, np.ndarray):
+            if not isinstance(cast(object, self.final_year), np.ndarray):
                 raise ASRException(
-                    f"Attribute final_year must be given as a numpy.ndarray, "
+                    "Attribute final_year must be given as a numpy.ndarray, " +
                     f"not as a/an {self.final_year.__class__.__qualname__}"
                 )
 
-            final_year_nan = np.argwhere(pd.isna(self.final_year)).ravel()
+            final_year_nan = _missing_indices(self.final_year)
             if len(final_year_nan) > 0:
                 self.final_year[final_year_nan] = self.expense_year[
                     final_year_nan
                 ].copy()
 
             # Exception: final_year is before expense_year
-            final_year_small_sum = np.sum(self.final_year < self.expense_year)
+            final_year_small_sum = np.count_nonzero(self.final_year < self.expense_year)
             if final_year_small_sum > 0:
                 raise ASRException(
-                    f"Attribute final_year ({self.final_year}) is before "
+                    f"Attribute final_year ({self.final_year}) is before " +
                     f"the expense_year ({self.expense_year})"
                 )
 
             # Exception: final_year is after the end year of the project
             if np.max(self.final_year) > self.end_year:
                 raise ASRException(
-                    f"Final year ({np.max(self.final_year)}) "
+                    f"Final year ({np.max(self.final_year)}) " +
                     f"is after the end year of the project ({self.end_year})"
                 )
 
-        self.final_year = self.final_year.astype(int)
+        self.final_year = self.final_year.astype(np.int64)
 
         # Check input data for unequal length
         arr_reference = len(self.expense_year)
@@ -2529,33 +2693,33 @@ class ASR(GeneralCost):
             ]
         ):
             raise ASRException(
-                f"Unequal length of array: "
-                f"cost: {len(self.cost)}, "
-                f"expense_year: {len(self.expense_year)}, "
-                f"cost_allocation: {len(self.cost_allocation)}, "
-                f"cost_type: {len(self.cost_type)}, "
-                f"description: {len(self.description)}, "
-                f"final_year: {len(self.final_year)}, "
-                f"future_rate: {len(self.future_rate)}, "
-                f"tax_portion: {len(self.tax_portion)}, "
+                "Unequal length of array: " +
+                f"cost: {len(self.cost)}, " +
+                f"expense_year: {len(self.expense_year)}, " +
+                f"cost_allocation: {len(self.cost_allocation)}, " +
+                f"cost_type: {len(self.cost_type)}, " +
+                f"description: {len(self.description)}, " +
+                f"final_year: {len(self.final_year)}, " +
+                f"future_rate: {len(self.future_rate)}, " +
+                f"tax_portion: {len(self.tax_portion)}, " +
                 f"tax_discount: {len(self.tax_discount)}. "
             )
 
         # Raise an exception: expense year is after the end year of the project
         if np.max(self.expense_year) > self.end_year:
             raise ASRException(
-                f"Expense year ({np.max(self.expense_year)}) "
+                f"Expense year ({np.max(self.expense_year)}) " +
                 f"is after the end year of the project ({self.end_year})"
             )
 
         # Raise an exception: expense year is before the start year of the project
         if np.min(self.expense_year) < self.start_year:
             raise ASRException(
-                f"Expense year ({np.min(self.expense_year)}) "
+                f"Expense year ({np.min(self.expense_year)}) " +
                 f"is before the start year of the project ({self.start_year})"
             )
 
-    def _calc_future_cost(self) -> np.ndarray:
+    def _calc_future_cost(self) -> npt.NDArray[np.float64]:
         """
         Calculate the future cost of each element by applying a growth rate
         over the project's timeline.
@@ -2583,11 +2747,12 @@ class ASR(GeneralCost):
         # Calculate future value of cost
         return self.cost * np.power((1.0 + self.future_rate), year_diff)
 
+    @override
     def expenditures_pre_tax(
         self,
-        year_inflation: np.ndarray = None,
-        inflation_rate: np.ndarray | int | float = 0.0,
-    ) -> np.ndarray:
+        year_inflation: npt.NDArray[np.int64] | None = None,
+        inflation_rate: npt.NDArray[np.float64] | int | float = 0.0,
+    ) -> npt.NDArray[np.float64]:
         """
         Calculate the pre-tax expenditures by adjusting future costs for inflation and
         distributing them over the project duration.
@@ -2636,17 +2801,20 @@ class ASR(GeneralCost):
         )
 
         # Calculate distributed cost
-        distributed_cost = calc_distributed_cost(
+        distributed_cost: npt.NDArray[np.float64] = np.asarray(calc_distributed_cost(
             cost=cost_adjusted_by_inflation,
             expense_year=self.expense_year,
             final_year=self.final_year,
             project_years=self.project_years,
             project_duration=self.project_duration,
-        )
+        ), dtype=np.float64)
 
-        return np.sum(distributed_cost, axis=1, keepdims=False)
+        return np.asarray(distributed_cost.sum(axis=1), dtype=np.float64)
 
-    def indirect_taxes(self, tax_rate: np.ndarray | float = 0.0) -> np.ndarray:
+    @override
+    def indirect_taxes(
+        self, tax_rate: npt.NDArray[np.float64] | float = 0.0
+    ) -> npt.NDArray[np.float64]:
         """
         Calculate and distribute indirect taxes over the project duration.
 
@@ -2691,17 +2859,18 @@ class ASR(GeneralCost):
         )
 
         # Calculate distributed indirect taxes
-        distributed_taxes = calc_distributed_cost(
+        distributed_taxes: npt.NDArray[np.float64] = np.asarray(calc_distributed_cost(
             cost=indirect_tax,
             expense_year=self.expense_year,
             final_year=self.final_year,
             project_years=self.project_years,
             project_duration=self.project_duration,
-        )
+        ), dtype=np.float64)
 
-        return np.sum(distributed_taxes, axis=1, keepdims=False)
+        return np.asarray(distributed_taxes.sum(axis=1), dtype=np.float64)
 
-    def __eq__(self, other):
+    @override
+    def __eq__(self, other: object) -> bool:
         # Between two instances of ASR
         if isinstance(other, ASR):
             return all(
@@ -2721,76 +2890,76 @@ class ASR(GeneralCost):
 
         # Between an instance of ASR and integer/float
         elif isinstance(other, (int, float)):
-            return np.sum(self.cost) == other
+            return float(np.sum(self.cost)) == other
 
         else:
             return False
 
-    def __lt__(self, other):
+    def __lt__(self, other: object) -> bool:
         # Between an instance of ASR with another instance of
         # CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales
         if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales)):
-            return np.sum(self.cost) < np.sum(other.cost)
+            return bool(np.sum(self.cost) < np.sum(other.cost))
 
         # Between an instance of ASR and an integer/float
         elif isinstance(other, (int, float)):
-            return np.sum(self.cost) < other
+            return bool(np.sum(self.cost) < other)
 
         else:
             raise ASRException(
-                "Must compare an instance of ASR with another instance of "
+                "Must compare an instance of ASR with another instance of " +
                 "CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer or a float. "
             )
 
-    def __le__(self, other):
+    def __le__(self, other: object) -> bool:
         # Between an instance of ASR with another instance of
         # CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales
         if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales)):
-            return np.sum(self.cost) <= np.sum(other.cost)
+            return bool(np.sum(self.cost) <= np.sum(other.cost))
 
         # Between an instance of ASR and an integer/float
         elif isinstance(other, (int, float)):
-            return np.sum(self.cost) <= other
+            return bool(np.sum(self.cost) <= other)
 
         else:
             raise ASRException(
-                "Must compare an instance of ASR with another instance of "
+                "Must compare an instance of ASR with another instance of " +
                 "CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer or a float. "
             )
 
-    def __gt__(self, other):
+    def __gt__(self, other: object) -> bool:
         # Between an instance of ASR with another instance of
         # CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales
         if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales)):
-            return np.sum(self.cost) > np.sum(other.cost)
+            return bool(np.sum(self.cost) > np.sum(other.cost))
 
         # Between an instance of ASR and an integer/float
         elif isinstance(other, (int, float)):
-            return np.sum(self.cost) > other
+            return bool(np.sum(self.cost) > other)
 
         else:
             raise ASRException(
-                "Must compare an instance of ASR with another instance of "
+                "Must compare an instance of ASR with another instance of " +
                 "CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
             )
 
-    def __ge__(self, other):
+    def __ge__(self, other: object) -> bool:
         # Between an instance of ASR with another instance of
         # CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales
         if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales)):
-            return np.sum(self.cost) >= np.sum(other.cost)
+            return bool(np.sum(self.cost) >= np.sum(other.cost))
 
         # Between an instance of ASR and an integer/float
         elif isinstance(other, (int, float)):
-            return np.sum(self.cost) >= other
+            return bool(np.sum(self.cost) >= other)
 
         else:
             raise ASRException(
-                "Must compare an instance of ASR with another instance of "
+                "Must compare an instance of ASR with another instance of " +
                 "CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
             )
 
-    def __add__(self, other):
+    def __add__(self, other: object) -> ASR:
         # Only allows addition between an instance of ASR
         # and another instance of ASR
         if isinstance(other, ASR):
@@ -2822,14 +2991,14 @@ class ASR(GeneralCost):
 
         else:
             raise ASRException(
-                f"Must add an instance of ASR with another instance of ASR. "
+                "Must add an instance of ASR with another instance of ASR. " +
                 f"{other}({other.__class__.__qualname__}) is not an instance of ASR."
             )
 
-    def __iadd__(self, other):
+    def __iadd__(self, other: object) -> ASR:
         return self.__add__(other)
 
-    def __sub__(self, other):
+    def __sub__(self, other: object) -> ASR:
         # Only allows subtraction between an instance of ASR
         # and another instance of ASR
         if isinstance(other, ASR):
@@ -2861,16 +3030,16 @@ class ASR(GeneralCost):
 
         else:
             raise ASRException(
-                f"Must subtract between an instance of ASR "
-                f"with another instance of ASR. "
-                f"{other}({other.__class__.__qualname__}) is not "
-                f"an instance of ASR."
+                "Must subtract between an instance of ASR " +
+                "with another instance of ASR. " +
+                f"{other}({other.__class__.__qualname__}) is not " +
+                "an instance of ASR."
             )
 
-    def __rsub__(self, other):
+    def __rsub__(self, other: object) -> ASR:
         return self.__sub__(other)
 
-    def __mul__(self, other):
+    def __mul__(self, other: object) -> ASR:
         # Multiplication is allowed only with an integer/a float
         if isinstance(other, (int, float)):
             return ASR(
@@ -2889,19 +3058,19 @@ class ASR(GeneralCost):
 
         else:
             raise ASRException(
-                f"Must multiply with an integer or a float. "
-                f"{other}({other.__class__.__qualname__}) "
-                f"is not an integer nor a float."
+                "Must multiply with an integer or a float. " +
+                f"{other}({other.__class__.__qualname__}) " +
+                "is not an integer nor a float."
             )
 
-    def __rmul__(self, other):
+    def __rmul__(self, other: object) -> ASR:
         return self.__mul__(other)
 
-    def __truediv__(self, other):
+    def __truediv__(self, other: object) -> ASR | float:
         # Between an instance of ASR with another instance of
         # CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales
         if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales)):
-            return np.sum(self.cost) / np.sum(other.cost)
+            return float(np.sum(self.cost) / np.sum(other.cost))
 
         # Between an instance of ASR and an integer/a float
         elif isinstance(other, (int, float)):
@@ -2925,10 +3094,11 @@ class ASR(GeneralCost):
 
         else:
             raise ASRException(
-                f"Must divide with an instance of CapitalCost/Intangible/OPEX/ASR/LBT"
-                f"/CostOfSales, integer or a float. {other}({other.__class__.__qualname__}) "
-                f"is not an instance of CapitalCost/Intangible/OPEX/ASR/LBT not an integer "
-                f"nor a float."
+                "Must divide with an instance of CapitalCost/Intangible/OPEX/ASR/LBT" +
+                f"/CostOfSales, integer or a float. {other}({other.__class__.__qualname__}) " +
+                "is not an instance of CapitalCost/Intangible/OPEX/ASR/LBT not an integer "
+                +
+                "nor a float."
             )
 
 
@@ -2953,20 +3123,38 @@ class LBT(GeneralCost):
         The array of gross revenues.
     """
 
-    final_year: np.ndarray = field(default=None)
-    utilized_land_area: np.ndarray = field(default=None)
-    utilized_building_area: np.ndarray = field(default=None)
-    njop_land: np.ndarray = field(default=None)
-    njop_building: np.ndarray = field(default=None)
-    gross_revenue: np.ndarray = field(default=None)
+    final_year: npt.NDArray[np.int64] = field(
+        default=cast(npt.NDArray[np.int64], _DEFAULT_NONE)
+    )
+    utilized_land_area: npt.NDArray[np.float64] = field(
+        default=cast(npt.NDArray[np.float64], _DEFAULT_NONE)
+    )
+    utilized_building_area: npt.NDArray[np.float64] = field(
+        default=cast(npt.NDArray[np.float64], _DEFAULT_NONE)
+    )
+    njop_land: npt.NDArray[np.float64] = field(
+        default=cast(npt.NDArray[np.float64], _DEFAULT_NONE)
+    )
+    njop_building: npt.NDArray[np.float64] = field(
+        default=cast(npt.NDArray[np.float64], _DEFAULT_NONE)
+    )
+    gross_revenue: npt.NDArray[np.float64] = field(
+        default=cast(npt.NDArray[np.float64], _DEFAULT_NONE)
+    )
 
     # Override attribute
-    cost: np.ndarray = field(default=None)
+    cost: npt.NDArray[np.float64] = field(
+        default=cast(npt.NDArray[np.float64], _DEFAULT_NONE)
+    )
 
     # Attributes to be defined later
     # (associated with surface and subsurface LBT components)
-    _surface_lbt_cost: np.ndarray = field(default=None, init=False, repr=False)
-    _subsurface_lbt_cost: np.ndarray = field(default=None, init=False, repr=False)
+    _surface_lbt_cost: npt.NDArray[np.float64] = field(
+        default=cast(npt.NDArray[np.float64], _DEFAULT_NONE), init=False, repr=False
+    )
+    _subsurface_lbt_cost: npt.NDArray[np.float64] = field(
+        default=cast(npt.NDArray[np.float64], _DEFAULT_NONE), init=False, repr=False
+    )
 
     def __post_init__(self):
         """
@@ -2992,6 +3180,15 @@ class LBT(GeneralCost):
         -   Raise an exception: expense_year is before the start_year of the project,
         """
 
+        self.project_duration: int
+        self.project_years: npt.NDArray[np.int64]
+        self.expense_year: npt.NDArray[np.int64]
+        self.cost_allocation: list[FluidType]
+        self.cost_type: list[CostType | None]
+        self.description: list[str]
+        self.tax_portion: npt.NDArray[np.float64]
+        self.tax_discount: npt.NDArray[np.float64] | float | int
+
         # Prepare attributes project_duration and project_years
         if self.end_year >= self.start_year:
             self.project_duration = self.end_year - self.start_year + 1
@@ -3003,57 +3200,57 @@ class LBT(GeneralCost):
             )
 
         # Prepare attribute expense_year
-        if not isinstance(self.expense_year, np.ndarray):
+        if not isinstance(cast(object, self.expense_year), np.ndarray):
             raise LBTException(
-                f"Attribute expense_year must be provided as a numpy.ndarray, "
+                "Attribute expense_year must be provided as a numpy.ndarray, " +
                 f"not as a/an {self.expense_year.__class__.__qualname__}"
             )
 
         else:
-            expense_year_nan_sum = np.sum(pd.isna(self.expense_year))
+            expense_year_nan_sum = len(_missing_indices(self.expense_year))
             if expense_year_nan_sum > 0:
                 raise LBTException(
                     f"Missing values in array expense_year: {self.expense_year}"
                 )
 
-        self.expense_year = self.expense_year.astype(int)
+        self.expense_year = self.expense_year.astype(np.int64)
 
         # Prepare attribute cost_allocation
-        if self.cost_allocation is None:
+        if cast(object, self.cost_allocation) is None:
             self.cost_allocation = [
                 FluidType.OIL for _ in range(len(self.expense_year))
             ]
 
         else:
-            if not isinstance(self.cost_allocation, list):
+            if not isinstance(cast(object, self.cost_allocation), list):
                 raise LBTException(
-                    f"Attribute cost_allocation must be given as a list, "
+                    "Attribute cost_allocation must be given as a list, " +
                     f"not as a/an {self.cost_allocation.__class__.__qualname__}"
                 )
 
             self.cost_allocation = [
-                FluidType.OIL if pd.isna(val) else val
+                FluidType.OIL if _is_missing(val) else val
                 for _, val in enumerate(self.cost_allocation)
             ]
 
         # Prepare attribute cost_type
-        if self.cost_type is None:
+        if cast(object, self.cost_type) is None:
             self.cost_type = [None for _ in range(len(self.expense_year))]
 
         else:
-            if not isinstance(self.cost_type, list):
+            if not isinstance(cast(object, self.cost_type), list):
                 raise LBTException(
-                    f"Attribute cost_type must be given as a list, not "
+                    "Attribute cost_type must be given as a list, not " +
                     f"as a/an {self.cost_type.__class__.__qualname__}"
                 )
 
             self.cost_type = [
-                None if pd.isna(val) else val for _, val in enumerate(self.cost_type)
+                None if _is_missing(val) else val for _, val in enumerate(self.cost_type)
             ]
 
             incorrect_cost_type = np.array(
                 [
-                    1 if not isinstance(val, CostType | None) else 0
+                    1 if not isinstance(cast(object, val), CostType | None) else 0
                     for _, val in enumerate(self.cost_type)
                 ]
             )
@@ -3062,49 +3259,49 @@ class LBT(GeneralCost):
                 raise LBTException("Must insert CostType in list cost_type")
 
         # Prepare attribute description
-        if self.description is None:
+        if cast(object, self.description) is None:
             self.description = [" " for _ in range(len(self.expense_year))]
 
         else:
-            if not isinstance(self.description, list):
+            if not isinstance(cast(object, self.description), list):
                 raise LBTException(
-                    f"Attribute description must be given as a list, "
+                    "Attribute description must be given as a list, " +
                     f"not as a/an {self.description.__class__.__qualname__}"
                 )
 
             self.description = [
-                " " if pd.isna(val) else val for _, val in enumerate(self.description)
+                " " if _is_missing(val) else val for _, val in enumerate(self.description)
             ]
 
         # Prepare attribute tax_portion
-        if self.tax_portion is None:
-            self.tax_portion = np.zeros_like(self.expense_year)
+        if cast(object, self.tax_portion) is None:
+            self.tax_portion = np.zeros_like(self.expense_year, dtype=np.float64)
 
         else:
-            if not isinstance(self.tax_portion, np.ndarray):
+            if not isinstance(cast(object, self.tax_portion), np.ndarray):
                 raise LBTException(
-                    f"Attribute tax_portion must be given as a numpy.ndarray, "
+                    "Attribute tax_portion must be given as a numpy.ndarray, " +
                     f"not as a/an {self.tax_portion.__class__.__qualname__}"
                 )
 
-            tax_portion_nan_id = np.argwhere(pd.isna(self.tax_portion)).ravel()
+            tax_portion_nan_id = _missing_indices(self.tax_portion)
             if len(tax_portion_nan_id) > 0:
                 self.tax_portion[tax_portion_nan_id] = np.zeros(len(tax_portion_nan_id))
 
-            tax_portion_large = np.sum(self.tax_portion > 1.0, dtype=np.float64)
-            tax_portion_negative = np.sum(self.tax_portion < 0.0, dtype=np.float64)
+            tax_portion_large = np.count_nonzero(self.tax_portion > 1.0)
+            tax_portion_negative = np.count_nonzero(self.tax_portion < 0.0)
             if tax_portion_large > 0 or tax_portion_negative > 0:
                 raise LBTException(
-                    f"The value of tax_portion must be: 0 < tax_portion < 1, "
+                    "The value of tax_portion must be: 0 < tax_portion < 1, " +
                     f"tax_portion: {self.tax_portion}"
                 )
 
         self.tax_portion = self.tax_portion.astype(np.float64)
 
         # Prepare attribute tax_discount
-        if not isinstance(self.tax_discount, (float, int, np.ndarray)):
+        if not isinstance(cast(object, self.tax_discount), (float, int, np.ndarray)):
             raise LBTException(
-                f"Attribute tax_discount must be provided as a float/int or as a numpy.ndarray, "
+                "Attribute tax_discount must be provided as a float/int or as a numpy.ndarray, " +
                 f"not as a/an {self.tax_discount.__class__.__qualname__}"
             )
 
@@ -3114,77 +3311,77 @@ class LBT(GeneralCost):
 
             self.tax_discount = np.repeat(self.tax_discount, len(self.expense_year))
 
-        elif isinstance(self.tax_discount, np.ndarray):
-            tax_discount_nan_id = np.argwhere(pd.isna(self.tax_discount)).ravel()
+        else:
+            tax_discount_nan_id = _missing_indices(self.tax_discount)
             if len(tax_discount_nan_id) > 0:
                 self.tax_discount[tax_discount_nan_id] = np.zeros(
                     len(tax_discount_nan_id)
                 )
 
-            tax_discount_large = np.sum(self.tax_discount > 1.0, dtype=np.float64)
-            tax_discount_negative = np.sum(self.tax_discount < 0.0, dtype=np.float64)
+            tax_discount_large = np.count_nonzero(self.tax_discount > 1.0)
+            tax_discount_negative = np.count_nonzero(self.tax_discount < 0.0)
             if tax_discount_large > 0 or tax_discount_negative > 0:
                 raise LBTException(
-                    f"The value of tax_discount must be: 0 < tax_discount < 1, "
+                    "The value of tax_discount must be: 0 < tax_discount < 1, " +
                     f"tax_discount: {self.tax_discount}"
                 )
 
         self.tax_discount = self.tax_discount.astype(np.float64)
 
         # Prepare attribute final_year
-        if self.final_year is None:
+        if cast(object, self.final_year) is None:
             self.final_year = self.expense_year.copy()
 
         else:
-            if not isinstance(self.final_year, np.ndarray):
+            if not isinstance(cast(object, self.final_year), np.ndarray):
                 raise LBTException(
-                    f"Attribute final_year must be given as a numpy.ndarray, "
+                    "Attribute final_year must be given as a numpy.ndarray, " +
                     f"not as a/an {self.final_year.__class__.__qualname__}"
                 )
 
-            final_year_nan_id = np.argwhere(pd.isna(self.final_year)).ravel()
+            final_year_nan_id = _missing_indices(self.final_year)
             if len(final_year_nan_id) > 0:
                 self.final_year[final_year_nan_id] = self.expense_year[
                     final_year_nan_id
                 ].copy()
 
             # Exception: final_year is before expense_year
-            final_year_small_sum = np.sum(self.final_year < self.expense_year)
+            final_year_small_sum = np.count_nonzero(self.final_year < self.expense_year)
             if final_year_small_sum > 0:
                 raise LBTException(
-                    f"Attribute final_year ({self.final_year}) is before "
+                    f"Attribute final_year ({self.final_year}) is before " +
                     f"the expense_year ({self.expense_year})"
                 )
 
             # Exception: final_year is after the end year of the project
             if np.max(self.final_year) > self.end_year:
                 raise LBTException(
-                    f"Final year ({np.max(self.final_year)}) "
+                    f"Final year ({np.max(self.final_year)}) " +
                     f"is after the end year of the project ({self.end_year})"
                 )
 
-        self.final_year = self.final_year.astype(int)
+        self.final_year = self.final_year.astype(np.int64)
 
         # Prepare attribute utilized_land_area
-        if self.utilized_land_area is None:
-            self.utilized_land_area = np.zeros_like(self.expense_year)
+        if cast(object, self.utilized_land_area) is None:
+            self.utilized_land_area = np.zeros_like(self.expense_year, dtype=np.float64)
 
         else:
-            if not isinstance(self.utilized_land_area, np.ndarray):
+            if not isinstance(cast(object, self.utilized_land_area), np.ndarray):
                 raise LBTException(
-                    f"Attribute utilized_land_area must be given as a numpy.ndarray, "
+                    "Attribute utilized_land_area must be given as a numpy.ndarray, " +
                     f"not as a/an {self.utilized_land_area.__class__.__qualname__}"
                 )
 
             # Missing data in array utilized_land_area
-            utilized_land_nan_id = np.argwhere(pd.isna(self.utilized_land_area)).ravel()
+            utilized_land_nan_id = _missing_indices(self.utilized_land_area)
             if len(utilized_land_nan_id) > 0:
                 self.utilized_land_area[utilized_land_nan_id] = np.zeros(
                     len(utilized_land_nan_id)
                 )
 
             # Exception: negative values in array utilized_land_area
-            utilized_land_area_negative_sum = np.sum(self.utilized_land_area < 0)
+            utilized_land_area_negative_sum = np.count_nonzero(self.utilized_land_area < 0)
             if utilized_land_area_negative_sum > 0:
                 raise LBTException(
                     f"Negative values in array utilized_land_area: {self.utilized_land_area}"
@@ -3193,27 +3390,25 @@ class LBT(GeneralCost):
         self.utilized_land_area = self.utilized_land_area.astype(np.float64)
 
         # Prepare attribute utilized_building_area
-        if self.utilized_building_area is None:
-            self.utilized_building_area = np.zeros_like(self.expense_year)
+        if cast(object, self.utilized_building_area) is None:
+            self.utilized_building_area = np.zeros_like(self.expense_year, dtype=np.float64)
 
         else:
-            if not isinstance(self.utilized_building_area, np.ndarray):
+            if not isinstance(cast(object, self.utilized_building_area), np.ndarray):
                 raise LBTException(
-                    f"Attribute utilized_building_area must be given as a numpy.ndarray, "
+                    "Attribute utilized_building_area must be given as a numpy.ndarray, " +
                     f"not as an/a {self.utilized_building_area.__class__.__qualname__}"
                 )
 
             # Missing data in array utilized_building_area
-            utilized_building_nan_id = np.argwhere(
-                pd.isna(self.utilized_building_area)
-            ).ravel()
+            utilized_building_nan_id = _missing_indices(self.utilized_building_area)
             if len(utilized_building_nan_id) > 0:
                 self.utilized_building_area[utilized_building_nan_id] = np.zeros(
                     len(utilized_building_nan_id)
                 )
 
             # Exception: negative values in array utilized_building_area
-            utilized_building_negative_sum = np.sum(self.utilized_building_area < 0)
+            utilized_building_negative_sum = np.count_nonzero(self.utilized_building_area < 0)
             if utilized_building_negative_sum > 0:
                 raise LBTException(
                     f"Negative values in array utilized_building_area: {self.utilized_building_area}"
@@ -3222,36 +3417,36 @@ class LBT(GeneralCost):
         self.utilized_building_area = self.utilized_building_area.astype(np.float64)
 
         # Prepare attribute njop_land
-        if self.njop_land is None:
-            self.njop_land = np.zeros_like(self.expense_year)
+        if cast(object, self.njop_land) is None:
+            self.njop_land = np.zeros_like(self.expense_year, dtype=np.float64)
 
         else:
-            if not isinstance(self.njop_land, np.ndarray):
+            if not isinstance(cast(object, self.njop_land), np.ndarray):
                 raise LBTException(
-                    f"Attribute njop_land must be given as a numpy.ndarray, "
+                    "Attribute njop_land must be given as a numpy.ndarray, " +
                     f"not as a/an {self.njop_land.__class__.__qualname__}"
                 )
 
             # Missing data of array njop_land
-            njop_land_nan_id = np.argwhere(pd.isna(self.njop_land)).ravel()
+            njop_land_nan_id = _missing_indices(self.njop_land)
             if len(njop_land_nan_id) > 0:
                 self.njop_land[njop_land_nan_id] = np.zeros(len(njop_land_nan_id))
 
         self.njop_land = self.njop_land.astype(np.float64)
 
         # Prepare attribute njop_building
-        if self.njop_building is None:
-            self.njop_building = np.zeros_like(self.expense_year)
+        if cast(object, self.njop_building) is None:
+            self.njop_building = np.zeros_like(self.expense_year, dtype=np.float64)
 
         else:
-            if not isinstance(self.njop_building, np.ndarray):
+            if not isinstance(cast(object, self.njop_building), np.ndarray):
                 raise LBTException(
-                    f"Attribute njop_building must be given as a numpy.ndarray, "
+                    "Attribute njop_building must be given as a numpy.ndarray, " +
                     f"not as a/an {self.njop_building.__class__.__qualname__}"
                 )
 
             # Missing data in array njop_building
-            njop_building_nan_id = np.argwhere(pd.isna(self.njop_building)).ravel()
+            njop_building_nan_id = _missing_indices(self.njop_building)
             if len(njop_building_nan_id) > 0:
                 self.njop_building[njop_building_nan_id] = np.zeros(
                     len(njop_building_nan_id)
@@ -3260,18 +3455,18 @@ class LBT(GeneralCost):
         self.njop_building = self.njop_building.astype(np.float64)
 
         # Prepare attribute gross_revenue
-        if self.gross_revenue is None:
-            self.gross_revenue = np.zeros_like(self.expense_year)
+        if cast(object, self.gross_revenue) is None:
+            self.gross_revenue = np.zeros_like(self.expense_year, dtype=np.float64)
 
         else:
-            if not isinstance(self.gross_revenue, np.ndarray):
+            if not isinstance(cast(object, self.gross_revenue), np.ndarray):
                 raise LBTException(
-                    f"Attribute gross_revenue must be given as a numpy.ndarray, "
+                    "Attribute gross_revenue must be given as a numpy.ndarray, " +
                     f"not as a/an {self.gross_revenue.__class__.__qualname__}"
                 )
 
             # Missing data in array gross_revenue
-            gross_revenue_nan_id = np.argwhere(pd.isna(self.gross_revenue)).ravel()
+            gross_revenue_nan_id = _missing_indices(self.gross_revenue)
             if len(gross_revenue_nan_id) > 0:
                 self.gross_revenue[gross_revenue_nan_id] = np.zeros(
                     len(gross_revenue_nan_id)
@@ -3292,18 +3487,18 @@ class LBT(GeneralCost):
         )
 
         # Prepare attribute cost
-        if self.cost is None:
+        if cast(object, self.cost) is None:
             self.cost = self._surface_lbt_cost + self._subsurface_lbt_cost
 
         else:
-            if not isinstance(self.cost, np.ndarray):
+            if not isinstance(cast(object, self.cost), np.ndarray):
                 raise LBTException(
-                    f"Attribute cost must be given as a numpy.ndarray, "
+                    "Attribute cost must be given as a numpy.ndarray, " +
                     f"not as a/an {self.cost.__class__.__qualname__}"
                 )
 
             else:
-                cost_nan_id = np.argwhere(pd.isna(self.cost)).ravel()
+                cost_nan_id = _missing_indices(self.cost)
                 if len(cost_nan_id) > 0:
                     self.cost[cost_nan_id] = np.zeros(len(cost_nan_id))
 
@@ -3330,41 +3525,43 @@ class LBT(GeneralCost):
             ]
         ):
             raise LBTException(
-                f"Unequal length of arrays: "
-                f"expense_year: {len(self.expense_year)}, "
-                f"cost_allocation: {len(self.cost_allocation)}, "
-                f"cost_type: {len(self.cost_type)}, "
-                f"description: {len(self.description)}, "
-                f"tax_portion: {len(self.tax_portion)}, "
-                f"tax_discount: {len(self.tax_discount)}, "
-                f"final_year: {len(self.final_year)}, "
-                f"utilized_land_area: {len(self.utilized_land_area)}, "
-                f"utilized_building_area: {len(self.utilized_building_area)}, "
-                f"njop_land: {len(self.njop_land)}, "
-                f"njop_building: {len(self.njop_building)}, "
+                "Unequal length of arrays: " +
+                f"expense_year: {len(self.expense_year)}, " +
+                f"cost_allocation: {len(self.cost_allocation)}, " +
+                f"cost_type: {len(self.cost_type)}, " +
+                f"description: {len(self.description)}, " +
+                f"tax_portion: {len(self.tax_portion)}, " +
+                f"tax_discount: {len(self.tax_discount)}, " +
+                f"final_year: {len(self.final_year)}, " +
+                f"utilized_land_area: {len(self.utilized_land_area)}, " +
+                f"utilized_building_area: {len(self.utilized_building_area)}, " +
+                f"njop_land: {len(self.njop_land)}, " +
+                f"njop_building: {len(self.njop_building)}, " +
                 f"gross_revenue: {len(self.gross_revenue)}, "
+                +
                 f"cost: {len(self.cost)}"
             )
 
         # Exception: expense year is after the end year of the project
         if np.max(self.expense_year) > self.end_year:
             raise LBTException(
-                f"Expense year ({np.max(self.expense_year)}) "
+                f"Expense year ({np.max(self.expense_year)}) " +
                 f"is after the end year of the project ({self.end_year})"
             )
 
         # Exception: expense_year is before the start year of the project
         if np.min(self.expense_year) < self.start_year:
             raise LBTException(
-                f"Expense year ({np.min(self.expense_year)}) "
+                f"Expense year ({np.min(self.expense_year)}) " +
                 f"is before the start year of the project ({self.start_year})"
             )
 
+    @override
     def expenditures_pre_tax(
         self,
-        year_inflation: np.ndarray = None,
-        inflation_rate: np.ndarray | int | float = 0.0,
-    ) -> np.ndarray:
+        year_inflation: npt.NDArray[np.int64] | None = None,
+        inflation_rate: npt.NDArray[np.float64] | int | float = 0.0,
+    ) -> npt.NDArray[np.float64]:
         """
         Calculate pre-tax expenditures adjusted for inflation.
 
@@ -3409,17 +3606,20 @@ class LBT(GeneralCost):
         )
 
         # Calculate distributed cost
-        distributed_cost = calc_distributed_cost(
+        distributed_cost: npt.NDArray[np.float64] = np.asarray(calc_distributed_cost(
             cost=cost_adjusted_by_inflation,
             expense_year=self.expense_year,
             final_year=self.final_year,
             project_years=self.project_years,
             project_duration=self.project_duration,
-        )
+        ), dtype=np.float64)
 
-        return np.sum(distributed_cost, axis=1, keepdims=False)
+        return np.asarray(distributed_cost.sum(axis=1), dtype=np.float64)
 
-    def indirect_taxes(self, tax_rate: np.ndarray | float = 0.0) -> np.ndarray:
+    @override
+    def indirect_taxes(
+        self, tax_rate: npt.NDArray[np.float64] | float = 0.0
+    ) -> npt.NDArray[np.float64]:
         """
         Calculate and distribute indirect taxes over the project duration.
 
@@ -3461,17 +3661,18 @@ class LBT(GeneralCost):
         )
 
         # Calculate distributed indirect taxes
-        distributed_taxes = calc_distributed_cost(
+        distributed_taxes: npt.NDArray[np.float64] = np.asarray(calc_distributed_cost(
             cost=indirect_tax,
             expense_year=self.expense_year,
             final_year=self.final_year,
             project_years=self.project_years,
             project_duration=self.project_duration,
-        )
+        ), dtype=np.float64)
 
-        return np.sum(distributed_taxes, axis=1, keepdims=False)
+        return np.asarray(distributed_taxes.sum(axis=1), dtype=np.float64)
 
-    def __eq__(self, other):
+    @override
+    def __eq__(self, other: object) -> bool:
         # Between two instances of LBT
         if isinstance(other, LBT):
             return all(
@@ -3495,76 +3696,76 @@ class LBT(GeneralCost):
 
         # Between an instance of LBT and an integer/a float
         elif isinstance(other, (int, float)):
-            return np.sum(self.cost) == other
+            return float(np.sum(self.cost)) == other
 
         else:
             return False
 
-    def __lt__(self, other):
+    def __lt__(self, other: object) -> bool:
         # Between an instance of LBT with another instance of
         # CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales
         if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales)):
-            return np.sum(self.cost) < np.sum(other.cost)
+            return bool(np.sum(self.cost) < np.sum(other.cost))
 
         # Between an instance of LBT and an integer/a float
         elif isinstance(other, (int, float)):
-            return np.sum(self.cost) < other
+            return bool(np.sum(self.cost) < other)
 
         else:
             raise LBTException(
-                "Must compare an instance of LBT with another instance of "
+                "Must compare an instance of LBT with another instance of " +
                 "CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
             )
 
-    def __le__(self, other):
+    def __le__(self, other: object) -> bool:
         # Between an instance of LBT with another instance of
         # CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales
         if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales)):
-            return np.sum(self.cost) <= np.sum(other.cost)
+            return bool(np.sum(self.cost) <= np.sum(other.cost))
 
         # Between an instance of LBT and an integer/a float
         elif isinstance(other, (int, float)):
-            return np.sum(self.cost) <= other
+            return bool(np.sum(self.cost) <= other)
 
         else:
             raise LBTException(
-                "Must compare an instance of LBT with another instance of "
+                "Must compare an instance of LBT with another instance of " +
                 "CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
             )
 
-    def __gt__(self, other):
+    def __gt__(self, other: object) -> bool:
         # Between an instance of LBT with another instance of
         # CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales
         if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales)):
-            return np.sum(self.cost) > np.sum(other.cost)
+            return bool(np.sum(self.cost) > np.sum(other.cost))
 
         # Between an instance of ASR and an integer/float
         elif isinstance(other, (int, float)):
-            return np.sum(self.cost) > other
+            return bool(np.sum(self.cost) > other)
 
         else:
             raise LBTException(
-                "Must compare an instance of ASR with another instance of "
+                "Must compare an instance of ASR with another instance of " +
                 "CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
             )
 
-    def __ge__(self, other):
+    def __ge__(self, other: object) -> bool:
         # Between an instance of LBT with another instance of
         # CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales
         if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales)):
-            return np.sum(self.cost) >= np.sum(other.cost)
+            return bool(np.sum(self.cost) >= np.sum(other.cost))
 
         # Between an instance of LBT and an integer/a float
         elif isinstance(other, (int, float)):
-            return np.sum(self.cost) >= other
+            return bool(np.sum(self.cost) >= other)
 
         else:
             raise LBTException(
-                "Must compare an instance of LBT with another instance of "
+                "Must compare an instance of LBT with another instance of " +
                 "CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
             )
 
-    def __add__(self, other):
+    def __add__(self, other: object) -> LBT:
         # Only allows addition between an instance of LBT
         # and another instance of LBT
         if isinstance(other, LBT):
@@ -3608,14 +3809,14 @@ class LBT(GeneralCost):
 
         else:
             raise LBTException(
-                f"Must add between an instance of LBT with another instance of LBT. "
+                "Must add between an instance of LBT with another instance of LBT. " +
                 f"{other}({other.__class__.__qualname__}) is not an instance of LBT."
             )
 
-    def __iadd__(self, other):
+    def __iadd__(self, other: object) -> LBT:
         return self.__add__(other)
 
-    def __sub__(self, other):
+    def __sub__(self, other: object) -> LBT:
         # Only allows subtraction between an instance of LBT
         # and another instance of LBT
         if isinstance(other, LBT):
@@ -3659,14 +3860,14 @@ class LBT(GeneralCost):
 
         else:
             raise LBTException(
-                f"Must subtract between an instance of LBT with another instance of LBT. "
+                "Must subtract between an instance of LBT with another instance of LBT. " +
                 f"{other}({other.__class__.__qualname__}) is not an instance of LBT."
             )
 
-    def __rsub__(self, other):
+    def __rsub__(self, other: object) -> LBT:
         return self.__sub__(other)
 
-    def __mul__(self, other):
+    def __mul__(self, other: object) -> LBT:
         # Multiplication is allowed only with an integer/a float
         if isinstance(other, (int, float)):
             return LBT(
@@ -3688,19 +3889,19 @@ class LBT(GeneralCost):
 
         else:
             raise LBTException(
-                f"Must multiply with an integer or a float. "
-                f"{other}({other.__class__.__qualname__}) "
-                f"is not an integer nor a float."
+                "Must multiply with an integer or a float. " +
+                f"{other}({other.__class__.__qualname__}) " +
+                "is not an integer nor a float."
             )
 
-    def __rmul__(self, other):
+    def __rmul__(self, other: object) -> LBT:
         return self.__mul__(other)
 
-    def __truediv__(self, other):
+    def __truediv__(self, other: object) -> LBT | float:
         # Between an instance of LBT with another instance of
         # CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales
         if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales)):
-            return np.sum(self.cost) / np.sum(other.cost)
+            return float(np.sum(self.cost) / np.sum(other.cost))
 
         # Between an instance of LBT and an integer/a float
         elif isinstance(other, (int, float)):
@@ -3728,10 +3929,10 @@ class LBT(GeneralCost):
 
         else:
             raise LBTException(
-                f"Must divide with an instance of CapitalCost/Intangible/OPEX/ASR/LBT"
-                f"/CostOfSales, integer or a float. {other}({other.__class__.__qualname__}) "
-                f"is not an instance  of CapitalCost/Intangible/OPEX/ASR/LBT nor an integer "
-                f"nor a float."
+                "Must divide with an instance of CapitalCost/Intangible/OPEX/ASR/LBT" +
+                f"/CostOfSales, integer or a float. {other}({other.__class__.__qualname__}) " +
+                "is not an instance  of CapitalCost/Intangible/OPEX/ASR/LBT nor an integer " +
+                "nor a float."
             )
 
 
@@ -3749,8 +3950,12 @@ class CostOfSales(GeneralCost):
     Overridden attributes are: expense_year and cost
     """
 
-    expense_year: np.ndarray = field(default=None)
-    cost: np.ndarray = field(default=None)
+    expense_year: npt.NDArray[np.int64] = field(
+        default=cast(npt.NDArray[np.int64], _DEFAULT_NONE)
+    )
+    cost: npt.NDArray[np.float64] = field(
+        default=cast(npt.NDArray[np.float64], _DEFAULT_NONE)
+    )
 
     def __post_init__(self):
         """
@@ -3768,6 +3973,14 @@ class CostOfSales(GeneralCost):
         -   Raise an exception: expense_year is before the start_year of the project
         """
 
+        self.project_duration: int
+        self.project_years: npt.NDArray[np.int64]
+        self.cost_allocation: list[FluidType]
+        self.cost_type: list[CostType | None]
+        self.description: list[str]
+        self.tax_portion: npt.NDArray[np.float64]
+        self.tax_discount: npt.NDArray[np.float64] | float | int
+
         # Prepare attributes project_duration and project_years
         if self.end_year >= self.start_year:
             self.project_duration = self.end_year - self.start_year + 1
@@ -3779,75 +3992,75 @@ class CostOfSales(GeneralCost):
             )
 
         # Prepare attribute expense_year
-        if self.expense_year is None:
+        if cast(object, self.expense_year) is None:
             self.expense_year = self.project_years.copy()
 
         else:
-            if not isinstance(self.expense_year, np.ndarray):
+            if not isinstance(cast(object, self.expense_year), np.ndarray):
                 raise CostOfSalesException(
-                    f"Attribute expense_year must be provided as a numpy.ndarray, "
+                    "Attribute expense_year must be provided as a numpy.ndarray, " +
                     f"not as a/an {self.expense_year.__class__.__qualname__}"
                 )
 
-            expense_year_nan_sum = np.sum(pd.isna(self.expense_year))
+            expense_year_nan_sum = len(_missing_indices(self.expense_year))
             if expense_year_nan_sum > 0:
                 raise CostOfSalesException(
                     f"Missing values in array expense_year: {self.expense_year}"
                 )
 
-        self.expense_year = self.expense_year.astype(int)
+        self.expense_year = self.expense_year.astype(np.int64)
 
         # Prepare attribute cost
-        if self.cost is None:
-            self.cost = np.zeros_like(self.expense_year)
+        if cast(object, self.cost) is None:
+            self.cost = np.zeros_like(self.expense_year, dtype=np.float64)
 
         else:
-            if not isinstance(self.cost, np.ndarray):
+            if not isinstance(cast(object, self.cost), np.ndarray):
                 raise CostOfSalesException(
-                    f"Attribute cost must be provided as a numpy.ndarray, "
+                    "Attribute cost must be provided as a numpy.ndarray, " +
                     f"not as an/a {self.cost.__class__.__qualname__}"
                 )
 
-            cost_nan_id = np.argwhere(pd.isna(self.cost)).ravel()
+            cost_nan_id = _missing_indices(self.cost)
             if len(cost_nan_id) > 0:
                 self.cost[cost_nan_id] = np.zeros(len(cost_nan_id))
 
         self.cost = self.cost.astype(np.float64)
 
         # Prepare attribute cost_allocation
-        if self.cost_allocation is None:
+        if cast(object, self.cost_allocation) is None:
             self.cost_allocation = [FluidType.OIL for _ in range(len(self.expense_year))]
 
         else:
-            if not isinstance(self.cost_allocation, list):
+            if not isinstance(cast(object, self.cost_allocation), list):
                 raise CostOfSalesException(
-                    f"Attribute cost allocation must be provided as a list, "
+                    "Attribute cost allocation must be provided as a list, " +
                     f"not as an/a {self.cost_allocation.__class__.__qualname__}"
                 )
 
             self.cost_allocation = [
-                FluidType.OIL if pd.isna(val) else val
+                FluidType.OIL if _is_missing(val) else val
                 for _, val in enumerate(self.cost_allocation)
             ]
 
         # Prepare attribute cost_type
-        if self.cost_type is None:
+        if cast(object, self.cost_type) is None:
             self.cost_type = [None for _ in range(len(self.expense_year))]
 
         else:
-            if not isinstance(self.cost_type, list):
+            if not isinstance(cast(object, self.cost_type), list):
                 raise CostOfSalesException(
-                    f"Attribute cost_type must be given as a list, not "
+                    "Attribute cost_type must be given as a list, not " +
                     f"as a/an {self.cost_type.__class__.__qualname__}"
                 )
 
             self.cost_type = [
-                None if pd.isna(val) else val for _, val in enumerate(self.cost_type)
+                None if _is_missing(val) else val for _, val in enumerate(self.cost_type)
             ]
 
             incorrect_cost_type = np.array(
                 [
-                    1 if not isinstance(val, CostType | None) else 0
+                    1 if not isinstance(cast(object, val), CostType | None) else 0
                     for _, val in enumerate(self.cost_type)
                 ]
             )
@@ -3856,49 +4069,49 @@ class CostOfSales(GeneralCost):
                 raise CostOfSalesException("Must insert CostType in list cost_type")
 
         # Prepare attribute description
-        if self.description is None:
+        if cast(object, self.description) is None:
             self.description = [" " for _ in range(len(self.expense_year))]
 
         else:
-            if not isinstance(self.description, list):
+            if not isinstance(cast(object, self.description), list):
                 raise CostOfSalesException(
-                    f"Attribute description must be provided as a list, "
+                    "Attribute description must be provided as a list, " +
                     f"not as an/a {self.description.__class__.__qualname__}"
                 )
 
             self.description = [
-                " " if pd.isna(val) else val for _, val in enumerate(self.description)
+                " " if _is_missing(val) else val for _, val in enumerate(self.description)
             ]
 
         # Prepare attribute tax_portion
-        if self.tax_portion is None:
-            self.tax_portion = np.zeros_like(self.expense_year)
+        if cast(object, self.tax_portion) is None:
+            self.tax_portion = np.zeros_like(self.expense_year, dtype=np.float64)
 
         else:
-            if not isinstance(self.tax_portion, np.ndarray):
+            if not isinstance(cast(object, self.tax_portion), np.ndarray):
                 raise CostOfSalesException(
-                    f"Attribute tax_portion must be given as a numpy.ndarray, "
+                    "Attribute tax_portion must be given as a numpy.ndarray, " +
                     f"not as a/an {self.tax_portion.__class__.__qualname__}"
                 )
 
-            tax_portion_nan_id = np.argwhere(pd.isna(self.tax_portion)).ravel()
+            tax_portion_nan_id = _missing_indices(self.tax_portion)
             if len(tax_portion_nan_id) > 0:
                 self.tax_portion[tax_portion_nan_id] = np.zeros(len(tax_portion_nan_id))
 
-            tax_portion_large = np.sum(self.tax_portion > 1.0, dtype=np.float64)
-            tax_portion_negative = np.sum(self.tax_portion < 0.0, dtype=np.float64)
+            tax_portion_large = np.count_nonzero(self.tax_portion > 1.0)
+            tax_portion_negative = np.count_nonzero(self.tax_portion < 0.0)
             if tax_portion_large > 0 or tax_portion_negative > 0:
                 raise CostOfSalesException(
-                    f"The value of tax_portion must be: 0 < tax_portion < 1, "
+                    "The value of tax_portion must be: 0 < tax_portion < 1, " +
                     f"tax_portion: {self.tax_portion}"
                 )
 
         self.tax_portion = self.tax_portion.astype(np.float64)
 
         # Prepare attribute tax_discount
-        if not isinstance(self.tax_discount, (float, int, np.ndarray)):
+        if not isinstance(cast(object, self.tax_discount), (float, int, np.ndarray)):
             raise CostOfSalesException(
-                f"Attribute tax_discount must be provided as a float/int or as a numpy.ndarray, "
+                "Attribute tax_discount must be provided as a float/int or as a numpy.ndarray, " +
                 f"not as a/an {self.tax_discount.__class__.__qualname__}"
             )
 
@@ -3910,18 +4123,18 @@ class CostOfSales(GeneralCost):
 
             self.tax_discount = np.repeat(self.tax_discount, len(self.expense_year))
 
-        elif isinstance(self.tax_discount, np.ndarray):
-            tax_discount_nan_id = np.argwhere(pd.isna(self.tax_discount)).ravel()
+        else:
+            tax_discount_nan_id = _missing_indices(self.tax_discount)
             if len(tax_discount_nan_id) > 0:
                 self.tax_discount[tax_discount_nan_id] = np.zeros(
                     len(tax_discount_nan_id)
                 )
 
-            tax_discount_large = np.sum(self.tax_discount > 1.0, dtype=np.float64)
-            tax_discount_negative = np.sum(self.tax_discount < 0.0, dtype=np.float64)
+            tax_discount_large = np.count_nonzero(self.tax_discount > 1.0)
+            tax_discount_negative = np.count_nonzero(self.tax_discount < 0.0)
             if tax_discount_large > 0 or tax_discount_negative > 0:
                 raise CostOfSalesException(
-                    f"The value of tax_discount must be: 0 < tax_discount < 1, "
+                    "The value of tax_discount must be: 0 < tax_discount < 1, " +
                     f"tax_discount: {self.tax_discount}"
                 )
 
@@ -3942,31 +4155,32 @@ class CostOfSales(GeneralCost):
             ]
         ):
             raise CostOfSalesException(
-                f"Unequal length of arrays: "
-                f"expense_year: {len(self.expense_year)}, "
-                f"cost: {len(self.cost)}, "
-                f"cost_allocation: {len(self.cost_allocation)}, "
-                f"cost_type: {len(self.cost_type)}, "
-                f"description: {len(self.description)}, "
-                f"tax_portion: {len(self.tax_portion)}, "
+                "Unequal length of arrays: " +
+                f"expense_year: {len(self.expense_year)}, " +
+                f"cost: {len(self.cost)}, " +
+                f"cost_allocation: {len(self.cost_allocation)}, " +
+                f"cost_type: {len(self.cost_type)}, " +
+                f"description: {len(self.description)}, " +
+                f"tax_portion: {len(self.tax_portion)}, " +
                 f"tax_discount: {len(self.tax_discount)} "
             )
 
         # Raise an error message: expense_year is after the end year of the project
         if np.max(self.expense_year) > self.end_year:
             raise CostOfSalesException(
-                f"Expense year ({np.max(self.expense_year)}) "
+                f"Expense year ({np.max(self.expense_year)}) " +
                 f"is after the end year of the project ({self.end_year})"
             )
 
         # Raise an error message: expense_year is before the start year of the project
         if np.min(self.expense_year) < self.start_year:
             raise CostOfSalesException(
-                f"Expense year ({np.min(self.expense_year)}) "
+                f"Expense year ({np.min(self.expense_year)}) " +
                 f"is before the start year of the project ({self.start_year})"
             )
 
-    def __eq__(self, other):
+    @override
+    def __eq__(self, other: object) -> bool:
         # Between two instances of CostOfSales
         if isinstance(other, CostOfSales):
             return all(
@@ -3984,76 +4198,76 @@ class CostOfSales(GeneralCost):
 
         # Between an instance of CostOfSales and an integer/a float
         elif isinstance(other, (int, float)):
-            return np.sum(self.cost) == other
+            return float(np.sum(self.cost)) == other
 
         else:
             return False
 
-    def __lt__(self, other):
+    def __lt__(self, other: object) -> bool:
         # Between an instance of CostOfSales with another instance of
         # CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales
         if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales)):
-            return np.sum(self.cost) < np.sum(other.cost)
+            return bool(np.sum(self.cost) < np.sum(other.cost))
 
         # Between an instance of CostOfSales and an integer/a float
         elif isinstance(other, (int, float)):
-            return np.sum(self.cost) < other
+            return bool(np.sum(self.cost) < other)
 
         else:
             raise CostOfSalesException(
-                "Must compare an instance of CostOfSales with another instance of "
+                "Must compare an instance of CostOfSales with another instance of " +
                 "CapitalCost/Instangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
             )
 
-    def __le__(self, other):
+    def __le__(self, other: object) -> bool:
         # Between an instance of CostOfSales with another instance of
         # CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales
         if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales)):
-            return np.sum(self.cost) <= np.sum(other.cost)
+            return bool(np.sum(self.cost) <= np.sum(other.cost))
 
         # Between an instance of CostOfSales and an integer/a float
         elif isinstance(other, (int, float)):
-            return np.sum(self.cost) <= other
+            return bool(np.sum(self.cost) <= other)
 
         else:
             raise CostOfSalesException(
-                "Must compare an instance of CostOfSales with another instance of "
+                "Must compare an instance of CostOfSales with another instance of " +
                 "CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
             )
 
-    def __gt__(self, other):
+    def __gt__(self, other: object) -> bool:
         # Between an instance of CostOfSales with another instance of
         # CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales
         if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales)):
-            return np.sum(self.cost) > np.sum(other.cost)
+            return bool(np.sum(self.cost) > np.sum(other.cost))
 
         # Between an instance of CostOfSales and an integer/a float
         elif isinstance(other, (int, float)):
-            return np.sum(self.cost) > other
+            return bool(np.sum(self.cost) > other)
 
         else:
             raise CostOfSalesException(
-                "Must compare an instance of CostOfSales with another instance of "
+                "Must compare an instance of CostOfSales with another instance of " +
                 "CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
             )
 
-    def __ge__(self, other):
+    def __ge__(self, other: object) -> bool:
         # Between an instance of CostOfSales with another instance of
         # CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales
         if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales)):
-            return np.sum(self.cost) >= np.sum(other.cost)
+            return bool(np.sum(self.cost) >= np.sum(other.cost))
 
         # Between an instance of CostOfSales and an integer/a float
         elif isinstance(other, (int, float)):
-            return np.sum(self.cost) >= other
+            return bool(np.sum(self.cost) >= other)
 
         else:
             raise CostOfSalesException(
-                "Must compare an instance of CostOfSales with another instance of "
+                "Must compare an instance of CostOfSales with another instance of " +
                 "CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales, an integer, or a float."
             )
 
-    def __add__(self, other):
+    def __add__(self, other: object) -> CostOfSales:
         # Only allows addition between an instance of CostOfSales
         # and another instance of CostOfSales
         if isinstance(other, CostOfSales):
@@ -4081,15 +4295,15 @@ class CostOfSales(GeneralCost):
 
         else:
             raise CostOfSalesException(
-                f"Must add between an instance of CostOfSales with another instance "
-                f"of CostOfSales. {other}({other.__class__.__qualname__}) is not "
-                f"an instance of CostOfSales."
+                "Must add between an instance of CostOfSales with another instance " +
+                f"of CostOfSales. {other}({other.__class__.__qualname__}) is not " +
+                "an instance of CostOfSales."
             )
 
-    def __iadd__(self, other):
+    def __iadd__(self, other: object) -> CostOfSales:
         return self.__add__(other)
 
-    def __sub__(self, other):
+    def __sub__(self, other: object) -> CostOfSales:
         # Only allows subtraction between an instance of CostOfSales
         # and another instance of CostOfSales
         if isinstance(other, CostOfSales):
@@ -4117,15 +4331,15 @@ class CostOfSales(GeneralCost):
 
         else:
             raise CostOfSalesException(
-                f"Must subtract between an instance of CostOfSales with another instance "
-                f"of CostOfSales. {other}({other.__class__.__qualname__}) is not "
-                f"an instance of CostOfSales."
+                "Must subtract between an instance of CostOfSales with another instance " +
+                f"of CostOfSales. {other}({other.__class__.__qualname__}) is not " +
+                "an instance of CostOfSales."
             )
 
-    def __rsub__(self, other):
+    def __rsub__(self, other: object) -> CostOfSales:
         return self.__sub__(other)
 
-    def __mul__(self, other):
+    def __mul__(self, other: object) -> CostOfSales:
         # Multiplication is allowed only with an integer/a float
         if isinstance(other, (int, float)):
             return CostOfSales(
@@ -4142,19 +4356,19 @@ class CostOfSales(GeneralCost):
 
         else:
             raise CostOfSalesException(
-                f"Must multiply with an integer or a float. "
-                f"{other}({other.__class__.__qualname__}) "
-                f"is not an integer nor a float."
+                "Must multiply with an integer or a float. " +
+                f"{other}({other.__class__.__qualname__}) " +
+                "is not an integer nor a float."
             )
 
-    def __rmul__(self, other):
+    def __rmul__(self, other: object) -> CostOfSales:
         return self.__mul__(other)
 
-    def __truediv__(self, other):
+    def __truediv__(self, other: object) -> CostOfSales | float:
         # Between an instance of CostOfSales with another instance of
         # CapitalCost/Intangible/OPEX/ASR/LBT/CostOfSales
         if isinstance(other, (CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales)):
-            return np.sum(self.cost) / np.sum(other.cost)
+            return float(np.sum(self.cost) / np.sum(other.cost))
 
         # Between an instance of CostOfSales and an integer/a float
         elif isinstance(other, (int, float)):
@@ -4177,8 +4391,8 @@ class CostOfSales(GeneralCost):
 
         else:
             raise CostOfSalesException(
-                f"Must divide with an instance of CapitalCost/Intangible/OPEX/ASR/LBT"
-                f"/CostOfSales, an integer, or a float. {other}({other.__class__.__qualname__}) "
-                f"is not an instance of CapitalCost/Intangible/OPEX/ASR/LBT nor an integer "
-                f"nor a float."
+                "Must divide with an instance of CapitalCost/Intangible/OPEX/ASR/LBT" +
+                f"/CostOfSales, an integer, or a float. {other}({other.__class__.__qualname__}) " +
+                "is not an instance of CapitalCost/Intangible/OPEX/ASR/LBT nor an integer " +
+                "nor a float."
             )
