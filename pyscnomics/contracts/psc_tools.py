@@ -408,13 +408,11 @@ def get_unrec_cost_after_tf(
         np.logical_and(
             (revenue - ftp_ctr - ftp_gov - ic) < depreciation + non_capital,
             unrecovered_cost == 0),
-            (
-                (depreciation + non_capital) - (
-                revenue - ftp_ctr - ftp_gov - ic) - transferred_cost_in + transferred_cost_out,
-                0
-            )
-
-            )
+        (depreciation + non_capital)
+        - (revenue - ftp_ctr - ftp_gov - ic)
+        - transferred_cost_in + transferred_cost_out,
+        0,
+    )
     left_cost = np.where(left_cost >= 0, left_cost, 0)
 
     unrecovered_cost_final = unrecovered_cost + left_cost
@@ -430,7 +428,7 @@ def get_unrec_cost_after_tf(
             trailing_cost = np.cumsum(left_cost[last_non_zero_indices:])
 
             unrecovered_cost_final[last_non_zero_indices:] = trailing_cost
-    return unrecovered_cost_final
+    return unrecovered_cost_final.astype(np.float64, copy=False)
 
 
 def get_ets_after_transfer(
@@ -576,6 +574,10 @@ def get_dmo(
 
     # Condition when the DMO scheme is using pre UU No.22 Year 2001
     if post_uu_22_year2001 is False:
+        if ets is None or ctr_ets is None or ctr_ftp is None:
+            raise ValueError(
+                "Pre-UU DMO requires ets, ctr_ets, and ctr_ftp to be provided."
+            )
         dmo_volume = np.where(ets > 0,
                            np.minimum((dmo_volume_portion * lifting.get_lifting_rate_ghv_arr() * ctr_pretax_share),
                                       np.divide(ctr_ets, lifting.get_price_arr(), where=lifting.get_price_arr() != 0) + np.divide(ctr_ftp, lifting.get_price_arr(), where=lifting.get_price_arr() != 0)),
