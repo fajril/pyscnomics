@@ -4,6 +4,7 @@ A collection of unit testings for module project.py
 
 import pytest
 import numpy as np
+import pandas as pd
 from datetime import date
 
 from pyscnomics.econ.selection import FluidType, InflationAppliedTo
@@ -66,6 +67,24 @@ def test_get_summary_requires_successful_run() -> None:
 
     with pytest.raises(BaseProjectSummaryException, match=r"run\(\)"):
         base_case.get_summary()
+
+
+def test_warnings_to_dataframe_returns_frame_without_mutating_messages() -> None:
+    base_case = BaseProject(
+        start_date=date(2023, 1, 1),
+        end_date=date(2030, 12, 31),
+        approval_year=2023,
+    )
+    warnings = [("Base Project", "Example warning")]
+    base_case.warning_messages = warnings.copy()
+
+    result = base_case.warnings_to_dataframe()
+
+    assert isinstance(result, pd.DataFrame)
+    assert result.to_dict(orient="records") == [
+        {"No.": 1, "Category": "Base Project", "Message": "Example warning"}
+    ]
+    assert base_case.warning_messages == warnings
 
 
 def test_incorrect_data_input():

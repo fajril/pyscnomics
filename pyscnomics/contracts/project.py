@@ -5,10 +5,11 @@ Configure base project as the foundation (or parent class) for PSC contract.
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import date
 from functools import reduce
-from typing import TypeVar
+from typing import TypeVar, cast
 
 from pyscnomics.econ.revenue import Lifting
 from pyscnomics.econ.selection import (
@@ -44,6 +45,31 @@ pd.set_option("display.max_columns", 200)
 pd.set_option("display.max_colwidth", 100)
 
 _ArrayDType = TypeVar("_ArrayDType", bound=np.generic)
+_Cost = TypeVar("_Cost", CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales)
+_ListValue = TypeVar("_ListValue")
+WarningMessage = tuple[str, str]
+
+
+def _equals_mask(
+    values: list[_ListValue], target: _ListValue
+) -> npt.NDArray[np.bool_]:
+    return np.fromiter(
+        (value == target for value in values), dtype=np.bool_, count=len(values)
+    )
+
+
+def _select_list(
+    values: list[_ListValue], mask: npt.NDArray[np.bool_]
+) -> list[_ListValue]:
+    return [
+        value
+        for index, value in enumerate(values)
+        if bool(cast(object, mask.item(index)))
+    ]
+
+
+def _float_scalar(value: object) -> float:
+    return float(cast(float, value))
 
 
 class BaseProjectException(Exception):
@@ -320,7 +346,7 @@ class BaseProject:
     _gas_cashflow: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
 
     # Attribute to store warning messages
-    warning_messages: list = field(default_factory=lambda: [], init=False, repr=False)
+    warning_messages: list[WarningMessage] = field(default_factory=list, init=False, repr=False)
 
     # Attributes associated with consolidated profiles
     _consolidated_lifting: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
@@ -464,7 +490,7 @@ class BaseProject:
             self.is_pod_1 = False
 
         else:
-            if not isinstance(self.is_pod_1, bool):
+            if not isinstance(cast(object, self.is_pod_1), bool):
                 raise BaseProjectException(
                     "Attribute is_pod_1 must be a boolean, not " +
                     f"a/an {self.is_pod_1.__class__.__qualname__}"
@@ -475,7 +501,7 @@ class BaseProject:
             self.is_strict = True
 
         else:
-            if not isinstance(self.is_strict, bool):
+            if not isinstance(cast(object, self.is_strict), bool):
                 raise BaseProjectException(
                     "Attribute is_strict must be a boolean, not " +
                     f"a/an {self.is_strict.__class__.__qualname__}"
@@ -527,7 +553,7 @@ class BaseProject:
             )
 
         else:
-            if not isinstance(self.lifting, tuple):
+            if not isinstance(cast(object, self.lifting), tuple):
                 raise BaseProjectException(
                     "Attribute lifting must be provided as a tuple of Lifting instances, " +
                     f"not as an/a {self.lifting.__class__.__qualname__}"
@@ -571,7 +597,7 @@ class BaseProject:
             )
 
         else:
-            if not isinstance(self.capital_cost, tuple):
+            if not isinstance(cast(object, self.capital_cost), tuple):
                 raise BaseProjectException(
                     "Attribute capital_cost must be provided as a tuple of CapitalCost " +
                     f"instances, not as an/a {self.capital_cost.__class__.__qualname__}"
@@ -597,7 +623,7 @@ class BaseProject:
             )
 
         else:
-            if not isinstance(self.intangible_cost, tuple):
+            if not isinstance(cast(object, self.intangible_cost), tuple):
                 raise BaseProjectException(
                     "Attribute intangible_cost must be provided as a tuple of Intangible " +
                     f"instances, not as an/a {self.intangible_cost.__class__.__qualname__}"
@@ -623,7 +649,7 @@ class BaseProject:
             )
 
         else:
-            if not isinstance(self.opex, tuple):
+            if not isinstance(cast(object, self.opex), tuple):
                 raise BaseProjectException(
                     "Attribute opex must be provided as a tuple of OPEX instances, " +
                     f"not as an/a {self.opex.__class__.__qualname__}"
@@ -649,7 +675,7 @@ class BaseProject:
             )
 
         else:
-            if not isinstance(self.asr_cost, tuple):
+            if not isinstance(cast(object, self.asr_cost), tuple):
                 raise BaseProjectException(
                     "Attribute asr_cost must be provided as a tuple of ASR instances, " +
                     f"not as an/a {self.asr_cost.__class__.__qualname__}"
@@ -675,7 +701,7 @@ class BaseProject:
             )
 
         else:
-            if not isinstance(self.lbt_cost, tuple):
+            if not isinstance(cast(object, self.lbt_cost), tuple):
                 raise BaseProjectException(
                     "Attribute lbt_cost must be provided as a tuple of LBT instances, " +
                     f"not as an/a {self.lbt_cost.__class__.__qualname__}"
@@ -701,7 +727,7 @@ class BaseProject:
             )
 
         else:
-            if not isinstance(self.cost_of_sales, tuple):
+            if not isinstance(cast(object, self.cost_of_sales), tuple):
                 raise BaseProjectException(
                     "Attribute cost_of_sales must be provided as a tuple of CostOfSales " +
                     f"instances, not as an/a {self.cost_of_sales.__class__.__qualname__}"
@@ -716,24 +742,12 @@ class BaseProject:
         self.cost_of_sales_total = reduce(lambda x, y: x + y, self.cost_of_sales)
 
         # Classify cost categories by fluid
-        (
-            capital_cost,
-            intangible,
-            opex,
-            asr,
-            lbt,
-            cost_of_sales,
-        ) = [
-            self._classify_costs_by_fluid(classifier=func)
-            for func in [
-                self._classify_capital_cost_by_fluid,
-                self._classify_intangible_cost_by_fluid,
-                self._classify_opex_by_fluid,
-                self._classify_asr_cost_by_fluid,
-                self._classify_lbt_cost_by_fluid,
-                self._classify_cost_of_sales_by_fluid,
-            ]
-        ]
+        capital_cost = self._classify_costs_by_fluid(self._classify_capital_cost_by_fluid)
+        intangible = self._classify_costs_by_fluid(self._classify_intangible_cost_by_fluid)
+        opex = self._classify_costs_by_fluid(self._classify_opex_by_fluid)
+        asr = self._classify_costs_by_fluid(self._classify_asr_cost_by_fluid)
+        lbt = self._classify_costs_by_fluid(self._classify_lbt_cost_by_fluid)
+        cost_of_sales = self._classify_costs_by_fluid(self._classify_cost_of_sales_by_fluid)
 
         # Modify cost_type in each cost categories, accounting for engineering sense
         fluid_types = [FluidType.OIL.name.lower(), FluidType.GAS.name.lower()]
@@ -752,29 +766,31 @@ class BaseProject:
                 self._prepare_cost_types(cost_obj=cost[ftype])
 
         # Define post-onstream cost, pre-onstream cost, and sunk cost attributes
-        costs_mapping = (
-            ("capital", self._filter_capital_cost, capital_cost),
-            ("intangible", self._filter_intangible, intangible),
-            ("opex", self._filter_opex, opex),
-            ("asr", self._filter_asr, asr),
-            ("lbt", self._filter_lbt, lbt),
-            ("cost_of_sales", self._filter_cost_of_sales, cost_of_sales),
-        )
-
         categories = (
             ("postonstream", CostType.POST_ONSTREAM_COST),
             ("preonstream", CostType.PRE_ONSTREAM_COST),
             ("sunk_cost", CostType.SUNK_COST),
         )
 
-        for prefix, filter_func, source in costs_mapping:
+        def filter_costs(
+            prefix: str,
+            filter_func: Callable[[_Cost, CostType], _Cost],
+            source: dict[str, _Cost],
+        ) -> None:
             for ftype in fluid_types:
                 for categ_name, categ_type in categories:
                     setattr(
                         self,
                         f"_{ftype}_{prefix}_{categ_name}",
-                        filter_func(cost_obj_fluid=source[ftype], include_cost_type=categ_type)
+                        filter_func(source[ftype], categ_type)
                     )
+
+        filter_costs("capital", self._filter_capital_cost, capital_cost)
+        filter_costs("intangible", self._filter_intangible, intangible)
+        filter_costs("opex", self._filter_opex, opex)
+        filter_costs("asr", self._filter_asr, asr)
+        filter_costs("lbt", self._filter_lbt, lbt)
+        filter_costs("cost_of_sales", self._filter_cost_of_sales, cost_of_sales)
 
         # Raise an exception error if the start year of the project is inconsistent
         self._check_inconsistent_start_year()
@@ -812,7 +828,7 @@ class BaseProject:
         """
 
         # Validate input type
-        if not isinstance(fluid, str):
+        if not isinstance(cast(object, fluid), str):
             raise BaseProjectException(
                 f"Parameter 'fluid' must be a string, not {fluid.__class__.__qualname__}."
             )
@@ -823,10 +839,14 @@ class BaseProject:
                 f"Invalid fluid type: {fluid}. Must choose between 'oil' or 'gas'."
             )
 
-        # Define fluid-specific attributes
-        onstream_date = getattr(self, f"{fluid}_onstream_date")
-        lifting = getattr(self, f"_{fluid}_lifting")
-        revenue = getattr(self, f"_{fluid}_revenue")
+        if fluid == "oil":
+            onstream_date = self.oil_onstream_date
+            lifting = self._oil_lifting
+            revenue = self._oil_revenue
+        else:
+            onstream_date = self.gas_onstream_date
+            lifting = self._gas_lifting
+            revenue = self._gas_revenue
 
         # Identify years with positive revenue
         revenue_idx = np.flatnonzero(revenue > 0)
@@ -852,7 +872,9 @@ class BaseProject:
 
                 # Only allow two values as onstream year:
                 # (1) earliest_lifting_year, or (2) earliest_revenue_year
-                earliest_lifting_year = int(min(lifting.prod_year))
+                earliest_lifting_year = int(
+                    np.min(lifting.prod_year)
+                )
                 allowed_years = {earliest_lifting_year, earliest_revenue_year}
 
                 if onstream_year not in allowed_years:
@@ -1268,24 +1290,23 @@ class BaseProject:
             )
 
         else:
-            allocation_array = np.array(cct.cost_allocation)
-            mask = (allocation_array == fluid_type)
+            mask = _equals_mask(cct.cost_allocation, fluid_type)
 
             return CapitalCost(
                 start_year=cct.start_year,
                 end_year=cct.end_year,
                 expense_year=cct.expense_year[mask],
                 cost=cct.cost[mask],
-                cost_allocation=allocation_array[mask].tolist(),
-                cost_type=np.array(cct.cost_type)[mask].tolist(),
-                description=np.array(cct.description)[mask].tolist(),
+                cost_allocation=_select_list(cct.cost_allocation, mask),
+                cost_type=_select_list(cct.cost_type, mask),
+                description=_select_list(cct.description, mask),
                 tax_portion=cct.tax_portion[mask],
                 tax_discount=np.asarray(cct.tax_discount, dtype=np.float64)[mask],
                 pis_year=cct.pis_year[mask],
                 salvage_value=cct.salvage_value[mask],
                 useful_life=cct.useful_life[mask],
                 depreciation_factor=cct.depreciation_factor[mask],
-                is_ic_applied=np.array(cct.is_ic_applied)[mask].tolist(),
+                is_ic_applied=_select_list(cct.is_ic_applied, mask),
             )
 
     def _classify_intangible_cost_by_fluid(self, fluid_type: FluidType) -> Intangible:
@@ -1330,17 +1351,16 @@ class BaseProject:
             )
 
         else:
-            allocation_array = np.array(ict.cost_allocation)
-            mask = (allocation_array == fluid_type)
+            mask = _equals_mask(ict.cost_allocation, fluid_type)
 
             return Intangible(
                 start_year=ict.start_year,
                 end_year=ict.end_year,
                 expense_year=ict.expense_year[mask],
                 cost=ict.cost[mask],
-                cost_allocation=allocation_array[mask].tolist(),
-                description=np.array(ict.description)[mask].tolist(),
-                cost_type=np.array(ict.cost_type)[mask].tolist(),
+                cost_allocation=_select_list(ict.cost_allocation, mask),
+                description=_select_list(ict.description, mask),
+                cost_type=_select_list(ict.cost_type, mask),
                 tax_portion=ict.tax_portion[mask],
                 tax_discount=np.asarray(ict.tax_discount, dtype=np.float64)[mask],
             )
@@ -1387,16 +1407,15 @@ class BaseProject:
             )
 
         else:
-            allocation_array = np.array(ot.cost_allocation)
-            mask = (allocation_array == fluid_type)
+            mask = _equals_mask(ot.cost_allocation, fluid_type)
 
             return OPEX(
                 start_year=ot.start_year,
                 end_year=ot.end_year,
                 expense_year=ot.expense_year[mask],
-                cost_allocation=allocation_array[mask].tolist(),
-                cost_type=np.array(ot.cost_type)[mask].tolist(),
-                description=np.array(ot.description)[mask].tolist(),
+                cost_allocation=_select_list(ot.cost_allocation, mask),
+                cost_type=_select_list(ot.cost_type, mask),
+                description=_select_list(ot.description, mask),
                 tax_portion=ot.tax_portion[mask],
                 tax_discount=np.asarray(ot.tax_discount, dtype=np.float64)[mask],
                 fixed_cost=ot.fixed_cost[mask],
@@ -1447,17 +1466,16 @@ class BaseProject:
             )
 
         else:
-            allocation_array = np.array(act.cost_allocation)
-            mask = (allocation_array == fluid_type)
+            mask = _equals_mask(act.cost_allocation, fluid_type)
 
             return ASR(
                 start_year=act.start_year,
                 end_year=act.end_year,
                 expense_year=act.expense_year[mask],
                 cost=act.cost[mask],
-                cost_allocation=allocation_array[mask].tolist(),
-                cost_type=np.array(act.cost_type)[mask].tolist(),
-                description=np.array(act.description)[mask].tolist(),
+                cost_allocation=_select_list(act.cost_allocation, mask),
+                cost_type=_select_list(act.cost_type, mask),
+                description=_select_list(act.description, mask),
                 tax_portion=act.tax_portion[mask],
                 tax_discount=np.asarray(act.tax_discount, dtype=np.float64)[mask],
                 final_year=act.final_year[mask],
@@ -1507,16 +1525,15 @@ class BaseProject:
             )
 
         else:
-            allocation_array = np.array(lct.cost_allocation)
-            mask = (allocation_array == fluid_type)
+            mask = _equals_mask(lct.cost_allocation, fluid_type)
 
             return LBT(
                 start_year=lct.start_year,
                 end_year=lct.end_year,
                 expense_year=lct.expense_year[mask],
-                cost_allocation=allocation_array[mask].tolist(),
-                cost_type=np.array(lct.cost_type)[mask].tolist(),
-                description=np.array(lct.description)[mask].tolist(),
+                cost_allocation=_select_list(lct.cost_allocation, mask),
+                cost_type=_select_list(lct.cost_type, mask),
+                description=_select_list(lct.description, mask),
                 tax_portion=lct.tax_portion[mask],
                 tax_discount=np.asarray(lct.tax_discount, dtype=np.float64)[mask],
                 final_year=lct.final_year[mask],
@@ -1570,23 +1587,24 @@ class BaseProject:
             )
 
         else:
-            allocation_array = np.array(cst.cost_allocation)
-            mask = (allocation_array == fluid_type)
+            mask = _equals_mask(cst.cost_allocation, fluid_type)
 
             return CostOfSales(
                 start_year=cst.start_year,
                 end_year=cst.end_year,
                 expense_year=cst.expense_year[mask],
                 cost=cst.cost[mask],
-                cost_allocation=allocation_array[mask].tolist(),
-                cost_type=np.array(cst.cost_type)[mask].tolist(),
-                description=np.array(cst.description)[mask].tolist(),
+                cost_allocation=_select_list(cst.cost_allocation, mask),
+                cost_type=_select_list(cst.cost_type, mask),
+                description=_select_list(cst.description, mask),
                 tax_portion=cst.tax_portion[mask],
                 tax_discount=np.asarray(cst.tax_discount, dtype=np.float64)[mask],
             )
 
     @staticmethod
-    def _classify_costs_by_fluid(classifier) -> dict:
+    def _classify_costs_by_fluid(
+        classifier: Callable[[FluidType], _Cost],
+    ) -> dict[str, _Cost]:
         """
         Classify and filter costs by fluid type (oil and gas).
 
@@ -1655,11 +1673,11 @@ class BaseProject:
         onstream_yr = min([oil_onstream_date.year, gas_onstream_date.year])
 
         # Raise an error: approval year is not provided
-        if self.approval_year is None:
+        if cast(object, self.approval_year) is None:
             raise BaseProjectException("Attribute approval_year is missing")
 
         # Raise an error: approval year is not provided as an integer
-        if not isinstance(self.approval_year, int):
+        if not isinstance(cast(object, self.approval_year), int):
             raise BaseProjectException(
                 "Attribute approval_year must be an integer, not " +
                 f"{self.approval_year.__class__.__qualname__}"
@@ -1816,7 +1834,10 @@ class BaseProject:
 
             if hit.any():
                 # Extract invalid cost type for reporting
-                found = [t.value for t in ct[mask][hit]]
+                found = [
+                    cost_type.value
+                    for cost_type in cast(list[CostType], ct[mask][hit].tolist())
+                ]
 
                 # Specify message to be displayed
                 msg = (
@@ -1862,11 +1883,13 @@ class BaseProject:
         - This method performs validation only and does not modify cost types.
         """
 
-        at_approval = (ry == self.approval_year)
-        at_onstream = (ry == onstream_year)
+        at_approval = np.asarray(ry == self.approval_year, dtype=np.bool_)
+        at_onstream = np.asarray(ry == onstream_year, dtype=np.bool_)
 
         # Validate cost type at exact approval year
-        if np.any(at_approval) and CostType.POST_ONSTREAM_COST in ct[at_approval]:
+        if np.any(at_approval) and CostType.POST_ONSTREAM_COST in cast(
+            list[CostType], ct[at_approval].tolist()
+        ):
             # Prepare messages to be displayed
             msg_error = (
                 "Cannot accept POST ONSTREAM COST as cost type at approval year " +
@@ -1876,7 +1899,9 @@ class BaseProject:
             raise BaseProjectException(msg_error)
 
         # Validate cost type at exact onstream year
-        if np.any(at_onstream) and CostType.SUNK_COST in ct[at_onstream]:
+        if np.any(at_onstream) and CostType.SUNK_COST in cast(
+            list[CostType], ct[at_onstream].tolist()
+        ):
             # Prepare messages to be displayed
             msg_error = (
                 f"Cannot accept SUNK COST as cost type at onstream year ({onstream_year})."
@@ -1998,7 +2023,7 @@ class BaseProject:
         """
 
         # Raise an exception for an incorrect input
-        if not isinstance(cost_obj_fluid, CapitalCost):
+        if not isinstance(cast(object, cost_obj_fluid), CapitalCost):
             raise BaseProjectException(
                 "Invalid input: cost_obj_fluid must be a CapitalCost object. " +
                 f"Received {cost_obj_fluid.__class__.__qualname__} instead."
@@ -2019,8 +2044,7 @@ class BaseProject:
         }[include_cost_type]
 
         # Conduct masking process
-        cost_type_array = np.array(cost_obj_fluid.cost_type)
-        mask = (cost_type_array == include_cost_type)
+        mask = _equals_mask(cost_obj_fluid.cost_type, include_cost_type)
 
         if not np.any(mask):
             return CapitalCost(
@@ -2038,9 +2062,9 @@ class BaseProject:
             end_year=cost_obj_fluid.end_year,
             expense_year=cost_obj_fluid.expense_year[mask],
             cost=cost_obj_fluid.cost[mask],
-            cost_allocation=np.array(cost_obj_fluid.cost_allocation)[mask].tolist(),
-            cost_type=np.array(cost_obj_fluid.cost_type)[mask].tolist(),
-            description=np.array(cost_obj_fluid.description)[mask].tolist(),
+            cost_allocation=_select_list(cost_obj_fluid.cost_allocation, mask),
+            cost_type=_select_list(cost_obj_fluid.cost_type, mask),
+            description=_select_list(cost_obj_fluid.description, mask),
             tax_portion=cost_obj_fluid.tax_portion[mask],
             tax_discount=np.asarray(
                 cost_obj_fluid.tax_discount, dtype=np.float64
@@ -2049,7 +2073,7 @@ class BaseProject:
             salvage_value=cost_obj_fluid.salvage_value[mask],
             useful_life=cost_obj_fluid.useful_life[mask],
             depreciation_factor=cost_obj_fluid.depreciation_factor[mask],
-            is_ic_applied=np.array(cost_obj_fluid.is_ic_applied)[mask].tolist(),
+            is_ic_applied=_select_list(cost_obj_fluid.is_ic_applied, mask),
         )
 
     def _filter_intangible(
@@ -2105,7 +2129,7 @@ class BaseProject:
         """
 
         # Raise an exception for an incorrect input
-        if not isinstance(cost_obj_fluid, Intangible):
+        if not isinstance(cast(object, cost_obj_fluid), Intangible):
             raise BaseProjectException(
                 "Invalid input: cost_obj_fluid must be an Intangible object. " +
                 f"Received {cost_obj_fluid.__class__.__qualname__} instead."
@@ -2126,8 +2150,7 @@ class BaseProject:
         }[include_cost_type]
 
         # Conduct masking process
-        cost_type_array = np.array(cost_obj_fluid.cost_type)
-        mask = (cost_type_array == include_cost_type)
+        mask = _equals_mask(cost_obj_fluid.cost_type, include_cost_type)
 
         if not np.any(mask):
             return Intangible(
@@ -2144,9 +2167,9 @@ class BaseProject:
             end_year=cost_obj_fluid.end_year,
             expense_year=cost_obj_fluid.expense_year[mask],
             cost=cost_obj_fluid.cost[mask],
-            cost_allocation=np.array(cost_obj_fluid.cost_allocation)[mask].tolist(),
-            cost_type=np.array(cost_obj_fluid.cost_type)[mask].tolist(),
-            description=np.array(cost_obj_fluid.description)[mask].tolist(),
+            cost_allocation=_select_list(cost_obj_fluid.cost_allocation, mask),
+            cost_type=_select_list(cost_obj_fluid.cost_type, mask),
+            description=_select_list(cost_obj_fluid.description, mask),
             tax_portion=cost_obj_fluid.tax_portion[mask],
             tax_discount=np.asarray(
                 cost_obj_fluid.tax_discount, dtype=np.float64
@@ -2206,7 +2229,7 @@ class BaseProject:
         """
 
         # Raise an exception for an incorrect input
-        if not isinstance(cost_obj_fluid, OPEX):
+        if not isinstance(cast(object, cost_obj_fluid), OPEX):
             raise BaseProjectException(
                 "Invalid input: cost_obj_fluid must be an OPEX object. " +
                 f"Received {cost_obj_fluid.__class__.__qualname__} instead."
@@ -2227,8 +2250,7 @@ class BaseProject:
         }[include_cost_type]
 
         # Conduct masking process
-        cost_type_array = np.array(cost_obj_fluid.cost_type)
-        mask = (cost_type_array == include_cost_type)
+        mask = _equals_mask(cost_obj_fluid.cost_type, include_cost_type)
 
         if not np.any(mask):
             return OPEX(
@@ -2244,9 +2266,9 @@ class BaseProject:
             start_year=cost_obj_fluid.start_year,
             end_year=cost_obj_fluid.end_year,
             expense_year=cost_obj_fluid.expense_year[mask],
-            cost_allocation=np.array(cost_obj_fluid.cost_allocation)[mask].tolist(),
-            cost_type=np.array(cost_obj_fluid.cost_type)[mask].tolist(),
-            description=np.array(cost_obj_fluid.description)[mask].tolist(),
+            cost_allocation=_select_list(cost_obj_fluid.cost_allocation, mask),
+            cost_type=_select_list(cost_obj_fluid.cost_type, mask),
+            description=_select_list(cost_obj_fluid.description, mask),
             tax_portion=cost_obj_fluid.tax_portion[mask],
             tax_discount=np.asarray(
                 cost_obj_fluid.tax_discount, dtype=np.float64
@@ -2308,7 +2330,7 @@ class BaseProject:
         """
 
         # Raise an exception for an incorrect input
-        if not isinstance(cost_obj_fluid, ASR):
+        if not isinstance(cast(object, cost_obj_fluid), ASR):
             raise BaseProjectException(
                 "Invalid input: cost_obj_fluid must be an ASR object. " +
                 f"Received {cost_obj_fluid.__class__.__qualname__} instead."
@@ -2329,8 +2351,7 @@ class BaseProject:
         }[include_cost_type]
 
         # Conduct masking process
-        cost_type_array = np.array(cost_obj_fluid.cost_type)
-        mask = (cost_type_array == include_cost_type)
+        mask = _equals_mask(cost_obj_fluid.cost_type, include_cost_type)
 
         if not np.any(mask):
             return ASR(
@@ -2347,9 +2368,9 @@ class BaseProject:
             end_year=cost_obj_fluid.end_year,
             expense_year=cost_obj_fluid.expense_year[mask],
             cost=cost_obj_fluid.cost[mask],
-            cost_allocation=np.array(cost_obj_fluid.cost_allocation)[mask].tolist(),
-            cost_type=np.array(cost_obj_fluid.cost_type)[mask].tolist(),
-            description=np.array(cost_obj_fluid.description)[mask].tolist(),
+            cost_allocation=_select_list(cost_obj_fluid.cost_allocation, mask),
+            cost_type=_select_list(cost_obj_fluid.cost_type, mask),
+            description=_select_list(cost_obj_fluid.description, mask),
             tax_portion=cost_obj_fluid.tax_portion[mask],
             tax_discount=np.asarray(
                 cost_obj_fluid.tax_discount, dtype=np.float64
@@ -2414,7 +2435,7 @@ class BaseProject:
         """
 
         # Raise an exception for an incorrect input
-        if not isinstance(cost_obj_fluid, LBT):
+        if not isinstance(cast(object, cost_obj_fluid), LBT):
             raise BaseProjectException(
                 "Invalid input: cost_obj_fluid must be an LBT object. " +
                 f"Received {cost_obj_fluid.__class__.__qualname__} instead."
@@ -2435,8 +2456,7 @@ class BaseProject:
         }[include_cost_type]
 
         # Conduct masking process
-        cost_type_array = np.array(cost_obj_fluid.cost_type)
-        mask = (cost_type_array == include_cost_type)
+        mask = _equals_mask(cost_obj_fluid.cost_type, include_cost_type)
 
         if not np.any(mask):
             return LBT(
@@ -2452,9 +2472,9 @@ class BaseProject:
             start_year=cost_obj_fluid.start_year,
             end_year=cost_obj_fluid.end_year,
             expense_year=cost_obj_fluid.expense_year[mask],
-            cost_allocation=np.array(cost_obj_fluid.cost_allocation)[mask].tolist(),
-            cost_type=np.array(cost_obj_fluid.cost_type)[mask].tolist(),
-            description=np.array(cost_obj_fluid.description)[mask].tolist(),
+            cost_allocation=_select_list(cost_obj_fluid.cost_allocation, mask),
+            cost_type=_select_list(cost_obj_fluid.cost_type, mask),
+            description=_select_list(cost_obj_fluid.description, mask),
             tax_portion=cost_obj_fluid.tax_portion[mask],
             tax_discount=np.asarray(
                 cost_obj_fluid.tax_discount, dtype=np.float64
@@ -2520,7 +2540,7 @@ class BaseProject:
         """
 
         # Raise an exception for an incorrect input
-        if not isinstance(cost_obj_fluid, CostOfSales):
+        if not isinstance(cast(object, cost_obj_fluid), CostOfSales):
             raise BaseProjectException(
                 "Invalid input: cost_obj_fluid must be a CostOfSales object. " +
                 f"Received {cost_obj_fluid.__class__.__qualname__} instead."
@@ -2541,8 +2561,7 @@ class BaseProject:
         }[include_cost_type]
 
         # Conduct masking process
-        cost_type_array = np.array(cost_obj_fluid.cost_type)
-        mask = (cost_type_array == include_cost_type)
+        mask = _equals_mask(cost_obj_fluid.cost_type, include_cost_type)
 
         if not np.any(mask):
             return CostOfSales(
@@ -2559,9 +2578,9 @@ class BaseProject:
             end_year=cost_obj_fluid.end_year,
             expense_year=cost_obj_fluid.expense_year[mask],
             cost=cost_obj_fluid.cost[mask],
-            cost_allocation=np.array(cost_obj_fluid.cost_allocation)[mask].tolist(),
-            cost_type=np.array(cost_obj_fluid.cost_type)[mask].tolist(),
-            description=np.array(cost_obj_fluid.description)[mask].tolist(),
+            cost_allocation=_select_list(cost_obj_fluid.cost_allocation, mask),
+            cost_type=_select_list(cost_obj_fluid.cost_type, mask),
+            description=_select_list(cost_obj_fluid.description, mask),
             tax_portion=cost_obj_fluid.tax_portion[mask],
             tax_discount=np.asarray(
                 cost_obj_fluid.tax_discount, dtype=np.float64
@@ -2929,16 +2948,11 @@ class BaseProject:
         oil_onstream_date, gas_onstream_date = self._require_onstream_dates()
         onstream_yr = min([oil_onstream_date.year, gas_onstream_date.year])
 
-        # Helper to extract min/max expense year for each object
-        def _extract_years(obj, func):
-            return func(obj.expense_year)
-
-        # Conduct vectorized extraction of min/max expense years
         preonstream_max_years = np.array(
-            [_extract_years(obj=pr, func=np.max) for pr in preonstream_objects]
+            [int(np.max(pr.expense_year)) for pr in preonstream_objects], dtype=np.int64
         )
         preonstream_min_years = np.array(
-            [_extract_years(obj=pr, func=np.min) for pr in preonstream_objects]
+            [int(np.min(pr.expense_year)) for pr in preonstream_objects], dtype=np.int64
         )
         message = None
 
@@ -3533,15 +3547,16 @@ class BaseProject:
             If `inflation_rate_applied_to` is not recognized.
         """
 
+        inflation_target = cast(object, inflation_rate_applied_to)
         # No inflation rate
-        if inflation_rate_applied_to is None:
+        if inflation_target is None:
             return target_attr.expenditures_pre_tax(
                 year_inflation=year_inflation,
                 inflation_rate=0.0,
             )
 
         # Inflation rate applied to CAPEX only
-        elif inflation_rate_applied_to == InflationAppliedTo.CAPEX:
+        elif inflation_target == InflationAppliedTo.CAPEX:
             if (
                 target_attr is self._oil_capital_postonstream
                 or target_attr is self._gas_capital_postonstream
@@ -3560,7 +3575,7 @@ class BaseProject:
                 )
 
         # Inflation rate applied to OPEX only
-        elif inflation_rate_applied_to == InflationAppliedTo.OPEX:
+        elif inflation_target == InflationAppliedTo.OPEX:
             if (
                 target_attr is self._oil_opex_postonstream
                 or target_attr is self._gas_opex_postonstream
@@ -3577,7 +3592,7 @@ class BaseProject:
                 )
 
         # Inflation rate applied to CAPEX and OPEX
-        elif inflation_rate_applied_to == InflationAppliedTo.CAPEX_AND_OPEX:
+        elif inflation_target == InflationAppliedTo.CAPEX_AND_OPEX:
             if (
                 target_attr is self._oil_capital_postonstream
                 or target_attr is self._gas_capital_postonstream
@@ -3821,10 +3836,12 @@ class BaseProject:
                 pre_attr_name = f"_{fluid}_{categ}_expenditures_pre_tax"
                 tax_attr_name = f"_{fluid}_{categ}_indirect_tax"
                 pre_attr = self._require_array(
-                    getattr(self, pre_attr_name), pre_attr_name
+                    cast(npt.NDArray[np.float64] | None, getattr(self, pre_attr_name)),
+                    pre_attr_name,
                 )
                 tax_attr = self._require_array(
-                    getattr(self, tax_attr_name), tax_attr_name
+                    cast(npt.NDArray[np.float64] | None, getattr(self, tax_attr_name)),
+                    tax_attr_name,
                 )
                 setattr(self, f"_{fluid}_{categ}_expenditures_post_tax", pre_attr + tax_attr)
 
@@ -3872,21 +3889,25 @@ class BaseProject:
           is raised.
         """
 
+        sulfur_selection = cast(object, sulfur_revenue)
+        electricity_selection = cast(object, electricity_revenue)
+        co2_selection = cast(object, co2_revenue)
+
         # Configure sulfur revenue
-        if sulfur_revenue is OtherRevenue.ADDITION_TO_OIL_REVENUE:
+        if sulfur_selection is OtherRevenue.ADDITION_TO_OIL_REVENUE:
             self._oil_revenue += self._sulfur_revenue
 
-        elif sulfur_revenue is OtherRevenue.ADDITION_TO_GAS_REVENUE:
+        elif sulfur_selection is OtherRevenue.ADDITION_TO_GAS_REVENUE:
             self._gas_revenue += self._sulfur_revenue
 
-        elif sulfur_revenue is OtherRevenue.REDUCTION_TO_OIL_OPEX:
+        elif sulfur_selection is OtherRevenue.REDUCTION_TO_OIL_OPEX:
             oil_opex_expenditures_post_tax = self._require_array(
                 self._oil_opex_expenditures_post_tax,
                 "_oil_opex_expenditures_post_tax",
             )
             oil_opex_expenditures_post_tax -= self._sulfur_revenue
 
-        elif sulfur_revenue is OtherRevenue.REDUCTION_TO_GAS_OPEX:
+        elif sulfur_selection is OtherRevenue.REDUCTION_TO_GAS_OPEX:
             gas_opex_expenditures_post_tax = self._require_array(
                 self._gas_opex_expenditures_post_tax,
                 "_gas_opex_expenditures_post_tax",
@@ -3899,20 +3920,20 @@ class BaseProject:
             )
 
         # Configure electricity revenue
-        if electricity_revenue is OtherRevenue.ADDITION_TO_OIL_REVENUE:
+        if electricity_selection is OtherRevenue.ADDITION_TO_OIL_REVENUE:
             self._oil_revenue += self._electricity_revenue
 
-        elif electricity_revenue is OtherRevenue.ADDITION_TO_GAS_REVENUE:
+        elif electricity_selection is OtherRevenue.ADDITION_TO_GAS_REVENUE:
             self._gas_revenue += self._electricity_revenue
 
-        elif electricity_revenue is OtherRevenue.REDUCTION_TO_OIL_OPEX:
+        elif electricity_selection is OtherRevenue.REDUCTION_TO_OIL_OPEX:
             oil_opex_expenditures_post_tax = self._require_array(
                 self._oil_opex_expenditures_post_tax,
                 "_oil_opex_expenditures_post_tax",
             )
             oil_opex_expenditures_post_tax -= self._electricity_revenue
 
-        elif electricity_revenue is OtherRevenue.REDUCTION_TO_GAS_OPEX:
+        elif electricity_selection is OtherRevenue.REDUCTION_TO_GAS_OPEX:
             gas_opex_expenditures_post_tax = self._require_array(
                 self._gas_opex_expenditures_post_tax,
                 "_gas_opex_expenditures_post_tax",
@@ -3925,20 +3946,20 @@ class BaseProject:
             )
 
         # Configure CO2 revenue
-        if co2_revenue is OtherRevenue.ADDITION_TO_OIL_REVENUE:
+        if co2_selection is OtherRevenue.ADDITION_TO_OIL_REVENUE:
             self._oil_revenue += self._co2_revenue
 
-        elif co2_revenue is OtherRevenue.ADDITION_TO_GAS_REVENUE:
+        elif co2_selection is OtherRevenue.ADDITION_TO_GAS_REVENUE:
             self._gas_revenue += self._co2_revenue
 
-        elif co2_revenue is OtherRevenue.REDUCTION_TO_OIL_OPEX:
+        elif co2_selection is OtherRevenue.REDUCTION_TO_OIL_OPEX:
             oil_opex_expenditures_post_tax = self._require_array(
                 self._oil_opex_expenditures_post_tax,
                 "_oil_opex_expenditures_post_tax",
             )
             oil_opex_expenditures_post_tax -= self._co2_revenue
 
-        elif co2_revenue is OtherRevenue.REDUCTION_TO_GAS_OPEX:
+        elif co2_selection is OtherRevenue.REDUCTION_TO_GAS_OPEX:
             gas_opex_expenditures_post_tax = self._require_array(
                 self._gas_opex_expenditures_post_tax,
                 "_gas_opex_expenditures_post_tax",
@@ -4095,22 +4116,28 @@ class BaseProject:
             oil_post_tax_name = f"_oil_{categ}_expenditures_post_tax"
             gas_post_tax_name = f"_gas_{categ}_expenditures_post_tax"
             oil_pre_tax = self._require_array(
-                getattr(self, oil_pre_tax_name), oil_pre_tax_name
+                cast(npt.NDArray[np.float64] | None, getattr(self, oil_pre_tax_name)),
+                oil_pre_tax_name,
             )
             gas_pre_tax = self._require_array(
-                getattr(self, gas_pre_tax_name), gas_pre_tax_name
+                cast(npt.NDArray[np.float64] | None, getattr(self, gas_pre_tax_name)),
+                gas_pre_tax_name,
             )
             oil_indirect_tax = self._require_array(
-                getattr(self, oil_indirect_tax_name), oil_indirect_tax_name
+                cast(npt.NDArray[np.float64] | None, getattr(self, oil_indirect_tax_name)),
+                oil_indirect_tax_name,
             )
             gas_indirect_tax = self._require_array(
-                getattr(self, gas_indirect_tax_name), gas_indirect_tax_name
+                cast(npt.NDArray[np.float64] | None, getattr(self, gas_indirect_tax_name)),
+                gas_indirect_tax_name,
             )
             oil_post_tax = self._require_array(
-                getattr(self, oil_post_tax_name), oil_post_tax_name
+                cast(npt.NDArray[np.float64] | None, getattr(self, oil_post_tax_name)),
+                oil_post_tax_name,
             )
             gas_post_tax = self._require_array(
-                getattr(self, gas_post_tax_name), gas_post_tax_name
+                cast(npt.NDArray[np.float64] | None, getattr(self, gas_post_tax_name)),
+                gas_post_tax_name,
             )
 
             # Set attributes associated with expenditures pre tax
@@ -4579,7 +4606,13 @@ class BaseProject:
         invalid_pis_yrs = pis_yrs[mask]
 
         # Pair invalid PIS years with their corresponding costs
-        invalid = [f"{yr}: {cst}" for yr, cst in zip(invalid_pis_yrs, invalid_costs)]
+        invalid = [
+            f"{year}: {cost}"
+            for year, cost in zip(
+                cast(list[int], invalid_pis_yrs.tolist()),
+                cast(list[float], invalid_costs.tolist()),
+            )
+        ]
 
         # Specify messages
         msg_error = (
@@ -4670,7 +4703,13 @@ class BaseProject:
         invalid_pis_yrs = pis_yrs[mask]
 
         # Pair invalid PIS years with their corresponding costs
-        invalid = [f"{yr}: {cst}" for yr, cst in zip(invalid_pis_yrs, invalid_costs)]
+        invalid = [
+            f"{year}: {cost}"
+            for year, cost in zip(
+                cast(list[int], invalid_pis_yrs.tolist()),
+                cast(list[float], invalid_costs.tolist()),
+            )
+        ]
 
         # Specify messages
         msg_error = (
@@ -4695,7 +4734,7 @@ class BaseProject:
                 (ContractType.BASE_PROJECT.value, msg_warning)
             )
 
-    def warnings_to_dataframe(self) -> None:
+    def warnings_to_dataframe(self) -> pd.DataFrame:
         """
         Convert warning messages from a list to a pandas DataFrame.
         """
@@ -4708,7 +4747,7 @@ class BaseProject:
             }
         )
 
-        self.warning_messages = messages
+        return messages
 
     def _require_run(self) -> None:
         if not self._has_run:
@@ -4871,26 +4910,26 @@ class BaseProject:
 
         # Prepare OIL lifting summary
         oil_lifting_ghv = self._oil_lifting.get_lifting_rate_ghv_arr()
-        oil_lifting_ghv_sum = np.sum(oil_lifting_ghv, dtype=float)
+        oil_lifting_ghv_sum = _float_scalar(cast(object, np.sum(oil_lifting_ghv, dtype=float)))
         oil_wap_sum = self._calc_division(
-            numerator=self._oil_revenue.sum(dtype=float), denominator=oil_lifting_ghv_sum
+            numerator=_float_scalar(cast(object, self._oil_revenue.sum(dtype=float))), denominator=oil_lifting_ghv_sum
         )
 
         # Prepare GAS lifting summary
         gas_lifting_ghv = self._gas_lifting.get_lifting_rate_ghv_arr()
-        gas_lifting_ghv_sum = np.sum(gas_lifting_ghv, dtype=float)
+        gas_lifting_ghv_sum = _float_scalar(cast(object, np.sum(gas_lifting_ghv, dtype=float)))
         gas_wap_sum = self._calc_division(
-            numerator=float(np.sum(gas_wap_price * gas_lifting_ghv)),
+            numerator=_float_scalar(cast(object, np.sum(gas_wap_price * gas_lifting_ghv))),
             denominator=gas_lifting_ghv_sum,
         )
 
         # Prepare gross revenue summary
-        oil_gross_revenue_sum = self._oil_revenue.sum(dtype=float)
-        gas_gross_revenue_sum = self._gas_revenue.sum(dtype=float)
+        oil_gross_revenue_sum = _float_scalar(cast(object, self._oil_revenue.sum(dtype=float)))
+        gas_gross_revenue_sum = _float_scalar(cast(object, self._gas_revenue.sum(dtype=float)))
         total_gross_revenue_sum = oil_gross_revenue_sum + gas_gross_revenue_sum
 
         # Prepare sunk cost summary
-        sunk_cost_sum = np.sum(oil_sunk_cost + gas_sunk_cost, dtype=float)
+        sunk_cost_sum = _float_scalar(cast(object, np.sum(oil_sunk_cost + gas_sunk_cost, dtype=float)))
 
         # Prepare preonstream costs
         preonstream_map = {
@@ -4926,8 +4965,8 @@ class BaseProject:
             np.float64, copy=False
         )
 
-        tangible_sum = tangible_cost.sum(dtype=float)
-        intangible_sum = intangible_cost.sum(dtype=float)
+        tangible_sum = _float_scalar(cast(object, tangible_cost.sum(dtype=float)))
+        intangible_sum = _float_scalar(cast(object, intangible_cost.sum(dtype=float)))
         investment_sum = tangible_sum + intangible_sum
 
         # Prepare OPEX summary
@@ -4938,7 +4977,7 @@ class BaseProject:
             + preonstream_costs["gas_opex"]
         )
 
-        opex_sum = opex_cost.sum(dtype=float)
+        opex_sum = _float_scalar(cast(object, opex_cost.sum(dtype=float)))
 
         # Prepare ASR summary
         asr_cost = (
@@ -4948,7 +4987,7 @@ class BaseProject:
             + preonstream_costs["gas_asr"]
         )
 
-        asr_sum = asr_cost.sum(dtype=float)
+        asr_sum = _float_scalar(cast(object, asr_cost.sum(dtype=float)))
 
         # Prepare LBT summary
         lbt_cost = (
@@ -4958,11 +4997,11 @@ class BaseProject:
             + preonstream_costs["gas_lbt"]
         )
 
-        lbt_sum = lbt_cost.sum(dtype=float)
+        lbt_sum = _float_scalar(cast(object, lbt_cost.sum(dtype=float)))
 
         # Prepare indirect taxes summary
-        oil_indirect_tax_sum = oil_total_indirect_tax.sum(dtype=float)
-        gas_indirect_tax_sum = gas_total_indirect_tax.sum(dtype=float)
+        oil_indirect_tax_sum = _float_scalar(cast(object, oil_total_indirect_tax.sum(dtype=float)))
+        gas_indirect_tax_sum = _float_scalar(cast(object, gas_total_indirect_tax.sum(dtype=float)))
 
         # Calculate IRR
         ctr_irr = irr(cashflow=consolidated_cashflow)
@@ -5124,10 +5163,10 @@ class BaseProject:
             )
 
             # Contractor net cashflow
-            ctr_net_cashflow_sum = cashflow_point_forward.sum(dtype=float)
+            ctr_net_cashflow_sum = _float_scalar(cast(object, cashflow_point_forward.sum(dtype=float)))
             ctr_net_cashflow_over_gross_rev = self._calc_division(
                 numerator=ctr_net_cashflow_sum,
-                denominator=gross_revenue_point_forward.sum(dtype=float),
+                denominator=_float_scalar(cast(object, gross_revenue_point_forward.sum(dtype=float))),
             )
 
         else:
