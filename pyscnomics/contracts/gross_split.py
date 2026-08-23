@@ -119,7 +119,7 @@ def _as_bool_array(values: npt.ArrayLike, name: str) -> BoolArray:
 
 
 def _as_float(value: object, name: str) -> float:
-    if not isinstance(value, (int, float, np.floating)):
+    if not isinstance(value, (int, float, np.integer, np.floating)):
         raise GrossSplitException(f"{name} must be numeric")
     return float(cast(float, value))
 
