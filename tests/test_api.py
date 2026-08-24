@@ -5,6 +5,7 @@ Run: uv run pytest tests/test_api.py -v
 
 from datetime import date
 from fastapi.testclient import TestClient
+import pytest
 
 from pyscnomics.api.main import app
 
@@ -198,10 +199,82 @@ class TestGrossSplitSchema:
         assert dumped["infra_avail_2024"] == "available"
         assert dumped["field_reserves_2024"] == "low"
 
+    def test_frontend_shaped_table_payload_preserves_nullable_contract_fields(
+        self, monkeypatch
+    ):
+        """Frontend null selectors and inactive CR block survive route validation."""
+        import pyscnomics.api.router as router
+
+        calls = {}
+
+        def fake_get_contract_table(data=None, contract_type=None):
+            calls["data"] = data
+            calls["contract_type"] = contract_type
+            return {"consolidated": {}}, object()
+
+        monkeypatch.setattr(router, "get_contract_table", fake_get_contract_table)
+
+        payload = {
+            "setup": {
+                "start_date": "01/01/2023",
+                "end_date": "31/12/2027",
+            },
+            "summary_arguments": {"discount_rate_start_year": 2024},
+            "contract_arguments": {
+                "reservoir_type_permen_2024": "unconventional"
+            },
+            "costrecovery": None,
+            "grosssplit": {
+                "field_status": None,
+                "field_loc": None,
+                "res_depth": None,
+                "infra_avail": None,
+                "res_type": None,
+                "api_oil": None,
+                "domestic_use": None,
+                "prod_stage": None,
+                "co2_content": None,
+                "h2s_content": None,
+                "field_reserves": None,
+            },
+        }
+
+        resp = client.post("/api/grosssplit/table", json=payload)
+
+        assert resp.status_code == 200
+        assert resp.json() == {"consolidated": {}}
+        assert calls["contract_type"] == "Gross Split"
+        assert calls["data"]["costrecovery"] is None
+        assert calls["data"]["grosssplit"]["field_reserves"] is None
+        assert (
+            calls["data"]["contract_arguments"]["reservoir_type_permen_2024"]
+            == "unconventional"
+        )
+        assert calls["data"]["summary_arguments"]["discount_rate_start_year"] == 2024
+
 
 # ── Cost type schema ─────────────────────────────────────────────
 
 class TestCostTypeSchema:
+    def test_capital_null_pis_year_falls_back_to_expense_year(self):
+        """A null PIS entry retains the engine's expense-year fallback."""
+        from pyscnomics.api.converter import convert_dict_to_capital
+
+        capital = convert_dict_to_capital(
+            {
+                "well": {
+                    "start_year": 2023,
+                    "end_year": 2027,
+                    "expense_year": [2024],
+                    "cost": [100.0],
+                    "pis_year": [None],
+                }
+            }
+        )
+
+        assert capital is not None
+        assert capital[0].pis_year.tolist() == [2024]
+
     def test_data_dump_preserves_cost_type(self):
         """HTTP cost classification must survive Pydantic model_dump."""
         from typing import Any
@@ -301,6 +374,30 @@ class TestSetupSchema:
 # ── Summary arguments schema ─────────────────────────────────────
 
 class TestSummaryArgumentsSchema:
+    def test_models_preserve_untyped_list_element_shapes(self):
+        """Parameterizing former bare lists must not narrow validation."""
+        from pyscnomics.api.converter import ContractArgumentsBM, SummaryArgumentsBM
+
+        inflation_curve = [{"year": 2025, "rate": 0.03}]
+        summary = SummaryArgumentsBM(inflation_rate=inflation_curve).model_dump()
+        contract = ContractArgumentsBM(
+            effective_tax_rate=inflation_curve,
+            vat_rate=inflation_curve,
+            lbt_rate=inflation_curve,
+            inflation_rate=inflation_curve,
+            cum_production_split_offset=inflation_curve,
+        ).model_dump()
+
+        assert summary["inflation_rate"] == inflation_curve
+        for field in (
+            "effective_tax_rate",
+            "vat_rate",
+            "lbt_rate",
+            "inflation_rate",
+            "cum_production_split_offset",
+        ):
+            assert contract[field] == inflation_curve
+
     def test_data_dump_preserves_discount_rate_start_year(self):
         """The frontend's discount reference year must survive model_dump."""
         from typing import Any
@@ -367,13 +464,16 @@ class TestTransitionUncertainty:
     """Regression: transition uncertainty must use DataTransition + "Transition"."""
 
     def test_datatransition_has_uncertainty_arguments(self):
-        """DataTransition carries uncertainty_arguments like Data."""
+        """DataTransition truthfully exposes its optional uncertainty section."""
+        from pydantic import TypeAdapter
+
         from pyscnomics.api.converter import Data, DataTransition, UncertaintyBM
 
         assert "uncertainty_arguments" in DataTransition.model_fields
         field = DataTransition.model_fields["uncertainty_arguments"]
-        assert field.annotation is UncertaintyBM or field.annotation == UncertaintyBM
+        assert field.annotation == UncertaintyBM | None
         assert field.default is None
+        assert TypeAdapter(field.annotation).validate_python(None) is None
         assert "uncertainty_arguments" in Data.model_fields
 
     def test_transition_uncertainty_route_signature(self):
@@ -411,6 +511,206 @@ class TestTransitionUncertainty:
         assert result == {"ok": True}
         assert calls["data"] == {"dumped": True}
         assert calls["contract_type"] == "Transition"
+
+    def test_transition_summary_adapts_discount_start_year(self, monkeypatch):
+        """Shared summary helper receives its canonical reference_year name."""
+        import pyscnomics.api.adapter as adapter
+
+        calls = {}
+
+        class FakeTransition:
+            def __init__(self, **_kwargs):
+                pass
+
+            def run(self, **_kwargs):
+                pass
+
+        def fake_costrecovery(data=None, summary_result=True):
+            return None, object(), {}, None
+
+        def fake_summary(**kwargs):
+            calls.update(kwargs)
+            return {}
+
+        monkeypatch.setattr(adapter, "Transition", FakeTransition)
+        monkeypatch.setattr(adapter, "get_costrecovery", fake_costrecovery)
+        monkeypatch.setattr(adapter, "get_summary", fake_summary)
+        monkeypatch.setattr(
+            adapter, "convert_summary_to_dict", lambda dict_object: dict_object
+        )
+
+        payload = {
+            "contract_1": {"costrecovery": {}, "grosssplit": None},
+            "contract_2": {"costrecovery": {}, "grosssplit": None},
+            "contract_arguments": {"unrec_portion": 0.5},
+            "summary_arguments": {
+                "discount_rate_start_year": 2024,
+                "inflation_rate": 0.03,
+                "discount_rate": 0.1,
+                "npv_mode": "SKK Full Cycle Nominal Terms",
+                "discounting_mode": "End Year",
+                "profitability_discounted": False,
+            },
+        }
+
+        adapter.get_transition(payload)
+
+        assert calls["reference_year"] == 2024
+        assert "discount_rate_start_year" not in calls
+
+    @pytest.mark.parametrize(
+        ("reference_year", "expected_reference_year"),
+        [(2026, 2026), (None, 2022)],
+    )
+    def test_transition_summary_falls_back_to_reference_year(
+        self, monkeypatch, reference_year, expected_reference_year
+    ):
+        """A null discount start year falls back to the supplied reference year."""
+        import pyscnomics.api.adapter as adapter
+
+        calls = {}
+
+        class FakeTransition:
+            def __init__(self, **_kwargs):
+                pass
+
+            def run(self, **_kwargs):
+                pass
+
+        def fake_costrecovery(data=None, summary_result=True):
+            return None, object(), {}, None
+
+        def fake_summary(**kwargs):
+            calls.update(kwargs)
+            return {}
+
+        monkeypatch.setattr(adapter, "Transition", FakeTransition)
+        monkeypatch.setattr(adapter, "get_costrecovery", fake_costrecovery)
+        monkeypatch.setattr(adapter, "get_summary", fake_summary)
+        monkeypatch.setattr(
+            adapter, "convert_summary_to_dict", lambda dict_object: dict_object
+        )
+
+        summary_arguments = {
+            "discount_rate_start_year": None,
+            "inflation_rate": 0.03,
+            "discount_rate": 0.1,
+            "npv_mode": "SKK Full Cycle Nominal Terms",
+            "discounting_mode": "End Year",
+            "profitability_discounted": False,
+        }
+        if reference_year is not None:
+            summary_arguments["reference_year"] = reference_year
+
+        payload = {
+            "contract_1": {"costrecovery": {}, "grosssplit": None},
+            "contract_2": {"costrecovery": {}, "grosssplit": None},
+            "contract_arguments": {"unrec_portion": 0.5},
+            "summary_arguments": summary_arguments,
+        }
+
+        _, _, _, summary_arguments = adapter.get_transition(payload)
+
+        assert calls["reference_year"] == expected_reference_year
+        assert summary_arguments["reference_year"] == expected_reference_year
+        assert summary_arguments["discount_rate_start_year"] is None
+
+    def test_transition_detailed_summary_maps_external_helper_arguments(
+        self, monkeypatch
+    ):
+        """Detailed-summary delegation maps API years to the legacy helper signature."""
+        import pyscnomics.api.adapter as adapter
+
+        calls = {}
+        transition = object()
+        summary_arguments = {
+            "reference_year": 2027,
+            "discount_rate_start_year": None,
+            "inflation_rate": 0.03,
+            "discount_rate": 0.1,
+            "npv_mode": "SKK Full Cycle Nominal Terms",
+            "discounting_mode": "End Year",
+            "profitability_discounted": False,
+        }
+
+        monkeypatch.setattr(
+            adapter,
+            "get_transition",
+            lambda data: ({}, transition, {}, summary_arguments),
+        )
+
+        def fake_summary(**kwargs):
+            calls.update(kwargs)
+            return {"ctr_npv": 123.0, "gov_take": 45.0}
+
+        monkeypatch.setattr(adapter, "get_summary", fake_summary)
+
+        result = adapter.get_detailed_summary({}, "Transition")
+
+        assert result == {"ctr_npv": 123.0, "gov_take": 45.0}
+        assert calls["contract"] is transition
+        assert calls["reference_year"] == 2027
+        assert "discount_rate_start_year" not in calls
+
+
+class TestAdapterExecutionSemantics:
+    def test_costrecovery_optimization_builds_each_baseline_input(self, monkeypatch):
+        """Optimization preserves the established three adapter executions."""
+        from types import SimpleNamespace
+
+        import numpy as np
+
+        import pyscnomics.api.adapter as adapter
+
+        calls = 0
+        optimizer_calls = {}
+        capital = SimpleNamespace(useful_life=np.array([5.0]))
+        contract = SimpleNamespace(capital_cost_total=capital)
+
+        def fake_costrecovery(data):
+            nonlocal calls
+            calls += 1
+            return (
+                {},
+                contract,
+                {"run": calls},
+                {
+                    "reference_year": 2022,
+                    "discount_rate_start_year": None,
+                    "inflation_rate": 0.03,
+                    "discount_rate": calls,
+                    "npv_mode": "mode",
+                    "discounting_mode": "discounting",
+                    "profitability_discounted": False,
+                },
+            )
+
+        def fake_optimize(**kwargs):
+            optimizer_calls.update(kwargs)
+            return ["Oil Contractor Pre Tax"], [0.2], 1.0, [contract]
+
+        monkeypatch.setattr(adapter, "get_costrecovery", fake_costrecovery)
+        monkeypatch.setattr(adapter, "optimize_psc", fake_optimize)
+
+        adapter.get_contract_optimization(
+            {
+                "optimization_arguments": {
+                    "dict_optimization": {
+                        "parameter": ["Oil Contractor Pre Tax"],
+                        "min": [0.1],
+                        "max": [0.2],
+                    },
+                    "target_optimization": 1.0,
+                    "target_parameter": "NPV",
+                }
+            },
+            "Cost Recovery",
+        )
+
+        assert calls == 3
+        assert optimizer_calls["contract_arguments"] == {"run": 2}
+        assert optimizer_calls["summary_arguments"]["discount_rate"] == 3
+        assert "reference_year" not in optimizer_calls["summary_arguments"]
 
 
 # ── Warnings endpoints ────────────────────────────────────────────

@@ -2,7 +2,7 @@
 Module to handle API router.
 """
 
-from typing import Any, cast
+from typing import Literal, Protocol, cast
 
 from fastapi import APIRouter
 
@@ -38,6 +38,16 @@ from pyscnomics.api.converter import DataTransition
 from pyscnomics.api.converter import LtpBM, RpdBM
 
 router = APIRouter(prefix="/api")
+
+
+class _WarningEntry(Protocol):
+    def __getitem__(self, index: int) -> object: ...
+
+
+class _RecordsConvertible(Protocol):
+    def to_dict(
+        self, *, orient: Literal["records"]
+    ) -> list[dict[str, object]]: ...
 
 
 @router.get("/")
@@ -534,7 +544,7 @@ async def calculate_economic_limit(data: EconLimit) -> int:
     cash_flow: list[int] | list[float]
     method: str
     """
-    return get_economic_limit(data=data.model_dump())
+    return int(get_economic_limit(data=data.model_dump()))
 
 
 @router.post("/asr_expenditures")
@@ -639,11 +649,14 @@ def _extract_warnings(adapter_result: tuple[object, ...]) -> list[dict[str, obje
     if warning_messages is None:
         return []
     if isinstance(warning_messages, list):
+        messages = cast(list[object], warning_messages)
         return [
-            item if isinstance(item, dict) else {"Message": item[1]}
-            for item in warning_messages
+            cast(dict[str, object], item)
+            if isinstance(item, dict)
+            else {"Message": cast(_WarningEntry, item)[1]}
+            for item in messages
         ]
-    return cast(Any, warning_messages).to_dict(orient="records")
+    return cast(_RecordsConvertible, warning_messages).to_dict(orient="records")
 
 
 @router.post("/baseproject/warnings")

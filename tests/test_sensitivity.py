@@ -178,6 +178,52 @@ def test_sensitivity_bm_accepts_step_without_increment():
     assert args.model_dump()["increment"] is None
 
 
+def test_api_sensitivity_preserves_float_step(monkeypatch):
+    """The adapter forwards the model's established float-or-int step unchanged."""
+    import pyscnomics.api.adapter as adapter
+
+    calls = {}
+    monkeypatch.setattr(
+        adapter,
+        "get_baseproject",
+        lambda data: (
+            {},
+            object(),
+            {},
+            {
+                "reference_year": 2022,
+                "discount_rate_start_year": None,
+                "inflation_rate": 0.03,
+                "discount_rate": 0.1,
+                "npv_mode": "mode",
+                "discounting_mode": "discounting",
+                "profitability_discounted": False,
+            },
+        ),
+    )
+
+    def fake_sensitivity(**kwargs):
+        calls.update(kwargs)
+        return {}
+
+    monkeypatch.setattr(adapter, "sensitivity_psc", fake_sensitivity)
+
+    adapter.get_sensitivity(
+        {
+            "sensitivity_arguments": {
+                "min_deviation": 0.1,
+                "max_deviation": 0.1,
+                "base_value": 1.0,
+                "step": 10.5,
+            }
+        },
+        "Base Project",
+    )
+
+    assert calls["step"] == 10.5
+    assert "reference_year" not in calls["summary_arguments"]
+
+
 def test_uncertainty_lifting_statistics_include_every_producer_type():
     oil = SimpleNamespace(lifting_rate=np.array([100.0]), price=np.array([10.0]))
     gas = SimpleNamespace(lifting_rate=np.array([20.0]), price=np.array([1.0]))
