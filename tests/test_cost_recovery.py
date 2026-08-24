@@ -2,11 +2,62 @@
 A collection of unit testing for class CostRecovery
 """
 
-import numpy as np
 from dataclasses import dataclass, field
-from pyscnomics.econ.selection import FluidType
-from pyscnomics.econ.revenue import Lifting
+from datetime import date
+from typing import cast
+
+import numpy as np
+
+from pyscnomics.contracts.costrecovery import CostRecovery
+from pyscnomics.dataset.sample import load_data
 from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales
+from pyscnomics.econ.revenue import Lifting
+from pyscnomics.econ.selection import FluidType
+
+
+def test_cost_recovery_reuses_normalized_condition_dict():
+    raw_conditions = {
+        "RC Bottom Limit": [0.0, 1.0],
+        "RC Top Limit": [1.0, 2.0],
+        "Pre Tax CTR Oil": [0.25, 0.3],
+        "Pre Tax CTR Gas": [0.5, 0.55],
+    }
+    contract = CostRecovery(
+        start_date=date(2020, 1, 1),
+        end_date=date(2021, 12, 31),
+        approval_year=2020,
+        condition_dict=raw_conditions,
+    )
+
+    copied = CostRecovery(
+        start_date=date(2020, 1, 1),
+        end_date=date(2021, 12, 31),
+        approval_year=2020,
+        condition_dict=contract.condition_dict,
+    )
+
+    assert copied.condition_dict == {
+        "condition_1": {
+            "bot_limit": 0.0,
+            "top_limit": 1.0,
+            "ctr_oil": 0.25,
+            "ctr_gas": 0.5,
+        },
+        "condition_2": {
+            "bot_limit": 1.0,
+            "top_limit": 2.0,
+            "ctr_oil": 0.3,
+            "ctr_gas": 0.55,
+        },
+    }
+
+
+def test_cost_recovery_unsupported_effective_tax_rate_defaults_to_zero():
+    contract = load_data("case1", "cost_recovery")
+
+    contract.run(effective_tax_rate=cast(float, cast(object, "unsupported")))
+
+    assert contract.get_summary()["gov_tax_income"] == 0.0
 
 
 @dataclass
@@ -90,5 +141,3 @@ class CostRecoveryExample:
 
     def _get_cost_of_sales_data(self):
         pass
-
-

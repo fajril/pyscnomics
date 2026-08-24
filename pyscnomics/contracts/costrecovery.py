@@ -3,9 +3,14 @@ Handles calculations associated with PSC Cost Recovery.
 """
 
 # import logging
-import numpy as np
-import pandas as pd
+from collections.abc import Mapping
 from dataclasses import dataclass, field
+from typing import cast
+
+import numpy as np
+import numpy.typing as npt
+import pandas as pd
+from typing_extensions import override
 
 from pyscnomics.econ.costs import CapitalCost
 from pyscnomics.contracts.project import BaseProject
@@ -40,6 +45,17 @@ pd.set_option("display.max_columns", 50)
 pd.set_option("display.max_colwidth", 100)
 
 
+# Dtype-only aliases match BaseProject; runtime helpers validate external shapes.
+FloatArray = npt.NDArray[np.float64]
+FloatMatrix = npt.NDArray[np.float64]
+YearArray = npt.NDArray[np.int64]
+CostSchedules = dict[str, FloatArray]
+RCICPBand = dict[str, float]
+RCICPConditions = dict[str, RCICPBand]
+RCICPColumnConditions = Mapping[str, npt.ArrayLike]
+RCICPInput = RCICPConditions | RCICPColumnConditions
+
+
 class SunkCostException(Exception):
     """Exception to raise for a misuse of Sunk Cost Method"""
 
@@ -56,6 +72,30 @@ class CostRecoverySummaryException(Exception):
     """ Exception to be raised for a misuse of get_summary() method """
 
     pass
+
+
+def _as_float_array(values: npt.ArrayLike, name: str) -> FloatArray:
+    array = np.asarray(values, dtype=np.float64)
+    if array.ndim != 1:
+        raise CostRecoveryException(f"{name} must be a one-dimensional numeric array")
+    return array
+
+
+def _sum_float(values: FloatArray) -> float:
+    total = cast(np.float64, np.sum(values, dtype=np.float64))
+    return float(total)
+
+
+def _as_float(value: object, name: str) -> float:
+    if not isinstance(value, (int, float, np.integer, np.floating)):
+        raise CostRecoveryException(f"{name} must be numeric")
+    return float(cast(float, value))
+
+
+def _require_float(value: float | None, name: str) -> float:
+    if value is None:
+        raise CostRecoveryException(f"{name} is unavailable before run()")
+    return value
 
 
 @dataclass
@@ -79,13 +119,13 @@ class CostRecovery(BaseProject):
         The portion of the Gas FTP in fraction.
     tax_split_type: TaxSplitTypeCR
         The type of the contractor split.
-    condition_dict: dict
+    condition_dict: RCICPConditions
         The condition dictionary of the split when the tax_split_type is not Conventional.
-    indicator_rc_icp_sliding: np.ndarray
+    indicator_rc_icp_sliding: FloatArray
         The indicator used in the SLIDING_SCALE or R2C tax_split_type.
-    oil_ctr_pretax_share: float | np.ndarray
+    oil_ctr_pretax_share: float | FloatArray
         The Oil Contractor Pre-Tax Split or Oil Contractor Pre-Tax Split Share.
-    gas_ctr_pretax_share: float | np.ndarray
+    gas_ctr_pretax_share: float | FloatArray
         The Gas Contractor Pre-Tax Split or Oil Contractor Pre-Tax Split Share.
     oil_ic_rate: float
         The Oil's Investment Credit (IC) rate of the contract.
@@ -114,218 +154,254 @@ class CostRecovery(BaseProject):
     # Arguments associated with FTP
     oil_ftp_is_available: bool = field(default=True)
     oil_ftp_is_shared: bool = field(default=True)
-    oil_ftp_portion: float | np.ndarray = field(default=0.2)
+    oil_ftp_portion: float | FloatArray = field(default=0.2)
     gas_ftp_is_available: bool = field(default=True)
     gas_ftp_is_shared: bool = field(default=True)
-    gas_ftp_portion: float | np.ndarray = field(default=0.2)
+    gas_ftp_portion: float | FloatArray = field(default=0.2)
 
     # Arguments associated with split
     tax_split_type: TaxSplitTypeCR = field(default=TaxSplitTypeCR.CONVENTIONAL)
-    condition_dict: dict = field(default_factory=dict)
-    indicator_rc_icp_sliding: np.ndarray = field(default=None)
-    oil_ctr_pretax_share: float | np.ndarray = field(default=0.25)
-    gas_ctr_pretax_share: float | np.ndarray = field(default=0.5)
+    condition_dict: RCICPInput = field(default_factory=dict[str, RCICPBand])
+    indicator_rc_icp_sliding: FloatArray | None = field(default=None)
+    oil_ctr_pretax_share: float | FloatArray = field(default=0.25)
+    gas_ctr_pretax_share: float | FloatArray = field(default=0.5)
 
     # Arguments associated with investment credit and cap rate
-    oil_ic_rate: float | np.ndarray = field(default=0.0)
-    gas_ic_rate: float | np.ndarray = field(default=0.0)
+    oil_ic_rate: float | FloatArray = field(default=0.0)
+    gas_ic_rate: float | FloatArray = field(default=0.0)
     ic_is_available: bool = field(default=False)
     oil_cr_cap_rate: float = field(default=1.0)
     gas_cr_cap_rate: float = field(default=1.0)
 
     # Arguments associated with DMO
-    oil_dmo_volume_portion: float | np.ndarray = field(default=0.25)
-    oil_dmo_fee_portion: float | np.ndarray = field(default=0.25)
+    oil_dmo_volume_portion: float | FloatArray = field(default=0.25)
+    oil_dmo_fee_portion: float | FloatArray = field(default=0.25)
     oil_dmo_holiday_duration: int = field(default=60)
-    gas_dmo_volume_portion: float | np.ndarray = field(default=1.0)
-    gas_dmo_fee_portion: float | np.ndarray = field(default=1.0)
+    gas_dmo_volume_portion: float | FloatArray = field(default=1.0)
+    gas_dmo_fee_portion: float | FloatArray = field(default=1.0)
     gas_dmo_holiday_duration: int = field(default=60)
 
     # Arguments associated with carry forward depreciation
-    oil_carry_forward_depreciation: float | np.ndarray = field(default=0.0)
-    gas_carry_forward_depreciation: float | np.ndarray = field(default=0.0)
+    oil_carry_forward_depreciation: float | FloatArray = field(default=0.0)
+    gas_carry_forward_depreciation: float | FloatArray = field(default=0.0)
 
     # Attributes associated with carry forward depreciation
-    _oil_carry_forward_depreciation: np.ndarray = field(
+    _oil_carry_forward_depreciation: FloatArray | None = field(
         default=None, init=False, repr=False
     )
-    _gas_carry_forward_depreciation: np.ndarray = field(
+    _gas_carry_forward_depreciation: FloatArray | None = field(
         default=None, init=False, repr=False
     )
 
     # Attributes associated with depreciations and undepreciated assets
-    _oil_depreciations: dict = field(default_factory=lambda: {}, init=False, repr=False)
-    _gas_depreciations: dict = field(default_factory=lambda: {}, init=False, repr=False)
-    _oil_undepreciated_assets: dict = field(default_factory=lambda: {}, init=False, repr=False)
-    _gas_undepreciated_assets: dict = field(default_factory=lambda: {}, init=False, repr=False)
-    _oil_depreciation: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_depreciation: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_sum_undepreciated_asset: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_sum_undepreciated_asset: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_depreciations: CostSchedules = field(default_factory=dict, init=False, repr=False)
+    _gas_depreciations: CostSchedules = field(default_factory=dict, init=False, repr=False)
+    _oil_undepreciated_assets: CostSchedules = field(default_factory=dict, init=False, repr=False)
+    _gas_undepreciated_assets: CostSchedules = field(default_factory=dict, init=False, repr=False)
+    _oil_depreciation: FloatArray | None = field(default=None, init=False, repr=False)
+    _gas_depreciation: FloatArray | None = field(default=None, init=False, repr=False)
+    _oil_sum_undepreciated_asset: float | None = field(default=None, init=False, repr=False)
+    _gas_sum_undepreciated_asset: float | None = field(default=None, init=False, repr=False)
 
     # Attributes associated with non-depreciable costs
-    _oil_non_depreciables: dict = field(default_factory=lambda: {}, init=False, repr=False)
-    _gas_non_depreciables: dict = field(default_factory=lambda: {}, init=False, repr=False)
+    _oil_non_depreciables: CostSchedules = field(default_factory=dict, init=False, repr=False)
+    _gas_non_depreciables: CostSchedules = field(default_factory=dict, init=False, repr=False)
 
     # Attributes associated with total depreciation and total nondepreciable
-    _oil_depr_total: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_depr_total: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_non_depr_total: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_non_depr_total: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_depr_total: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _gas_depr_total: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _oil_non_depr_total: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _gas_non_depr_total: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
 
     # Attributes associated with FTP
-    _oil_ftp: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_ftp_ctr: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_ftp_gov: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_ftp: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_ftp_ctr: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_ftp_gov: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_ftp: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _oil_ftp_ctr: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _oil_ftp_gov: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _gas_ftp: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _gas_ftp_ctr: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _gas_ftp_gov: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
 
     # Attributes associated with investment credit
-    _oil_ic: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_ic_unrecovered: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_ic_paid: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_ic: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_ic_unrecovered: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_ic_paid: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_ic: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _oil_ic_unrecovered: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _oil_ic_paid: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _gas_ic: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _gas_ic_unrecovered: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _gas_ic_paid: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
 
     # Attributes associated with core business logic
-    _oil_revenue_allocation: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_revenue_allocation: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_unrecovered_before_transfer: np.ndarray = field(
+    _oil_revenue_allocation: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _gas_revenue_allocation: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _oil_unrecovered_before_transfer: FloatArray | None = field(
         default=None, init=False, repr=False
     )
-    _gas_unrecovered_before_transfer: np.ndarray = field(
+    _gas_unrecovered_before_transfer: FloatArray | None = field(
         default=None, init=False, repr=False
     )
-    # _oil_cost_to_be_recovered: np.ndarray = field(default=None, init=False, repr=False)
-    # _gas_cost_to_be_recovered: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_recoverable_cost: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_recoverable_cost: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_cost_recovery: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_cost_recovery: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_ets_before_transfer: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_ets_before_transfer: np.ndarray = field(default=None, init=False, repr=False)
-    _transfer_to_oil: np.ndarray = field(default=None, init=False, repr=False)
-    _transfer_to_gas: np.ndarray = field(default=None, init=False, repr=False)
+    # _oil_cost_to_be_recovered: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    # _gas_cost_to_be_recovered: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _oil_recoverable_cost: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _gas_recoverable_cost: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _oil_cost_recovery: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _gas_cost_recovery: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _oil_ets_before_transfer: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _gas_ets_before_transfer: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _transfer_to_oil: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _transfer_to_gas: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
 
-    _oil_unrecovered_after_transfer: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_unrecovered_after_transfer: np.ndarray = field(default=None, init=False, repr=False)
-    # _oil_cost_to_be_recovered_after_tf: np.ndarray = field(default=None, init=False, repr=False)
-    # _gas_cost_to_be_recovered_after_tf: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_cost_recovery_after_tf: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_cost_recovery_after_tf: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_ets_after_transfer: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_ets_after_transfer: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_unrecovered_after_transfer: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _gas_unrecovered_after_transfer: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    # _oil_cost_to_be_recovered_after_tf: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    # _gas_cost_to_be_recovered_after_tf: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _oil_cost_recovery_after_tf: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _gas_cost_recovery_after_tf: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _oil_ets_after_transfer: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _gas_ets_after_transfer: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
 
-    _oil_contractor_share: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_government_share: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_contractor_share: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_government_share: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_contractor_share: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _oil_government_share: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _gas_contractor_share: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _gas_government_share: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
 
     # Attributes associated with DMO
-    _oil_dmo_volume: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_dmo_fee: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_ddmo: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_dmo_volume: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_dmo_fee: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_ddmo: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_dmo_volume: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _oil_dmo_fee: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _oil_ddmo: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _gas_dmo_volume: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _gas_dmo_fee: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _gas_ddmo: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
 
     # Attributes associated with taxable income
-    _oil_taxable_income: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_taxable_income: np.ndarray = field(default=None, init=False, repr=False)
-    _tax_rate_arr: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_tax_payment: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_tax_payment: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_taxable_income: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _gas_taxable_income: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _tax_rate_arr: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _oil_tax_payment: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _gas_tax_payment: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
 
     # Attributes associated with shares
-    _oil_ctr_net_share: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_ctr_net_share: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_contractor_take: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_contractor_take: np.ndarray = field(default=None, init=False, repr=False)
-    _oil_government_take: np.ndarray = field(default=None, init=False, repr=False)
-    _gas_government_take: np.ndarray = field(default=None, init=False, repr=False)
+    _oil_ctr_net_share: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _gas_ctr_net_share: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _oil_contractor_take: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _gas_contractor_take: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _oil_government_take: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _gas_government_take: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
 
     # Attributes associated with consolidated profiles
-    _consolidated_carry_forward_depreciation: np.ndarray = field(
+    _consolidated_carry_forward_depreciation: FloatArray | None = field(
         default=None, init=False, repr=False
     )
-    _consolidated_depreciations: dict = field(
+    _consolidated_depreciations: CostSchedules = field(
         default_factory=lambda: {}, init=False, repr=False
     )
+    _consolidated_lifting: FloatArray | None = field(default=None, init=False, repr=False)
+    _consolidated_wap_price: FloatArray | None = field(default=None, init=False, repr=False)
+    _consolidated_revenue: FloatArray | None = field(default=None, init=False, repr=False)
+    _consolidated_depreciable_sunk_cost: FloatArray | None = field(default=None, init=False, repr=False)
+    _consolidated_non_depreciable_sunk_cost: FloatArray | None = field(default=None, init=False, repr=False)
+    _consolidated_sunk_cost: FloatArray | None = field(default=None, init=False, repr=False)
+    _consolidated_depreciable_preonstream: FloatArray | None = field(default=None, init=False, repr=False)
+    _consolidated_non_depreciable_preonstream: FloatArray | None = field(default=None, init=False, repr=False)
+    _consolidated_preonstream: FloatArray | None = field(default=None, init=False, repr=False)
+    _consolidated_depreciable_postonstream: FloatArray | None = field(default=None, init=False, repr=False)
+    _consolidated_non_depreciable_postonstream: FloatArray | None = field(default=None, init=False, repr=False)
+    _consolidated_postonstream: FloatArray | None = field(default=None, init=False, repr=False)
     # _consolidated_undepreciated_assets: dict = field(
     #     default_factory=lambda: {}, init=False, repr=False
     # )
-    _consolidated_non_depreciables: dict = field(
+    _consolidated_non_depreciables: CostSchedules = field(
         default_factory=lambda: {}, init=False, repr=False
     )
-    _consolidated_depreciation: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_sum_undepreciated_asset: np.ndarray = field(
+    _consolidated_total_expenditures_pre_tax: FloatArray | None = field(default=None, init=False, repr=False)
+    _consolidated_total_indirect_tax: FloatArray | None = field(default=None, init=False, repr=False)
+    _consolidated_total_expenditures_post_tax: FloatArray | None = field(default=None, init=False, repr=False)
+    _consolidated_depreciation: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _consolidated_sum_undepreciated_asset: float | None = field(
         default=None, init=False, repr=False
     )
-    _consolidated_depr_total: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_non_depr_total: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_depr_total: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _consolidated_non_depr_total: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
 
-    _consolidated_ftp: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_ftp_ctr: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_ftp_gov: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_ftp: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _consolidated_ftp_ctr: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _consolidated_ftp_gov: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
 
-    _consolidated_ic: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_ic_unrecovered: np.ndarray = field(
+    _consolidated_ic: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _consolidated_ic_unrecovered: FloatArray | None = field(
         default=None, init=False, repr=False
     )
-    _consolidated_ic_paid: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_ic_paid: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
 
-    # _consolidated_cost_to_be_recovered_before_tf: np.ndarray = field(
+    # _consolidated_cost_to_be_recovered_before_tf: FloatArray | None = field(
     #    default=None, init=False, repr=False
     # )
-    _consolidated_recoverable_cosdt: np.ndarray = field(
+    _consolidated_recoverable_cosdt: FloatArray | None = field(
         default=None, init=False, repr=False
     )
-    _consolidated_unrecovered_before_transfer: np.ndarray = field(
+    _consolidated_recoverable_cost: FloatArray | None = field(
         default=None, init=False, repr=False
     )
-    _consolidated_cost_recovery_before_transfer: np.ndarray = field(
+    _consolidated_revenue_allocation: FloatArray | None = field(
         default=None, init=False, repr=False
     )
-    _consolidated_ets_before_transfer: np.ndarray = field(
+    _consolidated_unrecovered_before_transfer: FloatArray | None = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_cost_recovery_before_transfer: FloatArray | None = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_ets_before_transfer: FloatArray | None = field(
         default=None, init=False, repr=False
     )
 
-    # _consolidated_cost_to_be_recovered_after_tf: np.ndarray = field(
+    # _consolidated_cost_to_be_recovered_after_tf: FloatArray | None = field(
     #    default=None, init=False, repr=False
     # )
-    _consolidated_unrecovered_after_transfer: np.ndarray = field(
+    _consolidated_unrecovered_after_transfer: FloatArray | None = field(
         default=None, init=False, repr=False
     )
-    _consolidated_cost_recovery_after_tf: np.ndarray = field(
+    _consolidated_cost_recovery_after_tf: FloatArray | None = field(
         default=None, init=False, repr=False
     )
-    _consolidated_ets_after_transfer: np.ndarray = field(
-        default=None, init=False, repr=False
-    )
-
-    _consolidated_contractor_share: np.ndarray = field(
-        default=None, init=False, repr=False
-    )
-    _consolidated_government_share: np.ndarray = field(
+    _consolidated_ets_after_transfer: FloatArray | None = field(
         default=None, init=False, repr=False
     )
 
-    _consolidated_dmo_volume: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_dmo_fee: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_ddmo: np.ndarray = field(default=None, init=False, repr=False)
-
-    _consolidated_taxable_income: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_tax_due: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_unpaid_tax_balance: np.ndarray = field(
+    _consolidated_contractor_share: FloatArray | None = field(
         default=None, init=False, repr=False
     )
-    _consolidated_tax_payment: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_government_share: FloatArray | None = field(
+        default=None, init=False, repr=False
+    )
 
-    _consolidated_ctr_net_share: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_contractor_take: np.ndarray = field(default=None, init=False, repr=False)
-    _consolidated_government_take: np.ndarray = field(default=None, init=False, repr=False)
+    _consolidated_dmo_volume: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _consolidated_dmo_fee: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _consolidated_ddmo: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+
+    _consolidated_taxable_income: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _consolidated_tax_due: FloatArray | None = field(default=None, init=False, repr=False)
+    _consolidated_unpaid_tax_balance: FloatArray | None = field(
+        default=None, init=False, repr=False
+    )
+    _consolidated_tax_payment: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+
+    _consolidated_ctr_net_share: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _consolidated_contractor_take: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _consolidated_government_take: FloatArray = field(default_factory=lambda: np.zeros(1, dtype=np.float64), init=False, repr=False)
+    _consolidated_capital: FloatArray | None = field(default=None, init=False, repr=False)
+    _consolidated_non_capital: FloatArray | None = field(default=None, init=False, repr=False)
+    _consolidated_total_expenses: FloatArray | None = field(default=None, init=False, repr=False)
+    _consolidated_cashflow: FloatArray | None = field(default=None, init=False, repr=False)
+    _consolidated_opex: FloatArray | None = field(default=None, init=False, repr=False)
+    _consolidated_asr: FloatArray | None = field(default=None, init=False, repr=False)
+    _consolidated_lbt: FloatArray | None = field(default=None, init=False, repr=False)
+    _oil_total_expenditures_pre_tax: FloatArray | None = field(default=None, init=False, repr=False)
+    _gas_total_expenditures_pre_tax: FloatArray | None = field(default=None, init=False, repr=False)
+    _oil_total_indirect_tax: FloatArray | None = field(default=None, init=False, repr=False)
+    _gas_total_indirect_tax: FloatArray | None = field(default=None, init=False, repr=False)
+    _oil_total_expenditures_post_tax: FloatArray | None = field(default=None, init=False, repr=False)
+    _gas_total_expenditures_post_tax: FloatArray | None = field(default=None, init=False, repr=False)
+    _oil_cashflow: FloatArray | None = field(default=None, init=False, repr=False)
+    _gas_cashflow: FloatArray | None = field(default=None, init=False, repr=False)
 
     def __post_init__(self):
         """
@@ -399,27 +475,18 @@ class CostRecovery(BaseProject):
         )
 
         for attr_name, attr in fraction_attributes:
-            if not isinstance(attr, (float, int, np.ndarray)):
-                raise CostRecoveryException(
-                    f"Attribute {attr_name} should be given as an int, float, "
-                    f"or a numpy ndarray, not as a/an "
-                    f"{attr.__class__.__qualname__}"
-                )
-
-            if isinstance(attr, float) or isinstance(attr, int):
-                if not (min_fraction <= attr <= max_fraction):
-                    range_type = "exceeding 1.0" if attr > max_fraction else "below 0"
+            if isinstance(attr, (int, float)):
+                value = _as_float(attr, attr_name)
+                if not (min_fraction <= value <= max_fraction):
+                    range_type = "exceeding 1.0" if value > max_fraction else "below 0.0"
                     raise CostRecoveryException(
-                        f"The {attr_name} value ({attr}) is {range_type}. "
-                        f"Allowed range: {min_fraction} - {max_fraction}."
+                        f"The {attr_name} value ({value}) is {range_type}. Allowed range: {min_fraction} - {max_fraction}."
                     )
-
-            elif isinstance(attr, np.ndarray):
-                if len(attr) != len(self.project_years):
+            else:
+                arr = _as_float_array(attr, attr_name)
+                if len(arr) != len(self.project_years):
                     raise CostRecoveryException(
-                        f"The {attr_name} length is ({len(attr)}). "
-                        f"The length of {attr_name} ({len(attr)}) is different from "
-                        f"the length of the project {len(self.project_duration)}"
+                        f"The {attr_name} length is ({len(arr)}). The length of {attr_name} ({len(arr)}) is different from the length of the project {self.project_duration}"
                     )
 
         # Prepare attributes associated with DMO holiday
@@ -431,45 +498,106 @@ class CostRecovery(BaseProject):
         for attr_name, attr in discrete_attributes:
             if attr < 0:
                 raise CostRecoveryException(
-                    f"The {attr_name} value ({attr}) is below 0. "
-                    f"The minimum value of this attribute is 0. "
+                    f"The {attr_name} value ({attr}) is below 0. The minimum value of this attribute is 0. "
                 )
 
         # Prepare attributes associated with carry forward depreciation
-        carward_depr = {
-            "oil_carry_forward_depreciation": self.oil_carry_forward_depreciation,
-            "gas_carry_forward_depreciation": self.gas_carry_forward_depreciation,
-        }
+        def _normalize_carry_forward(
+            value: float | FloatArray, attr_name: str
+        ) -> FloatArray:
+            if isinstance(value, (int, float)):
+                arr = np.atleast_1d(_as_float(value, attr_name)).astype(float)
+            else:
+                arr = _as_float_array(value, attr_name)
 
-        for attr_name, value in carward_depr.items():
-            # Check for unsuitable data type
-            if not isinstance(value, (np.ndarray, float, int)):
-                raise CostRecoveryException(
-                    f"Attribute {attr_name} must be given as a numpy ndarray, "
-                    f"a float, or an integer, not as a/an "
-                    f"{value.__class__.__qualname__}"
-                )
-
-            # Check for negative values
-            if np.any(value < 0):
+            if np.any(arr < 0):
                 raise CostRecoveryException(f"The {attr_name} contains negative values")
 
-            # Check length exceeding project duration
-            if isinstance(value, np.ndarray) and len(value) > self.project_duration:
+            if len(arr) > self.project_duration:
                 raise CostRecoveryException(
-                    f"The {attr_name} length ({len(value)}) exceeds "
-                    f"project duration ({self.project_duration})"
+                    f"The {attr_name} length ({len(arr)}) exceeds project duration ({self.project_duration})"
                 )
 
-            # Modify 'carward_depr' to array with length equals to project duration
-            if isinstance(value, (np.ndarray, float, int)):
-                arr = np.atleast_1d(value).astype(float)
-                result = np.zeros_like(self.project_years, dtype=float)
-                result[:len(arr)] = arr
-                carward_depr[attr_name] = result
+            result = np.zeros_like(self.project_years, dtype=float)
+            result[:len(arr)] = arr
+            return result
 
-        self._oil_carry_forward_depreciation = carward_depr["oil_carry_forward_depreciation"]
-        self._gas_carry_forward_depreciation = carward_depr["gas_carry_forward_depreciation"]
+        self._oil_carry_forward_depreciation = _normalize_carry_forward(
+            self.oil_carry_forward_depreciation, "oil_carry_forward_depreciation"
+        )
+        self._gas_carry_forward_depreciation = _normalize_carry_forward(
+            self.gas_carry_forward_depreciation, "gas_carry_forward_depreciation"
+        )
+
+        # Normalize the sliding-scale / RC condition dictionary into a typed form
+        self._normalize_condition_dict()
+
+    def _normalize_condition_dict(self) -> None:
+        """
+        Normalize the user-supplied ``condition_dict`` (column-oriented sliding
+        scale / RC table) into the row-oriented, typed ``RCICPConditions`` form.
+
+        The input is expected to map each column name to an array-like of band
+        values, e.g.::
+
+            {
+                "RC Bottom Limit": [...],
+                "RC Top Limit": [...],
+                "Pre Tax CTR Oil": [...],
+                "Pre Tax CTR Gas": [...],
+            }
+
+        After normalization ``self.condition_dict`` becomes::
+
+            {
+                "condition_1": {"bot_limit": ..., "top_limit": ...,
+                                "ctr_oil": ..., "ctr_gas": ...},
+                ...
+            }
+
+        Returns
+        -------
+        None
+        """
+        raw = self.condition_dict
+        if not raw:
+            return
+
+        first_key = next(iter(raw))
+        first_value = raw[first_key]
+        if isinstance(first_value, dict):
+            normalized: RCICPConditions = {}
+            for name, band in raw.items():
+                if not isinstance(band, dict):
+                    raise CostRecoveryException(
+                        "condition_dict cannot mix normalized and column forms"
+                    )
+                normalized[name] = {
+                    "bot_limit": _as_float(band["bot_limit"], "bot_limit"),
+                    "top_limit": _as_float(band["top_limit"], "top_limit"),
+                    "ctr_oil": _as_float(band["ctr_oil"], "ctr_oil"),
+                    "ctr_gas": _as_float(band["ctr_gas"], "ctr_gas"),
+                }
+            self.condition_dict = normalized
+            return
+
+        columns = cast(RCICPColumnConditions, raw)
+        bot_limit = _as_float_array(columns["RC Bottom Limit"], "RC Bottom Limit")
+        top_limit = _as_float_array(columns["RC Top Limit"], "RC Top Limit")
+        ctr_oil = _as_float_array(columns["Pre Tax CTR Oil"], "Pre Tax CTR Oil")
+        ctr_gas = _as_float_array(columns["Pre Tax CTR Gas"], "Pre Tax CTR Gas")
+        n_bands = len(bot_limit)
+
+        normalized_columns: RCICPConditions = {}
+        for index in range(n_bands):
+            normalized_columns[f"condition_{index + 1}"] = {
+                "bot_limit": _as_float(bot_limit.item(index), "bot_limit"),
+                "top_limit": _as_float(top_limit.item(index), "top_limit"),
+                "ctr_oil": _as_float(ctr_oil.item(index), "ctr_oil"),
+                "ctr_gas": _as_float(ctr_gas.item(index), "ctr_gas"),
+            }
+
+        self.condition_dict = normalized_columns
 
     def _check_invalid_capital_sunk_costs(
         self,
@@ -504,18 +632,20 @@ class CostRecovery(BaseProject):
 
         # Identify non-zero sunk costs
         name = sc_capital_name
-        nonzero_mask = (sc_capital_object.cost != 0.0)
+        cost = _as_float_array(sc_capital_object.cost, f"{name}.cost")
+        expense_year: YearArray = sc_capital_object.expense_year
+        nonzero_mask = np.asarray(cost != 0.0, dtype=np.bool_)
 
         # Exit early if all sunk costs are zeros
         if not np.any(nonzero_mask):
             return
 
-        # Extract invalid costs and their corresponding years
-        invalid_costs = sc_capital_object.cost[nonzero_mask]
-        invalid_years = sc_capital_object.expense_year[nonzero_mask]
-
         # Pair invalid expense years with invalid costs
-        invalid = [f"{yr}: {cst}" for yr, cst in zip(invalid_years, invalid_costs)]
+        invalid = [
+            f"{int(expense_year.item(index))}: {_as_float(cost.item(index), 'cost')}"
+            for index in range(len(cost))
+            if bool(nonzero_mask.item(index))
+        ]
 
         # Specify messages to be displayed
         msg_error = (
@@ -607,10 +737,10 @@ class CostRecovery(BaseProject):
         self,
         depr_method: DeprMethod,
         decline_factor: float | int,
-        year_inflation: np.ndarray,
-        inflation_rate: np.ndarray | int | float,
-        tax_rate: np.ndarray | float,
-        inflation_rate_applied_to: InflationAppliedTo,
+        year_inflation: YearArray | None,
+        inflation_rate: FloatArray | int | float,
+        tax_rate: FloatArray | float,
+        inflation_rate_applied_to: InflationAppliedTo | None,
     ) -> None:
         """
         Compute and assign depreciation schedules for oil and gas capital costs.
@@ -626,11 +756,11 @@ class CostRecovery(BaseProject):
             Depreciation method to apply.
         decline_factor : float or int
             Decline factor for declining-balance depreciation.
-        year_inflation : np.ndarray
+        year_inflation : FloatArray
             Yearly inflation multipliers.
-        inflation_rate : np.ndarray or float or int
+        inflation_rate : FloatArray or float or int
             Inflation rate(s) applied in depreciation calculations.
-        tax_rate : np.ndarray or float
+        tax_rate : FloatArray or float
             Applicable tax rate(s).
         inflation_rate_applied_to : InflationAppliedTo
             Specifies how inflation is applied in depreciation.
@@ -663,18 +793,11 @@ class CostRecovery(BaseProject):
         # "depreciations": dict and "undepreciated_assets": dict
         cost_types = ["sunk_cost", "preonstream", "postonstream"]
 
-        depreciations = {f: {c: None for c in cost_types} for f in depr_mapping.keys()}
-        undepreciated_assets = {f: {c: None for c in cost_types} for f in depr_mapping.keys()}
-
-        # Common arguments passed to the depreciation calculator
-        kwargs_depr = {
-            "depr_method": depr_method,
-            "decline_factor": decline_factor,
-            "year_inflation": year_inflation,
-            "inflation_rate": inflation_rate,
-            "tax_rate": tax_rate,
-            "inflation_rate_applied_to": inflation_rate_applied_to,
-        }
+        depreciations: dict[str, CostSchedules] = {}
+        undepreciated_assets: dict[str, CostSchedules] = {}
+        for fluid in depr_mapping:
+            depreciations[fluid] = {c: np.zeros_like(self.project_years, dtype=float) for c in cost_types}
+            undepreciated_assets[fluid] = {c: np.zeros_like(self.project_years, dtype=float) for c in cost_types}
 
         # Compute depreciation per fluid per cost type
         for f, mapping in depr_mapping.items():
@@ -682,7 +805,14 @@ class CostRecovery(BaseProject):
                 (
                     depreciations[f][c],
                     undepreciated_assets[f][c]
-                ) = obj_cap.total_depreciation_rate(**kwargs_depr)
+                ) = obj_cap.total_depreciation_rate(
+                    depr_method=depr_method,
+                    decline_factor=decline_factor,
+                    year_inflation=year_inflation,
+                    inflation_rate=inflation_rate,
+                    tax_rate=tax_rate,
+                    inflation_rate_applied_to=inflation_rate_applied_to,
+                )
 
         # Store the results as class's attributes
         self._oil_depreciations = depreciations["oil"]
@@ -691,8 +821,8 @@ class CostRecovery(BaseProject):
         self._gas_undepreciated_assets = undepreciated_assets["gas"]
 
     def _allocate_non_depreciable_sunk_cost(
-        self, non_depreciable_sunk_cost: np.ndarray
-    ) -> np.ndarray:
+        self, non_depreciable_sunk_cost: FloatArray
+    ) -> FloatArray:
         """
         Allocate non-depreciable sunk costs to the project onstream year.
 
@@ -702,7 +832,7 @@ class CostRecovery(BaseProject):
 
         Parameters
         ----------
-        non_depreciable_sunk_cost : np.ndarray
+        non_depreciable_sunk_cost : FloatArray
             Array of non-depreciable sunk cost values across project years.
 
         Returns
@@ -722,17 +852,19 @@ class CostRecovery(BaseProject):
 
         # Identify onstream year in project years array
         onstream_yr = min([oil_onstream_date.year, gas_onstream_date.year])
-        match_at_onstream = np.flatnonzero(self.project_years == onstream_yr)
+        match_at_onstream = np.flatnonzero(
+            cast(npt.ArrayLike, self.project_years == onstream_yr)
+        )
         if match_at_onstream.size != 1:
             raise CostRecoveryException(
                 f"Expected one onstream year match, got {match_at_onstream.size} instead."
             )
 
         # Configure index of onstream year in project years array
-        onstream_id = int(match_at_onstream[0])
+        onstream_id = int(match_at_onstream.item(0))
 
         # Calculate bulk value of non-depreciable_sunk_cost
-        bulk = non_depreciable_sunk_cost.sum(dtype=float)
+        bulk = _sum_float(non_depreciable_sunk_cost)
 
         # Allocate bulk value of non-depreciable sunk cost at the onstream year
         arr = np.zeros_like(self.project_years, dtype=float)
@@ -853,7 +985,7 @@ class CostRecovery(BaseProject):
             ]:
                 for c in cost_types:
                     depr[c][-1] += undepr[c].sum()
-                    undepr[c] = np.zeros([1, 1], dtype=float)
+                    undepr[c] = np.zeros(self.project_duration, dtype=float)
 
     def _get_ftp(self) -> None:
         """
@@ -868,17 +1000,17 @@ class CostRecovery(BaseProject):
 
         Updates
         -------
-        self._oil_ftp : np.ndarray
+        self._oil_ftp : FloatArray
             Total oil FTP before split.
-        self._gas_ftp : np.ndarray
+        self._gas_ftp : FloatArray
             Total gas FTP before split.
-        self._oil_ftp_ctr : np.ndarray
+        self._oil_ftp_ctr : FloatArray
             Contractor's share of oil FTP.
-        self._gas_ftp_ctr : np.ndarray
+        self._gas_ftp_ctr : FloatArray
             Contractor's share of gas FTP.
-        self._oil_ftp_gov : np.ndarray
+        self._oil_ftp_gov : FloatArray
             Government's share of oil FTP.
-        self._gas_ftp_gov : np.ndarray
+        self._gas_ftp_gov : FloatArray
             Government's share of gas FTP.
 
         Notes
@@ -896,16 +1028,22 @@ class CostRecovery(BaseProject):
         # Fill attributes "_oil_ftp", "_oil_ftp_portion", and "_oil_ftp_gov"
         if self.oil_ftp_is_available:
             self._oil_ftp = self.oil_ftp_portion * self._oil_revenue
-            if self.oil_ftp_is_shared:
-                self._oil_ftp_ctr = self.oil_ctr_pretax_share * self._oil_ftp
+            self._oil_ftp_ctr = (
+                self.oil_ctr_pretax_share * self._oil_ftp
+                if self.oil_ftp_is_shared
+                else np.zeros_like(self._oil_ftp, dtype=float)
+            )
             self._oil_ftp_gov = self._oil_ftp - self._oil_ftp_ctr
 
         # Sharing condition if GAS FTP is available.
         # Fill attributes "_gas_ftp", "_gas_ftp_portion", and "_gas_ftp_gov"
         if self.gas_ftp_is_available:
             self._gas_ftp = self.gas_ftp_portion * self._gas_revenue
-            if self.gas_ftp_is_shared:
-                self._gas_ftp_ctr = self.gas_ctr_pretax_share * self._gas_ftp
+            self._gas_ftp_ctr = (
+                self.gas_ctr_pretax_share * self._gas_ftp
+                if self.gas_ftp_is_shared
+                else np.zeros_like(self._gas_ftp, dtype=float)
+            )
             self._gas_ftp_gov = self._gas_ftp - self._gas_ftp_ctr
 
     def _apply_cost_of_sales(self, oil_applied: bool, gas_applied: bool) -> None:
@@ -938,6 +1076,13 @@ class CostRecovery(BaseProject):
           it indicates absence of sales, hence the exception.
         """
 
+        self._oil_revenue: FloatArray = _as_float_array(
+            cast(npt.ArrayLike, self._oil_revenue), "_oil_revenue"
+        )
+        self._gas_revenue: FloatArray = _as_float_array(
+            cast(npt.ArrayLike, self._gas_revenue), "_gas_revenue"
+        )
+
         if oil_applied:
             oil_cost_of_sales_expenditures_post_tax = self._require_array(
                 self._oil_cost_of_sales_expenditures_post_tax,
@@ -968,100 +1113,71 @@ class CostRecovery(BaseProject):
 
     def _get_rc_icp_pretax(self) -> None:
         """
-        A Function to get the value of PreTax Split using Revenue over Cost (RC)
-        or Indonesian Crude Price (ICP) sliding scale.
+        Compute the Pre-Tax Split using Revenue over Cost (RC) or Indonesian
+        Crude Price (ICP) sliding scale and store the resulting oil and gas
+        contractor pre-tax shares.
 
-        Notes
-        -------
-        The structure of the dictionary is as the following:
-        condition_dict =
-        {
-            'condition_1': {'bot_limit': 0,
-                            'top_limit': 1,
-                            'ctr_oil': 0.3137260,
-                            'ctr_gas': 0.5498040,
-                            'gov_oil': 0.686274,
-                            'gov_gas': 0.45098,
-                            'split_ctr_oil': 20,
-                            'split_ctr_gas': 35,
-                            'split_gov_oil': 80,
-                            'split_gov_gas': 65},
+        The method expects ``condition_dict`` to be already normalized (see
+        ``_normalize_condition_dict``) into the form::
 
-            'condition_2': {'bot_limit': 1,
-                            'top_limit': 1.2,
-                            'ctr_oil': 0.27451,
-                            'ctr_gas': 0.509804,
-                            'gov_oil': 0.72549,
-                            'gov_gas': 0.490196,
-                            'split_ctr_oil': 17.5,
-                            'split_ctr_gas': 32.5,
-                            'split_gov_oil': 82.5,
-                            'split_gov_gas': 67.5},
-
-            'condition_3': {'bot_limit': 1.2,
-                            'top_limit': 1.4,
-                            'ctr_oil': 0.235295,
-                            'ctr_gas': 0.470589,
-                            'gov_oil': 0.764705,
-                            'gov_gas': 0.529411,
-                            'split_ctr_oil': 15,
-                            'split_ctr_gas': 30,
-                            'split_gov_oil': 85,
-                            'split_gov_gas': 70}
-        }
+            {
+                "condition_1": {"bot_limit": ..., "top_limit": ...,
+                                "ctr_oil": ..., "ctr_gas": ...},
+                ...
+            }
 
         Returns
         -------
-        Modifying the following Cost Recovery attributes:
-            self.oil_ctr_pretax_share
-            self.gas_ctr_pretax_share
+        None
+            Updates ``oil_ctr_pretax_share`` and ``gas_ctr_pretax_share``.
         """
 
-        # Conditioning the given dictionary
-        length_condition = len(self.condition_dict[list(self.condition_dict.keys())[0]])
-        enum_value = list(range(1, length_condition + 1))
-        condition_dict_new = {}
-        for index, step in enumerate(enum_value):
-            dict_isi = {
-                "bot_limit": self.condition_dict["RC Bottom Limit"][index],
-                "top_limit": self.condition_dict["RC Top Limit"][index],
-                "ctr_oil": self.condition_dict["Pre Tax CTR Oil"][index],
-                "ctr_gas": self.condition_dict["Pre Tax CTR Gas"][index],
-            }
+        sliding = self.indicator_rc_icp_sliding
+        if sliding is None:
+            raise CostRecoveryException(
+                "indicator_rc_icp_sliding must be provided when using a non-conventional tax split type"
+            )
+        sliding_arr = _as_float_array(sliding, "indicator_rc_icp_sliding")
 
-            key_string = "condition_" + str(step)
-            condition_dict_new[key_string] = dict_isi
-
-        self.condition_dict = condition_dict_new
-
-        # Extract relevant values from the condition_dict dictionary
-        bot_limits = np.array(
-            [self.condition_dict[c]["bot_limit"] for c in self.condition_dict]
+        bands: list[RCICPBand] = list(cast(RCICPConditions, self.condition_dict).values())
+        bot_limit = _as_float_array(
+            [band["bot_limit"] for band in bands], "bot_limit"
         )
-        top_limits = np.array(
-            [self.condition_dict[c]["top_limit"] for c in self.condition_dict]
+        top_limit = _as_float_array(
+            [band["top_limit"] for band in bands], "top_limit"
         )
-        ctr_oil_values = np.array(
-            [self.condition_dict[c]["ctr_oil"] for c in self.condition_dict]
+        ctr_oil_values = _as_float_array(
+            [band["ctr_oil"] for band in bands], "ctr_oil"
         )
-        ctr_gas_values = np.array(
-            [self.condition_dict[c]["ctr_gas"] for c in self.condition_dict]
+        ctr_gas_values = _as_float_array(
+            [band["ctr_gas"] for band in bands], "ctr_gas"
         )
 
         # Create conditions using vectorized comparisons
-        conditions = (bot_limits[:, np.newaxis] < self.indicator_rc_icp_sliding) & (
-            self.indicator_rc_icp_sliding <= top_limits[:, np.newaxis]
+        conditions = (bot_limit[:, np.newaxis] < sliding_arr) & (
+            sliding_arr <= top_limit[:, np.newaxis]
         )
 
         # Calculate corresponding values using np.select()
-        self.oil_ctr_pretax_share = np.select(
-            conditions, ctr_oil_values[:, np.newaxis], default=np.nan
+        condition_rows = [conditions[index] for index in range(len(conditions))]
+        oil_choices = [
+            np.full_like(sliding_arr, _as_float(ctr_oil_values.item(index), "ctr_oil"))
+            for index in range(len(ctr_oil_values))
+        ]
+        gas_choices = [
+            np.full_like(sliding_arr, _as_float(ctr_gas_values.item(index), "ctr_gas"))
+            for index in range(len(ctr_gas_values))
+        ]
+        self.oil_ctr_pretax_share = _as_float_array(
+            np.select(condition_rows, oil_choices, default=np.nan),
+            "oil_ctr_pretax_share",
         )
-        self.gas_ctr_pretax_share = np.select(
-            conditions, ctr_gas_values[:, np.newaxis], default=np.nan
+        self.gas_ctr_pretax_share = _as_float_array(
+            np.select(condition_rows, gas_choices, default=np.nan),
+            "gas_ctr_pretax_share",
         )
 
-    def _get_tax_by_regime(self, tax_regime) -> np.ndarray:
+    def _get_tax_by_regime(self, tax_regime: TaxRegime) -> FloatArray:
         """
         Determine the tax rate array based on the tax regime and project years.
 
@@ -1086,7 +1202,7 @@ class CostRecovery(BaseProject):
 
         Returns
         -------
-        tax_rate_arr : np.ndarray
+        tax_rate_arr : FloatArray
             A 1D array of tax rates for each project year. The tax rate is determined
             based on the tax regime and the project's starting year in relation to
             the predefined tax configurations.
@@ -1128,24 +1244,24 @@ class CostRecovery(BaseProject):
 
     def _get_ic(
         self,
-        revenue: np.ndarray,
-        ftp: np.ndarray,
+        revenue: FloatArray,
+        ftp: FloatArray,
         cost_alloc: FluidType,
-        ic_rate: float | np.ndarray,
-    ) -> tuple:
+        ic_rate: float | FloatArray,
+    ) -> tuple[FloatArray, FloatArray, FloatArray]:
         """
         The function to apply the Investment Credit (IC) into the capital cost
         based on the given IC rate.
 
         Parameters
         ----------
-        revenue: np.ndarray
+        revenue: FloatArray
             The array of revenue.
-        ftp: np.ndarray
+        ftp: FloatArray
             The array of First Tranche Petroleum (FTP).
         cost_alloc: FluidType
             The cost allocation of the cost.
-        ic_rate: float | np.ndarray
+        ic_rate: float | FloatArray
             The IC rate which will be applied to the cost.
 
         Returns
@@ -1183,50 +1299,53 @@ class CostRecovery(BaseProject):
 
         # Unrec IC
         ic_unrecovered = np.cumsum(ic_total) - np.cumsum(revenue - ftp)
-        ic_unrecovered = np.where(ic_unrecovered > 0, ic_unrecovered, 0)
+        ic_unrecovered = np.where(ic_unrecovered > 0, ic_unrecovered, 0.0)
 
         ic_unrec_next = np.roll(ic_unrecovered, 1)
-        ic_unrec_next[0] = 0
+        ic_unrec_next[0] = 0.0
         ic_paid = np.minimum(revenue - ftp, ic_total + ic_unrec_next)
 
-        return ic_total, ic_unrecovered, ic_paid
+        return cast(
+            "tuple[FloatArray, FloatArray, FloatArray]",
+            (ic_total, ic_unrecovered, ic_paid),
+        )
 
     @staticmethod
     def _get_cost_recovery(
-        revenue: np.ndarray,
-        ftp: np.ndarray,
-        ic: np.ndarray,
-        depreciation: np.ndarray,
-        non_capital: np.ndarray,
-        cost_to_be_recovered: np.ndarray,
+        revenue: FloatArray,
+        ftp: FloatArray,
+        ic: FloatArray,
+        depreciation: FloatArray,
+        non_capital: FloatArray,
+        cost_to_be_recovered: FloatArray,
         cr_cap_rate: float,
-    ) -> np.ndarray:
+    ) -> FloatArray:
         """
         A function to get the array of cost recovery.
 
         Parameters
         ----------
-        revenue: np.ndarray
+        revenue: FloatArray
             The array containing the revenue.
-        ftp: np.ndarray
+        ftp: FloatArray
             The array containing the First Tranche Petroleum (FTP).
-        ic: np.ndarray
+        ic: FloatArray
             The array containing the Paid Investment Credit (IC).
-        depreciation: np.ndarray
+        depreciation: FloatArray
             The array containing the depreciated expenditures.
-        non_capital: np.ndarray
+        non_capital: FloatArray
             The array containing the non-capital expenditures.
             non_capital expenditures is consisting of:
             Intangible, Operating Expenditures (OPEX) and Abandonment Site
             and Restoration (ASR) Expenditures.
-        cost_to_be_recovered: np.ndarray
+        cost_to_be_recovered: FloatArray
             The array containing the cost to be recovered.
         cr_cap_rate: float
             The cost recovery cap rate.
 
         Returns
         -------
-        out: np.ndarray
+        out: FloatArray
             The array of cost recovery.
         """
 
@@ -1239,31 +1358,31 @@ class CostRecovery(BaseProject):
 
     @staticmethod
     def _get_ets_before_transfer(
-        revenue: np.ndarray,
-        ftp_ctr: np.ndarray,
-        ftp_gov: np.ndarray,
-        ic: np.ndarray,
-        cost_recovery: np.ndarray,
-    ) -> np.ndarray:
+        revenue: FloatArray,
+        ftp_ctr: FloatArray,
+        ftp_gov: FloatArray,
+        ic: FloatArray,
+        cost_recovery: FloatArray,
+    ) -> FloatArray:
         """
         A function to get the Equity To be Shared (ETS) before transfer.
 
         Parameters
         ----------
-        revenue: np.ndarray
+        revenue: FloatArray
             The array containing the revenue.
-        ftp_ctr: np.ndarray
+        ftp_ctr: FloatArray
             The array containing the Contractor's First Tranche Petroleum (FTP).
-        ftp_gov: np.ndarray
+        ftp_gov: FloatArray
             The array containing the Government's FTP.
-        ic: np.ndarray
+        ic: FloatArray
             The array containing the Paid Investment Credit (IC).
         cost_recovery
             The array containing the cost recovery.
 
         Returns
         -------
-        out: np.ndarray
+        out: FloatArray
             The array of ETS before transfer.
         """
 
@@ -1274,38 +1393,38 @@ class CostRecovery(BaseProject):
 
     @staticmethod
     def _get_ets_after_transfer(
-        ets_before_tf: np.ndarray,
-        revenue: np.ndarray,
-        ftp_ctr: np.ndarray,
-        ftp_gov: np.ndarray,
-        ic: np.ndarray,
-        cost_recovery: np.ndarray,
-        transferred_in: np.ndarray,
-        transferred_out: np.ndarray,
-    ) -> np.ndarray:
+        ets_before_tf: FloatArray,
+        revenue: FloatArray,
+        ftp_ctr: FloatArray,
+        ftp_gov: FloatArray,
+        ic: FloatArray,
+        cost_recovery: FloatArray,
+        transferred_in: FloatArray,
+        transferred_out: FloatArray,
+    ) -> FloatArray:
         """
         A function to get the Equity To be Shared (ETS) before transfer.
 
         Parameters
         ----------
-        revenue: np.ndarray
+        revenue: FloatArray
             The array containing the revenue.
-        ftp_ctr: np.ndarray
+        ftp_ctr: FloatArray
             The array containing the Contractor's First Tranche Petroleum (FTP).
-        ftp_gov: np.ndarray
+        ftp_gov: FloatArray
             The array containing the Government's FTP.
-        ic: np.ndarray
+        ic: FloatArray
             The array containing the Paid Investment Credit (IC).
-        cost_recovery: np.ndarray
+        cost_recovery: FloatArray
             The array containing the cost recovery.
-        transferred_in: np.ndarray
+        transferred_in: FloatArray
             The transferred cost into the cashflow.
-        transferred_out: np.ndarray
+        transferred_out: FloatArray
             The transferred cost out from the cashflow.
 
         Returns
         -------
-        out: np.ndarray
+        out: FloatArray
             The array of ETS before transfer.
         """
         ets_after_transfer = np.where(
@@ -1324,7 +1443,9 @@ class CostRecovery(BaseProject):
         return np.where(ets_after_transfer < tol, 0, ets_after_transfer)
 
     @staticmethod
-    def _get_equity_share(ets, pretax_ctr) -> tuple:
+    def _get_equity_share(
+        ets: FloatArray, pretax_ctr: float | FloatArray
+    ) -> tuple[FloatArray, FloatArray]:
         r"""
         Use to calculate equity share (ES).
 
@@ -1335,7 +1456,7 @@ class CostRecovery(BaseProject):
 
         Parameters
         ----------
-        ets : np.ndarray
+        ets : FloatArray
             equity to be shared
         pretax_ctr: float
             pretax contractor
@@ -1343,9 +1464,9 @@ class CostRecovery(BaseProject):
         Returns
         -------
         out: tup
-            * ES_ctr : np.ndarray
+            * ES_ctr : FloatArray
                 Equity share of contractor
-            * ES_gov : np.ndarray
+            * ES_gov : FloatArray
                 Equity share of government
         """
         contractor_share = pretax_ctr * ets
@@ -1355,13 +1476,13 @@ class CostRecovery(BaseProject):
 
     @staticmethod
     def _get_tax_payment(
-        ctr_share: np.ndarray,
-        taxable_income: np.ndarray,
-        tax_rate: np.ndarray,
-        ftp_ctr: np.ndarray,
-        unrec_cost: np.ndarray,
+        ctr_share: FloatArray,
+        taxable_income: FloatArray,
+        tax_rate: FloatArray,
+        ftp_ctr: FloatArray,
+        unrec_cost: FloatArray,
         ftp_tax_regime: FTPTaxRegime = FTPTaxRegime.PRE_PDJP_20_2017,
-    ) -> np.ndarray:
+    ) -> FloatArray:
         """
         The function to get the tax payment of the Cost Recovery contract based on
         the chosen regime.
@@ -1388,62 +1509,96 @@ class CostRecovery(BaseProject):
 
         Parameters
         ----------
-        ctr_share: np.ndarray
+        ctr_share: FloatArray
             The contractor equity to be split
-        taxable_income: np.ndarray
+        taxable_income: FloatArray
             The contractor's Taxable Income (TI)
-        tax_rate: float | np.ndarray
+        tax_rate: float | FloatArray
             The applied effective tax rate
-        ftp_ctr: np.ndarray
+        ftp_ctr: FloatArray
             The contractor's First Tranche Petroleum (FTP)
-        unrec_cost: np.ndarray
+        unrec_cost: FloatArray
             The unrecoverable cost
         ftp_tax_regime: FTPTaxRegime
             The regime used to calculate the tax payment
 
         Returns
         -------
-        ctr_tax: np.ndarray
+        ctr_tax: FloatArray
             The contractor's tax payment
         """
 
         # Tax payment prior to PDJP 2017
         if ftp_tax_regime == FTPTaxRegime.PRE_PDJP_20_2017:
-            applied_tax = np.where(ctr_share > 0, 1, 0)
-            cum_ti = np.cumsum(taxable_income)
+            applied_tax = _as_float_array(
+                np.where(ctr_share > 0, 1.0, 0.0), "applied_tax"
+            )
+            cum_ti = _as_float_array(np.cumsum(taxable_income), "cum_ti")
 
-            applied_tax_prior = np.concatenate((np.zeros(1), applied_tax))[0:-1]
+            applied_tax_prior = _as_float_array(
+                np.concatenate((np.zeros(1), applied_tax))[0:-1],
+                "applied_tax_prior",
+            )
 
-            ctr_tax = np.where(
-                np.logical_and(applied_tax == 1, applied_tax_prior == 0),
-                cum_ti * tax_rate,
-                np.where(
-                    np.logical_and(applied_tax == 1, applied_tax_prior == 1),
-                    taxable_income * tax_rate,
-                    0,
+            first_tax_year = cast(
+                npt.ArrayLike,
+                np.logical_and(
+                    cast(npt.ArrayLike, applied_tax == 1),
+                    cast(npt.ArrayLike, applied_tax_prior == 0),
                 ),
+            )
+            subsequent_tax_year = cast(
+                npt.ArrayLike,
+                np.logical_and(
+                    cast(npt.ArrayLike, applied_tax == 1),
+                    cast(npt.ArrayLike, applied_tax_prior == 1),
+                ),
+            )
+            accumulated_tax = _as_float_array(
+                cast(npt.ArrayLike, cum_ti * tax_rate), "accumulated_tax"
+            )
+            current_tax = _as_float_array(
+                cast(npt.ArrayLike, taxable_income * tax_rate), "current_tax"
+            )
+            ctr_tax = _as_float_array(
+                np.where(
+                    first_tax_year,
+                    accumulated_tax,
+                    np.where(subsequent_tax_year, current_tax, 0),
+                ),
+                "ctr_tax",
             )
 
         # Tax payment after PDJP 2017
         elif ftp_tax_regime == FTPTaxRegime.PDJP_20_2017:
             # Defining the array used in calculation of ftp tax payment
-            ftp_cum_b2 = np.cumsum(ftp_ctr)
+            ftp_cum_b2 = _as_float_array(np.cumsum(ftp_ctr), "ftp_cum_b2")
             ftp_prior_b3 = np.zeros_like(ftp_ctr, dtype=float)
             ftp_diff_b4 = np.zeros_like(ftp_ctr, dtype=float)
             ftp_considered_b5 = np.zeros_like(ftp_ctr, dtype=float)
 
             # Looping throughout the ftp array
-            for i, value in enumerate(ftp_ctr):
+            for i in range(len(ftp_ctr)):
                 if i == 0:
                     ftp_prior_b3[i] = 0
 
                 ftp_prior_b3[i] = ftp_prior_b3[i - 1] + ftp_considered_b5[i - 1]
 
+                ftp_cumulative = _as_float(
+                    cast(object, ftp_cum_b2[i]), "ftp_cum_b2"
+                )
+                prior = _as_float(cast(object, ftp_prior_b3[i]), "ftp_prior_b3")
                 ftp_diff_b4[i] = np.where(
-                    ftp_cum_b2[i] > ftp_prior_b3[i], ftp_cum_b2[i] - ftp_prior_b3[i], 0
+                    ftp_cumulative > prior, ftp_cumulative - prior, 0
+                )
+                unrecovered = _as_float(cast(object, unrec_cost[i]), "unrec_cost")
+                ftp_difference = _as_float(
+                    cast(object, ftp_diff_b4[i]), "ftp_diff_b4"
                 )
                 ftp_considered_b5[i] = np.where(
-                    ftp_diff_b4[i] > unrec_cost[i], ftp_diff_b4[i] - unrec_cost[i], 0
+                    ftp_difference > unrecovered,
+                    ftp_difference - unrecovered,
+                    0,
                 )
 
             # Calculating the ftp tax payment
@@ -1453,22 +1608,22 @@ class CostRecovery(BaseProject):
             ti_tax = (taxable_income - ftp_ctr) * tax_rate
 
             # Calculating ctr_tax
-            ctr_tax = ftp_tax_paid + ti_tax
+            ctr_tax = _as_float_array(ftp_tax_paid + ti_tax, "ctr_tax")
 
         else:
-            ctr_tax = taxable_income * tax_rate
+            ctr_tax = _as_float_array(taxable_income * tax_rate, "ctr_tax")
 
         return ctr_tax
 
     @staticmethod
     def _get_tax_payment_pdjp(
-        ftp_ctr: np.ndarray,
-        unrec_cost: np.ndarray,
-        tax_rate: np.ndarray,
-        taxable_income: np.ndarray,
-        ctr_share: np.ndarray,
-        ddmo: np.ndarray,
-    ):
+        ftp_ctr: FloatArray,
+        unrec_cost: FloatArray,
+        tax_rate: FloatArray,
+        taxable_income: FloatArray,
+        ctr_share: FloatArray,
+        ddmo: FloatArray,
+    ) -> tuple[FloatArray, FloatArray]:
         """
         Calculate the contractor's tax payment and unpaid tax under the PDJP
         (Profit Distribution and Joint Payment) mechanism.
@@ -1483,27 +1638,27 @@ class CostRecovery(BaseProject):
 
         Parameters
         ----------
-        ftp_ctr : np.ndarray
+        ftp_ctr : FloatArray
             Array of contractor's FTP share for each period.
-        unrec_cost : np.ndarray
+        unrec_cost : FloatArray
             Array of unrecoverable costs that reduce the taxable FTP portion.
-        tax_rate : np.ndarray
+        tax_rate : FloatArray
             Array of applicable tax rates for each period (expressed as a fraction,
             e.g., 0.3 for 30%).
-        taxable_income : np.ndarray
+        taxable_income : FloatArray
             Array of contractor's taxable income before FTP adjustment.
-        ctr_share : np.ndarray
+        ctr_share : FloatArray
             Array of contractor's equity share of production for each period.
-        ddmo : np.ndarray
+        ddmo : FloatArray
             Array of domestic market obligation (DMO) deductions or similar
             non-taxable components.
 
         Returns
         -------
-        tax_paid : np.ndarray
+        tax_paid : FloatArray
             Array of tax amounts actually paid by the contractor in each period,
             after accounting for unpaid tax carried forward and DMO adjustments.
-        unpaid_tax : np.ndarray
+        unpaid_tax : FloatArray
             Array of unpaid tax amounts to be carried over to subsequent periods.
 
         Notes
@@ -1519,49 +1674,80 @@ class CostRecovery(BaseProject):
         """
 
         # Defining the array used in calculation of ftp tax payment
-        ftp_cum_b2 = np.cumsum(ftp_ctr)
+        ftp_cum_b2 = _as_float_array(np.cumsum(ftp_ctr), "ftp_cum_b2")
         ftp_prior_b3 = np.zeros_like(ftp_ctr, dtype=float)
         ftp_diff_b4 = np.zeros_like(ftp_ctr, dtype=float)
         ftp_considered_b5 = np.zeros_like(ftp_ctr, dtype=float)
 
         # Looping throughout the ftp array
-        for i, value in enumerate(ftp_ctr):
+        for i in range(len(ftp_ctr)):
             if i == 0:
                 ftp_prior_b3[i] = 0
 
             ftp_prior_b3[i] = ftp_prior_b3[i - 1] + ftp_considered_b5[i - 1]
 
-            ftp_diff_b4[i] = np.where(
-                ftp_cum_b2[i] > ftp_prior_b3[i], ftp_cum_b2[i] - ftp_prior_b3[i], 0
-            )
+            ftp_cumulative = _as_float(cast(object, ftp_cum_b2[i]), "ftp_cum_b2")
+            prior = _as_float(cast(object, ftp_prior_b3[i]), "ftp_prior_b3")
+            ftp_diff_b4[i] = np.where(ftp_cumulative > prior, ftp_cumulative - prior, 0)
+            unrecovered = _as_float(cast(object, unrec_cost[i]), "unrec_cost")
+            ftp_difference = _as_float(cast(object, ftp_diff_b4[i]), "ftp_diff_b4")
             ftp_considered_b5[i] = np.where(
-                ftp_diff_b4[i] > unrec_cost[i], ftp_diff_b4[i] - unrec_cost[i], 0
+                ftp_difference > unrecovered,
+                ftp_difference - unrecovered,
+                0,
             )
 
         # Calculating the ftp tax payment
         ftp_tax_paid = ftp_considered_b5 * tax_rate
 
         # Calculating the taxable income without ftp
-        taxable_income_wo_ftp = np.where(
-            taxable_income - ftp_ctr < 0,
-            taxable_income - ftp_ctr + ddmo,
-            taxable_income - ftp_ctr,
+        taxable_income_wo_ftp = _as_float_array(
+            np.where(
+                taxable_income - ftp_ctr < 0,
+                taxable_income - ftp_ctr + ddmo,
+                taxable_income - ftp_ctr,
+            ),
+            "taxable_income_wo_ftp",
         )
 
         # Defining Taxing flag
-        applied_tax = np.where(ctr_share > 0, 1, 0)
-        cum_ti = np.cumsum(taxable_income_wo_ftp)
+        applied_tax = _as_float_array(
+            np.where(ctr_share > 0, 1.0, 0.0), "applied_tax"
+        )
+        cum_ti = _as_float_array(np.cumsum(taxable_income_wo_ftp), "cum_ti")
 
-        applied_tax_prior = np.concatenate((np.zeros(1), applied_tax))[0:-1]
+        applied_tax_prior = _as_float_array(
+            np.concatenate((np.zeros(1), applied_tax))[0:-1],
+            "applied_tax_prior",
+        )
 
-        ctr_ets_tax = np.where(
-            np.logical_and(applied_tax == 1, applied_tax_prior == 0),
-            cum_ti * tax_rate,
-            np.where(
-                np.logical_and(applied_tax == 1, applied_tax_prior == 1),
-                taxable_income_wo_ftp * tax_rate,
-                0,
+        first_tax_year = cast(
+            npt.ArrayLike,
+            np.logical_and(
+                cast(npt.ArrayLike, applied_tax == 1),
+                cast(npt.ArrayLike, applied_tax_prior == 0),
             ),
+        )
+        subsequent_tax_year = cast(
+            npt.ArrayLike,
+            np.logical_and(
+                cast(npt.ArrayLike, applied_tax == 1),
+                cast(npt.ArrayLike, applied_tax_prior == 1),
+            ),
+        )
+        accumulated_tax = _as_float_array(
+            cast(npt.ArrayLike, cum_ti * tax_rate), "accumulated_tax"
+        )
+        current_tax = _as_float_array(
+            cast(npt.ArrayLike, taxable_income_wo_ftp * tax_rate), "current_tax"
+        )
+        ctr_ets_tax = _as_float_array(
+            np.where(
+                first_tax_year,
+                accumulated_tax,
+                np.where(subsequent_tax_year, current_tax, 0),
+            ),
+            "ctr_ets_tax",
         )
 
         # Tax from FTP and Contractor Equity
@@ -1574,49 +1760,73 @@ class CostRecovery(BaseProject):
         unpaid_tax = np.zeros_like(taxable_income, dtype=float)
         tax_paid = np.zeros_like(taxable_income, dtype=float)
 
-        for index, i in enumerate(taxable_income):
+        for index in range(len(taxable_income)):
             if index == 0:
-                tax_paid[index] = np.where(
-                    taxable_income[index] > ctr_tax[index] + 0,
-                    ctr_tax[index] + 0,
-                    ets_and_ftp_ctr[index] - ddmo[index],
+                due = _as_float(cast(object, ctr_tax[index]), "ctr_tax")
+                income = _as_float(
+                    cast(object, taxable_income[index]), "taxable_income"
                 )
+                take = _as_float(
+                    cast(object, ets_and_ftp_ctr[index]), "ets_and_ftp_ctr"
+                )
+                dmo = _as_float(cast(object, ddmo[index]), "ddmo")
+                tax_paid[index] = np.where(
+                    income > due,
+                    due,
+                    take - dmo,
+                )
+                paid = _as_float(cast(object, tax_paid[index]), "tax_paid")
                 unpaid_tax[index] = np.where(
-                    ctr_tax[index] + 0 > tax_paid[index],
-                    ctr_tax[index] + 0 - tax_paid[index],
+                    due > paid,
+                    due - paid,
                     0,
                 )
             else:
-                tax_paid[index] = np.where(
-                    taxable_income[index] > ctr_tax[index] + unpaid_tax[index - 1],
-                    ctr_tax[index] + unpaid_tax[index - 1],
-                    ets_and_ftp_ctr[index] - ddmo[index],
+                due = _as_float(cast(object, ctr_tax[index]), "ctr_tax") + _as_float(
+                    cast(object, unpaid_tax[index - 1]), "unpaid_tax"
                 )
+                income = _as_float(
+                    cast(object, taxable_income[index]), "taxable_income"
+                )
+                take = _as_float(
+                    cast(object, ets_and_ftp_ctr[index]), "ets_and_ftp_ctr"
+                )
+                dmo = _as_float(cast(object, ddmo[index]), "ddmo")
+                tax_paid[index] = np.where(
+                    income > due,
+                    due,
+                    take - dmo,
+                )
+                paid = _as_float(cast(object, tax_paid[index]), "tax_paid")
                 unpaid_tax[index] = np.where(
-                    ctr_tax[index] + unpaid_tax[index - 1] > tax_paid[index],
-                    ctr_tax[index] + unpaid_tax[index - 1] - tax_paid[index],
+                    due > paid,
+                    due - paid,
                     0,
                 )
 
-        return tax_paid, unpaid_tax
+        return _as_float_array(tax_paid, "tax_paid"), _as_float_array(
+            unpaid_tax, "unpaid_tax"
+        )
 
     @staticmethod
-    def _unpaid_and_tax_balance(tax_payment: np.ndarray, ets_ctr: np.ndarray):
+    def _unpaid_and_tax_balance(
+        tax_payment: FloatArray, ets_ctr: FloatArray
+    ) -> tuple[FloatArray, FloatArray]:
         """
         The function to get the contractor's unpaid tax and tax payment.
 
         Parameters
         ----------
-        tax_payment: np.ndarray
+        tax_payment: FloatArray
             The contractors tax payment
-        ets_ctr: np.ndarray
+        ets_ctr: FloatArray
             The contractor's share
 
         Returns
         -------
-        unpaid_tax: np.ndarray
+        unpaid_tax: FloatArray
             The unpaid contractor's tax
-        ctr_tax: np.ndarray
+        ctr_tax: FloatArray
             The contractor's tax payment
         """
 
@@ -1625,8 +1835,12 @@ class CostRecovery(BaseProject):
         ctr_tax = np.zeros_like(ets_ctr, dtype=float)
 
         for i in range(1, len(unpaid_tax)):
-            unpaid_tax[i] = max(0, unpaid_tax[i - 1] + tax_payment[i] - ets_ctr[i])
-            ctr_tax[i] = min(ets_ctr[i], unpaid_tax[i - 1] + tax_payment[i])
+            due = _as_float(cast(object, unpaid_tax[i - 1]), "unpaid_tax") + _as_float(
+                cast(object, tax_payment[i]), "tax_payment"
+            )
+            available = _as_float(cast(object, ets_ctr[i]), "ets_ctr")
+            unpaid_tax[i] = max(0, due - available)
+            ctr_tax[i] = min(available, due)
 
         return unpaid_tax, ctr_tax
 
@@ -1742,41 +1956,56 @@ class CostRecovery(BaseProject):
         )
         self._consolidated_postonstream = oil_postonstream + gas_postonstream
 
-        categories = [
-            "capital",
-            "intangible",
-            "opex",
-            "asr",
-            "lbt",
-            "cost_of_sales",
-        ]
+        categories: tuple[
+            tuple[
+                str,
+                tuple[
+                    FloatArray | None,
+                    FloatArray | None,
+                    FloatArray | None,
+                    FloatArray | None,
+                    FloatArray | None,
+                    FloatArray | None,
+                ],
+            ],
+            ...,
+        ] = (
+            ("capital", (self._oil_capital_expenditures_pre_tax, self._gas_capital_expenditures_pre_tax, self._oil_capital_indirect_tax, self._gas_capital_indirect_tax, self._oil_capital_expenditures_post_tax, self._gas_capital_expenditures_post_tax)),
+            ("intangible", (self._oil_intangible_expenditures_pre_tax, self._gas_intangible_expenditures_pre_tax, self._oil_intangible_indirect_tax, self._gas_intangible_indirect_tax, self._oil_intangible_expenditures_post_tax, self._gas_intangible_expenditures_post_tax)),
+            ("opex", (self._oil_opex_expenditures_pre_tax, self._gas_opex_expenditures_pre_tax, self._oil_opex_indirect_tax, self._gas_opex_indirect_tax, self._oil_opex_expenditures_post_tax, self._gas_opex_expenditures_post_tax)),
+            ("asr", (self._oil_asr_expenditures_pre_tax, self._gas_asr_expenditures_pre_tax, self._oil_asr_indirect_tax, self._gas_asr_indirect_tax, self._oil_asr_expenditures_post_tax, self._gas_asr_expenditures_post_tax)),
+            ("lbt", (self._oil_lbt_expenditures_pre_tax, self._gas_lbt_expenditures_pre_tax, self._oil_lbt_indirect_tax, self._gas_lbt_indirect_tax, self._oil_lbt_expenditures_post_tax, self._gas_lbt_expenditures_post_tax)),
+            ("cost_of_sales", (self._oil_cost_of_sales_expenditures_pre_tax, self._gas_cost_of_sales_expenditures_pre_tax, self._oil_cost_of_sales_indirect_tax, self._gas_cost_of_sales_indirect_tax, self._oil_cost_of_sales_expenditures_post_tax, self._gas_cost_of_sales_expenditures_post_tax)),
+        )
 
         # Attributes associated with consolidated expenditures pre tax,
         # consolidated indirect tax, and consolidated expenditures post tax
-        for categ in categories:
-            oil_pre_tax_name = f"_oil_{categ}_expenditures_pre_tax"
-            gas_pre_tax_name = f"_gas_{categ}_expenditures_pre_tax"
-            oil_indirect_tax_name = f"_oil_{categ}_indirect_tax"
-            gas_indirect_tax_name = f"_gas_{categ}_indirect_tax"
-            oil_post_tax_name = f"_oil_{categ}_expenditures_post_tax"
-            gas_post_tax_name = f"_gas_{categ}_expenditures_post_tax"
+        for categ, arrays in categories:
+            (
+                oil_pre_tax_value,
+                gas_pre_tax_value,
+                oil_indirect_tax_value,
+                gas_indirect_tax_value,
+                oil_post_tax_value,
+                gas_post_tax_value,
+            ) = arrays
             oil_pre_tax = self._require_array(
-                getattr(self, oil_pre_tax_name), oil_pre_tax_name
+                oil_pre_tax_value, f"_oil_{categ}_expenditures_pre_tax"
             )
             gas_pre_tax = self._require_array(
-                getattr(self, gas_pre_tax_name), gas_pre_tax_name
+                gas_pre_tax_value, f"_gas_{categ}_expenditures_pre_tax"
             )
             oil_indirect_tax = self._require_array(
-                getattr(self, oil_indirect_tax_name), oil_indirect_tax_name
+                oil_indirect_tax_value, f"_oil_{categ}_indirect_tax"
             )
             gas_indirect_tax = self._require_array(
-                getattr(self, gas_indirect_tax_name), gas_indirect_tax_name
+                gas_indirect_tax_value, f"_gas_{categ}_indirect_tax"
             )
             oil_post_tax = self._require_array(
-                getattr(self, oil_post_tax_name), oil_post_tax_name
+                oil_post_tax_value, f"_oil_{categ}_expenditures_post_tax"
             )
             gas_post_tax = self._require_array(
-                getattr(self, gas_post_tax_name), gas_post_tax_name
+                gas_post_tax_value, f"_gas_{categ}_expenditures_post_tax"
             )
 
             # Set attributes associated with consolidated expenditures pre tax
@@ -1836,8 +2065,16 @@ class CostRecovery(BaseProject):
         )
 
         # Attributes associated with carry forward depreciation
+        oil_carry_forward_depreciation = self._require_array(
+            self._oil_carry_forward_depreciation,
+            "_oil_carry_forward_depreciation",
+        )
+        gas_carry_forward_depreciation = self._require_array(
+            self._gas_carry_forward_depreciation,
+            "_gas_carry_forward_depreciation",
+        )
         self._consolidated_carry_forward_depreciation = (
-            self._oil_carry_forward_depreciation + self._gas_carry_forward_depreciation
+            oil_carry_forward_depreciation + gas_carry_forward_depreciation
         )
 
         # Attributes associated with depreciations and undepreciated assets
@@ -1858,10 +2095,20 @@ class CostRecovery(BaseProject):
             for c in cost_types
         }
 
-        self._consolidated_sum_undepreciated_asset = self._oil_sum_undepreciated_asset \
-            + self._gas_sum_undepreciated_asset
+        self._consolidated_sum_undepreciated_asset = (
+            _require_float(
+                self._oil_sum_undepreciated_asset,
+                "_oil_sum_undepreciated_asset",
+            )
+            + _require_float(
+                self._gas_sum_undepreciated_asset,
+                "_gas_sum_undepreciated_asset",
+            )
+        )
 
-        self._consolidated_depreciation = self._oil_depreciation + self._gas_depreciation
+        self._consolidated_depreciation = self._require_array(
+            self._oil_depreciation, "_oil_depreciation"
+        ) + self._require_array(self._gas_depreciation, "_gas_depreciation")
 
         # Attributes associated with total depreciation and total non depreciable
         self._consolidated_depr_total = self._oil_depr_total + self._gas_depr_total
@@ -1890,8 +2137,12 @@ class CostRecovery(BaseProject):
             self._oil_revenue_allocation + self._gas_revenue_allocation
         )
 
-        self._consolidated_unrecovered_before_transfer = (
-            self._oil_unrecovered_before_transfer + self._gas_unrecovered_before_transfer
+        self._consolidated_unrecovered_before_transfer = self._require_array(
+            self._oil_unrecovered_before_transfer,
+            "_oil_unrecovered_before_transfer",
+        ) + self._require_array(
+            self._gas_unrecovered_before_transfer,
+            "_gas_unrecovered_before_transfer",
         )
         self._consolidated_cost_recovery_before_transfer = (
             self._oil_cost_recovery + self._gas_cost_recovery
@@ -1948,7 +2199,7 @@ class CostRecovery(BaseProject):
             )
 
         elif ftp_tax_regime is FTPTaxRegime.PRE_PDJP_20_2017:
-            self._consolidated_tax_due = self._get_tax_payment(
+            consolidated_tax_due = self._get_tax_payment(
                 ctr_share=self._consolidated_contractor_share,
                 taxable_income=self._consolidated_taxable_income,
                 tax_rate=self._tax_rate_arr,
@@ -1956,12 +2207,13 @@ class CostRecovery(BaseProject):
                 unrec_cost=self._consolidated_unrecovered_after_transfer,
                 ftp_tax_regime=ftp_tax_regime,
             )
+            self._consolidated_tax_due = consolidated_tax_due
 
             (
                 self._consolidated_unpaid_tax_balance,
                 self._consolidated_tax_payment,
             ) = self._unpaid_and_tax_balance(
-                tax_payment=self._consolidated_tax_due,
+                tax_payment=consolidated_tax_due,
                 ets_ctr=self._consolidated_contractor_share,
             )
 
@@ -2045,26 +2297,27 @@ class CostRecovery(BaseProject):
         )
         self._consolidated_non_capital = oil_non_capital + gas_non_capital
 
+    @override
     def run(
         self,
         sulfur_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_GAS_REVENUE,
         electricity_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_OIL_REVENUE,
         co2_revenue: OtherRevenue = OtherRevenue.ADDITION_TO_GAS_REVENUE,
-        vat_rate: np.ndarray | float = 0.0,
-        year_inflation: np.ndarray = None,
-        inflation_rate: np.ndarray | float = 0.0,
+        vat_rate: FloatArray | float = 0.0,
+        year_inflation: YearArray | None = None,
+        inflation_rate: FloatArray | float = 0.0,
         inflation_rate_applied_to: InflationAppliedTo | None = InflationAppliedTo.CAPEX,
         is_dmo_end_weighted: bool = False,
         tax_regime: TaxRegime = TaxRegime.NAILED_DOWN,
-        effective_tax_rate: float | np.ndarray | None = None,
-        ftp_tax_regime=FTPTaxRegime.PDJP_20_2017,
+        effective_tax_rate: float | FloatArray | None = None,
+        ftp_tax_regime: FTPTaxRegime = FTPTaxRegime.PDJP_20_2017,
         depr_method: DeprMethod = DeprMethod.PSC_DB,
         decline_factor: float | int = 2,
         post_uu_22_year2001: bool = True,
         oil_cost_of_sales_applied: bool = False,
         gas_cost_of_sales_applied: bool = False,
         sum_undepreciated_cost: bool = False,
-    ):
+    ) -> None:
         """
         Execute the Cost Recovery contract cashflow calculation.
 
@@ -2083,7 +2336,7 @@ class CostRecovery(BaseProject):
             Treatment of CO₂ revenue.
         vat_rate : float or np.ndarray, optional
             VAT rate applied to expenditures.
-        year_inflation : np.ndarray, optional
+        year_inflation : FloatArray, optional
             Year index for inflation application.
         inflation_rate : float or np.ndarray, optional
             Inflation rate.
@@ -2116,7 +2369,7 @@ class CostRecovery(BaseProject):
             Results are stored on the object as internal attributes.
         """
 
-        self._has_run = False
+        self._has_run: bool = False
 
         # Calculate WAP (Weighted Average Price) for each produced fluid
         self._get_wap_price()
@@ -2355,11 +2608,13 @@ class CostRecovery(BaseProject):
 
         # Summation attributes: "sunk_cost" + "preonstream" + "postonstream",
         # for depreciations and undepreciated_assets
-        self._oil_sum_undepreciated_asset = np.sum(
-            [np.sum(v) for v in self._oil_undepreciated_assets.values()]
+        self._oil_sum_undepreciated_asset = _as_float(
+            np.sum([np.sum(v) for v in self._oil_undepreciated_assets.values()]),
+            "_oil_sum_undepreciated_asset",
         )
-        self._gas_sum_undepreciated_asset = np.sum(
-            [np.sum(v) for v in self._gas_undepreciated_assets.values()]
+        self._gas_sum_undepreciated_asset = _as_float(
+            np.sum([np.sum(v) for v in self._gas_undepreciated_assets.values()]),
+            "_gas_sum_undepreciated_asset",
         )
 
         self._oil_depreciation = np.sum([v for v in self._oil_depreciations.values()], axis=0)
@@ -2588,46 +2843,63 @@ class CostRecovery(BaseProject):
 
         oil_allocation = self._oil_revenue - self._oil_ftp - self._oil_ic_paid
         gas_allocation = self._gas_revenue - self._gas_ftp - self._gas_ic_paid
-        allocation = np.vstack((oil_allocation, gas_allocation)).T
+        allocation: FloatMatrix = np.vstack((oil_allocation, gas_allocation)).T
         # non_capital = np.vstack((self._oil_non_capital, self._gas_non_capital)).T
         # depreciation = np.vstack((self._oil_depreciation, self._gas_depreciation)).T
-        non_capital = np.vstack((self._oil_non_depr_total, self._gas_non_depr_total)).T
-        depreciation = np.vstack((self._oil_depr_total, self._gas_depr_total)).T
+        non_capital: FloatMatrix = np.vstack(
+            (self._oil_non_depr_total, self._gas_non_depr_total)
+        ).T
+        depreciation: FloatMatrix = np.vstack(
+            (self._oil_depr_total, self._gas_depr_total)
+        ).T
 
-        ets_pre_trf = np.zeros_like(allocation)
-        ets_post_trf = np.zeros_like(allocation)
-        unrec_pre_trf = np.zeros_like(allocation)
-        unrec_post_trf = np.zeros_like(allocation)
-        rec_pre_trf = np.zeros_like(allocation)
-        rec_post_trf = np.zeros_like(allocation)
-        recoverable_cost = np.zeros_like(allocation)
-        trf_to_og = np.zeros_like(allocation)
+        ets_pre_trf: FloatMatrix = np.zeros_like(allocation)
+        ets_post_trf: FloatMatrix = np.zeros_like(allocation)
+        unrec_pre_trf: FloatMatrix = np.zeros_like(allocation)
+        unrec_post_trf: FloatMatrix = np.zeros_like(allocation)
+        rec_pre_trf: FloatMatrix = np.zeros_like(allocation)
+        rec_post_trf: FloatMatrix = np.zeros_like(allocation)
+        recoverable_cost: FloatMatrix = np.zeros_like(allocation)
+        trf_to_og: FloatMatrix = np.zeros_like(allocation)
         project_duration = len(self.project_years)
-        prev_unrec = np.zeros(2)
+        prev_unrec: FloatArray = np.zeros(2)
 
         for i in range(project_duration):
+            allocation_row = cast(FloatArray, allocation[i])
+            non_capital_row = cast(FloatArray, non_capital[i])
+            depreciation_row = cast(FloatArray, depreciation[i])
+            recoverable_row: FloatArray = (
+                non_capital_row + depreciation_row + prev_unrec
+            )
+            ets_row: FloatArray = np.maximum(allocation_row - recoverable_row, 0)
+            unrec_row: FloatArray = np.maximum(recoverable_row - allocation_row, 0)
+            rec_row: FloatArray = recoverable_row - unrec_row
 
-            recoverable_cost[i] = non_capital[i] + depreciation[i] + prev_unrec
-            ets_pre_trf[i] = np.maximum(allocation[i] - recoverable_cost[i], 0)
-            unrec_pre_trf[i] = np.maximum(recoverable_cost[i] - allocation[i], 0)
-            rec_pre_trf[i] = recoverable_cost[i] - unrec_pre_trf[i]
+            recoverable_cost[i] = recoverable_row
+            ets_pre_trf[i] = ets_row
+            unrec_pre_trf[i] = unrec_row
+            rec_pre_trf[i] = rec_row
 
-            trf_to = np.zeros(2)
-            ets_after = ets_pre_trf[i].copy()
-            unrec_after = unrec_pre_trf[i].copy()
-            recov_after = rec_pre_trf[i].copy()
+            trf_to: FloatArray = np.zeros(2)
+            ets_after = ets_row.copy()
+            unrec_after = unrec_row.copy()
+            recov_after = rec_row.copy()
 
-            if ets_pre_trf[i, 0] > 0 and unrec_pre_trf[i, 1] > 0:
-                trf_to[1] = np.minimum(ets_pre_trf[i, 0], unrec_pre_trf[i, 1])
-                ets_after[0] = ets_pre_trf[i, 0] - trf_to[1]
-                unrec_after[1] = unrec_pre_trf[i, 1] - trf_to[1]
-                recov_after[1] = rec_pre_trf[i, 1] + trf_to[1]
+            oil_ets = float(cast(np.float64, ets_row[0]))
+            gas_unrec = float(cast(np.float64, unrec_row[1]))
+            gas_ets = float(cast(np.float64, ets_row[1]))
+            oil_unrec = float(cast(np.float64, unrec_row[0]))
+            if oil_ets > 0 and gas_unrec > 0:
+                trf_to[1] = np.minimum(oil_ets, gas_unrec)
+                ets_after[0] = oil_ets - trf_to[1]
+                unrec_after[1] = gas_unrec - trf_to[1]
+                recov_after[1] = rec_row[1] + trf_to[1]
 
-            elif ets_pre_trf[i, 1] > 0 and unrec_pre_trf[i, 0] > 0:
-                trf_to[0] = np.minimum(ets_pre_trf[i, 1], unrec_pre_trf[i, 0])
-                ets_after[1] = ets_pre_trf[i, 1] - trf_to[0]
-                unrec_after[0] = unrec_pre_trf[i, 0] - trf_to[0]
-                recov_after[0] = rec_pre_trf[i, 0] + trf_to[0]
+            elif gas_ets > 0 and oil_unrec > 0:
+                trf_to[0] = np.minimum(gas_ets, oil_unrec)
+                ets_after[1] = gas_ets - trf_to[0]
+                unrec_after[0] = oil_unrec - trf_to[0]
+                recov_after[0] = rec_row[0] + trf_to[0]
 
             ets_post_trf[i] = ets_after
             unrec_post_trf[i] = unrec_after
@@ -2778,18 +3050,19 @@ class CostRecovery(BaseProject):
 
         # Tax Rate
         # Procedure if information about effective tax rate is not given
-        if effective_tax_rate is None:
+        effective_tax_rate_value = cast(object, effective_tax_rate)
+        if effective_tax_rate_value is None:
             tax_rate_arr = self._get_tax_by_regime(tax_regime=tax_regime)
 
         else:
             # If effective tax rate is given as an array
-            if isinstance(effective_tax_rate, np.ndarray):
-                tax_rate_arr = effective_tax_rate
+            if isinstance(effective_tax_rate_value, np.ndarray):
+                tax_rate_arr = cast(FloatArray, effective_tax_rate_value)
 
             # If effective tax rate is given as a single value
-            elif isinstance(effective_tax_rate, (float, int)):
+            elif isinstance(effective_tax_rate_value, (float, int)):
                 tax_rate_arr = np.full_like(
-                    self.project_years, effective_tax_rate, dtype=float
+                    self.project_years, effective_tax_rate_value, dtype=float
                 )
             else:
                 tax_rate_arr = np.zeros_like(self.project_years, dtype=float)
@@ -2833,8 +3106,12 @@ class CostRecovery(BaseProject):
         )
 
         # Contractor cashflow
-        self._oil_cashflow = self._oil_contractor_take - self._oil_total_expenses
-        self._gas_cashflow = self._gas_contractor_take - self._gas_total_expenses
+        self._oil_cashflow = self._oil_contractor_take - self._require_array(
+            self._oil_total_expenses, "_oil_total_expenses"
+        )
+        self._gas_cashflow = self._gas_contractor_take - self._require_array(
+            self._gas_total_expenses, "_gas_total_expenses"
+        )
 
         # Government Take by Fluid
         self._oil_government_take = (
@@ -2867,21 +3144,23 @@ class CostRecovery(BaseProject):
         # Display warning messages as pandas DataFrame
         # self.warnings_to_dataframe()
 
+    @override
     def _require_run(self) -> None:
         if not self._has_run:
             raise CostRecoverySummaryException(
                 "Call run() successfully before requesting a cost recovery summary."
             )
 
+    @override
     def get_summary(
         self,
         discount_rate: float = 0.1,
         npv_mode: NPVSelection = NPVSelection.NPV_SKK_REAL_TERMS,
         discounting_mode: DiscountingMode = DiscountingMode.END_YEAR,
         discount_rate_start_year: int | None = None,
-        inflation_rate: np.ndarray | float = 0.0,
+        inflation_rate: float = 0.0,
         profitability_discounted: bool = False,
-    ) -> dict:
+    ) -> dict[str, float | np.float64]:
         """
         Generate a comprehensive project economic summary under the Cost Recovery
         PSC scheme.
@@ -2995,6 +3274,30 @@ class CostRecovery(BaseProject):
         consolidated_cashflow = self._require_array(
             self._consolidated_cashflow, "_consolidated_cashflow"
         )
+        oil_carry_forward_depreciation = self._require_array(
+            self._oil_carry_forward_depreciation,
+            "_oil_carry_forward_depreciation",
+        )
+        gas_carry_forward_depreciation = self._require_array(
+            self._gas_carry_forward_depreciation,
+            "_gas_carry_forward_depreciation",
+        )
+        consolidated_contractor_share = self._require_array(
+            self._consolidated_contractor_share,
+            "_consolidated_contractor_share",
+        )
+        consolidated_government_share = self._require_array(
+            self._consolidated_government_share,
+            "_consolidated_government_share",
+        )
+        consolidated_cost_recovery_after_transfer = self._require_array(
+            self._consolidated_cost_recovery_after_tf,
+            "_consolidated_cost_recovery_after_tf",
+        )
+        consolidated_unrecovered_after_transfer = self._require_array(
+            self._consolidated_unrecovered_after_transfer,
+            "_consolidated_unrecovered_after_transfer",
+        )
         oil_capital = self._require_array(self._oil_capital, "_oil_capital")
         gas_capital = self._require_array(self._gas_capital, "_gas_capital")
 
@@ -3005,39 +3308,44 @@ class CostRecovery(BaseProject):
         # Cannot have discount rate year before the start year of the project
         if discount_rate_start_year < self.start_date.year:
             raise CostRecoverySummaryException(
-                f"The discounting reference year ({discount_rate_start_year}) "
-                f"is before start year of the project ({self.start_date.year})."
+                f"The discounting reference year ({discount_rate_start_year}) is before start year of the project ({self.start_date.year})."
             )
 
         # Cannot have discount rate year after the end year of the project
         if discount_rate_start_year > self.end_date.year:
             raise CostRecoverySummaryException(
-                f"The discounting reference year ({discount_rate_start_year}) "
-                f"is after the end year of the project ({self.end_date.year})."
+                f"The discounting reference year ({discount_rate_start_year}) is after the end year of the project ({self.end_date.year})."
             )
 
         # Prepare OIL lifting summary
-        oil_lifting_ghv = self._oil_lifting.get_lifting_rate_ghv_arr()
-        oil_lifting_ghv_sum = np.sum(oil_lifting_ghv, dtype=float)
+        oil_lifting_ghv = _as_float_array(
+            cast(npt.ArrayLike, self._oil_lifting.get_lifting_rate_ghv_arr()),
+            "oil_lifting_ghv",
+        )
+        oil_lifting_ghv_sum = _sum_float(oil_lifting_ghv)
         oil_wap_sum = self._calc_division(
-            numerator=self._oil_revenue.sum(dtype=float), denominator=oil_lifting_ghv_sum
+            numerator=_sum_float(self._oil_revenue),
+            denominator=oil_lifting_ghv_sum,
         )
 
         # Prepare GAS lifting summary
-        gas_lifting_ghv = self._gas_lifting.get_lifting_rate_ghv_arr()
-        gas_lifting_ghv_sum = np.sum(gas_lifting_ghv, dtype=float)
+        gas_lifting_ghv = _as_float_array(
+            cast(npt.ArrayLike, self._gas_lifting.get_lifting_rate_ghv_arr()),
+            "gas_lifting_ghv",
+        )
+        gas_lifting_ghv_sum = _sum_float(gas_lifting_ghv)
         gas_wap_sum = self._calc_division(
-            numerator=np.sum(gas_wap_price * gas_lifting_ghv),
+            numerator=_sum_float(gas_wap_price * gas_lifting_ghv),
             denominator=gas_lifting_ghv_sum,
         )
 
         # Prepare gross revenue summary
-        oil_gross_revenue_sum = self._oil_revenue.sum(dtype=float)
-        gas_gross_revenue_sum = self._gas_revenue.sum(dtype=float)
+        oil_gross_revenue_sum = _sum_float(self._oil_revenue)
+        gas_gross_revenue_sum = _sum_float(self._gas_revenue)
         total_gross_revenue_sum = oil_gross_revenue_sum + gas_gross_revenue_sum
 
         # Prepare sunk cost summary
-        sunk_cost_sum = np.sum(oil_sunk_cost + gas_sunk_cost, dtype=float)
+        sunk_cost_sum = _sum_float(oil_sunk_cost + gas_sunk_cost)
 
         # Prepare preonstream costs
         preonstream_map = {
@@ -3051,8 +3359,12 @@ class CostRecovery(BaseProject):
             "gas_lbt": self._gas_lbt_preonstream,
         }
 
-        preonstream_costs = {
-            key: val.expenditures_pre_tax() for key, val in preonstream_map.items()
+        preonstream_costs: dict[str, FloatArray] = {
+            key: _as_float_array(
+                cast(npt.ArrayLike, val.expenditures_pre_tax()),
+                f"{key}.expenditures_pre_tax",
+            )
+            for key, val in preonstream_map.items()
         }
 
         # Prepare tangible and intangible cost summary
@@ -3073,8 +3385,8 @@ class CostRecovery(BaseProject):
             np.float64, copy=False
         )
 
-        tangible_sum = tangible_cost.sum(dtype=float)
-        intangible_sum = intangible_cost.sum(dtype=float)
+        tangible_sum = _sum_float(tangible_cost)
+        intangible_sum = _sum_float(intangible_cost)
         investment_sum = tangible_sum + intangible_sum
 
         # Prepare OPEX summary
@@ -3085,7 +3397,7 @@ class CostRecovery(BaseProject):
             + preonstream_costs["gas_opex"]
         )
 
-        opex_sum = opex_cost.sum(dtype=float)
+        opex_sum = _sum_float(opex_cost)
 
         # Prepare ASR summary
         asr_cost = (
@@ -3095,7 +3407,7 @@ class CostRecovery(BaseProject):
             + preonstream_costs["gas_asr"]
         )
 
-        asr_sum = asr_cost.sum(dtype=float)
+        asr_sum = _sum_float(asr_cost)
 
         # Prepare LBT summary
         lbt_cost = (
@@ -3105,36 +3417,46 @@ class CostRecovery(BaseProject):
             + preonstream_costs["gas_lbt"]
         )
 
-        lbt_sum = lbt_cost.sum(dtype=float)
+        lbt_sum = _sum_float(lbt_cost)
 
         # Prepare indirect taxes summary
-        oil_indirect_tax_sum = oil_total_indirect_tax.sum(dtype=float)
-        gas_indirect_tax_sum = gas_total_indirect_tax.sum(dtype=float)
+        oil_indirect_tax_sum = _sum_float(oil_total_indirect_tax)
+        gas_indirect_tax_sum = _sum_float(gas_total_indirect_tax)
 
         # Prepare carry forward depreciation summary
-        oil_carward_depreciation_sum = self._oil_carry_forward_depreciation.sum(dtype=float)
-        gas_carward_depreciation_sum = self._gas_carry_forward_depreciation.sum(dtype=float)
+        oil_carward_depreciation_sum = _sum_float(
+            oil_carry_forward_depreciation
+        )
+        gas_carward_depreciation_sum = _sum_float(
+            gas_carry_forward_depreciation
+        )
         total_carward_depreciation_sum = (
             oil_carward_depreciation_sum + gas_carward_depreciation_sum
         )
 
         # Prepare undepreciated assets summary
-        oil_undepreciated_asset_sum = np.sum(
-            [undepr.sum() for undepr in self._oil_undepreciated_assets.values()]
+        oil_undepreciated_asset_sum = sum(
+            _sum_float(undepr)
+            for undepr in self._oil_undepreciated_assets.values()
         )
-        gas_undepreciated_asset_sum = np.sum(
-            [undepr.sum() for undepr in self._gas_undepreciated_assets.values()]
+        gas_undepreciated_asset_sum = sum(
+            _sum_float(undepr)
+            for undepr in self._gas_undepreciated_assets.values()
         )
         total_undepreciated_asset_sum = (
             oil_undepreciated_asset_sum + gas_undepreciated_asset_sum
         )
 
         # Prepare government DDMO summary
-        gov_ddmo = self._consolidated_ddmo.sum(dtype=float)
+        gov_ddmo = _sum_float(self._consolidated_ddmo)
 
         # Prepare government take summary
-        gov_take_income_sum = self._consolidated_tax_payment.sum(dtype=float)
-        gov_take_sum = self._consolidated_government_take.sum(dtype=float)
+        gov_take_income_sum = _sum_float(
+            self._consolidated_tax_payment
+        )
+        gov_take_sum = _sum_float(
+            self._consolidated_government_take
+        )
         gov_take_over_gross_rev = self._calc_division(
             numerator=gov_take_sum, denominator=total_gross_revenue_sum
         )
@@ -3303,7 +3625,7 @@ class CostRecovery(BaseProject):
             ctr_pv_ratio = self._calc_division(numerator=ctr_npv, denominator=investment_npv)
 
         else:
-            investment_pi = np.sum(tangible_cost + intangible_cost)
+            investment_pi = float(np.sum(tangible_cost + intangible_cost))
             ctr_pv_ratio = self._calc_division(numerator=ctr_npv, denominator=investment_pi)
 
         ctr_pi = 1 + ctr_pv_ratio
@@ -3316,19 +3638,26 @@ class CostRecovery(BaseProject):
         )
 
         # Prepare government FTP share summary
-        gov_ftp_share_sum = self._consolidated_ftp_gov.sum(dtype=float)
+        gov_ftp_share_sum = _sum_float(self._consolidated_ftp_gov)
 
         # Prepare government equity share summary
-        gov_equity_share_sum = self._consolidated_government_share.sum(dtype=float)
+        gov_equity_share_sum = _sum_float(
+            consolidated_government_share
+        )
 
         # Prepare cost recovery summary
-        cost_recovery_sum = self._consolidated_cost_recovery_after_tf.sum(dtype=float)
+        cost_recovery_sum = _sum_float(
+            consolidated_cost_recovery_after_transfer,
+        )
         cost_recovery_over_gross_rev = self._calc_division(
             numerator=cost_recovery_sum, denominator=total_gross_revenue_sum
         )
 
         # Prepare unrecoverable cost summary
-        unrec_cost = self._consolidated_unrecovered_after_transfer[-1]
+        unrec_cost = _as_float(
+            consolidated_unrecovered_after_transfer.item(-1),
+            "_consolidated_unrecovered_after_transfer",
+        )
         unrec_over_costrec = self._calc_division(
             numerator=unrec_cost, denominator=cost_recovery_sum
         )
@@ -3337,20 +3666,26 @@ class CostRecovery(BaseProject):
         )
 
         # Prepare contractor gross share summary
-        ctr_gross_share_sum = self._consolidated_contractor_share.sum(dtype=float)
+        ctr_gross_share_sum = _sum_float(
+            consolidated_contractor_share
+        )
 
         # Prepare government gross share summary
-        gov_gross_share_sum = self._consolidated_government_share.sum(dtype=float)
+        gov_gross_share_sum = _sum_float(
+            consolidated_government_share
+        )
 
         # Prepare contractor net share summary
-        ctr_net_share_sum = self._consolidated_ctr_net_share.sum(dtype=float)
+        ctr_net_share_sum = _sum_float(
+            self._consolidated_ctr_net_share
+        )
         ctr_net_share_over_gross_share = self._calc_division(
             numerator=ctr_net_share_sum, denominator=total_gross_revenue_sum
         )
 
         # Net cash flow is a full-lifecycle project metric. Point-forward
         # selection applies to valuation metrics, not this reported total.
-        ctr_net_cashflow_sum = consolidated_cashflow.sum(dtype=float)
+        ctr_net_cashflow_sum = _sum_float(consolidated_cashflow)
         ctr_net_cashflow_over_gross_rev = self._calc_division(
             numerator=ctr_net_cashflow_sum, denominator=total_gross_revenue_sum
         )

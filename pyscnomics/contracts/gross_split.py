@@ -50,10 +50,10 @@ pd.set_option("display.max_rows", 200)
 pd.set_option("display.max_columns", 50)
 pd.set_option("display.max_colwidth", 150)
 
-FloatArray = np.ndarray[tuple[int], np.dtype[np.float64]]
-FloatMatrix = np.ndarray[tuple[int, int], np.dtype[np.float64]]
-YearArray = np.ndarray[tuple[int], np.dtype[np.int64]]
-BoolArray = np.ndarray[tuple[int], np.dtype[np.bool_]]
+FloatArray = npt.NDArray[np.float64]
+FloatMatrix = npt.NDArray[np.float64]
+YearArray = npt.NDArray[np.int64]
+BoolArray = npt.NDArray[np.bool_]
 CostSchedules = dict[str, FloatArray]
 NonCapitalCost = Intangible | OPEX | ASR | LBT | CostOfSales
 CapitalValidationMapping = list[tuple[CapitalCost, str, bool]]
@@ -101,21 +101,14 @@ def _as_float_array(values: npt.ArrayLike, name: str) -> FloatArray:
     array = np.asarray(values, dtype=np.float64)
     if array.ndim != 1:
         raise GrossSplitException(f"{name} must be a one-dimensional numeric array")
-    return cast(FloatArray, array)
-
-
-def _as_float_matrix(values: npt.ArrayLike, name: str) -> FloatMatrix:
-    array = np.asarray(values, dtype=np.float64)
-    if array.ndim != 2:
-        raise GrossSplitException(f"{name} must be a two-dimensional numeric array")
-    return cast(FloatMatrix, array)
+    return array
 
 
 def _as_bool_array(values: npt.ArrayLike, name: str) -> BoolArray:
     array = np.asarray(values, dtype=np.bool_)
     if array.ndim != 1:
         raise GrossSplitException(f"{name} must be a one-dimensional boolean array")
-    return cast(BoolArray, array)
+    return array
 
 
 def _as_float(value: object, name: str) -> float:
@@ -3903,38 +3896,24 @@ class GrossSplit(BaseProject):
 
         # ====================================================================================
 
-        allocation = _as_float_matrix(
-            np.stack([oil_ctr_share_before_transfer, gas_ctr_share_before_transfer], axis=1),
-            "allocation",
+        allocation: FloatMatrix = np.stack(
+            [oil_ctr_share_before_transfer, gas_ctr_share_before_transfer], axis=1
         )
-        tobe_deducted = _as_float_matrix(
-            np.stack([oil_cost_tobe_deducted, gas_cost_tobe_deducted], axis=1),
-            "cost to be deducted",
+        tobe_deducted: FloatMatrix = np.stack(
+            [oil_cost_tobe_deducted, gas_cost_tobe_deducted], axis=1
         )
-        deductible = _as_float_matrix(np.zeros_like(allocation), "deductible cost")
-        undeductible_pre_trf = _as_float_matrix(
-            np.zeros_like(allocation), "undeductible cost before transfer"
-        )
-        undeductible_post_trf = _as_float_matrix(
-            np.zeros_like(allocation), "undeductible cost after transfer"
-        )
-        net_pre_trf = _as_float_matrix(
-            np.zeros_like(allocation), "net profit before transfer"
-        )
-        net_post_trf = _as_float_matrix(
-            np.zeros_like(allocation), "net profit after transfer"
-        )
-        trf_to_og = _as_float_matrix(np.zeros_like(allocation), "transfer")
+        deductible: FloatMatrix = np.zeros_like(allocation)
+        undeductible_pre_trf: FloatMatrix = np.zeros_like(allocation)
+        undeductible_post_trf: FloatMatrix = np.zeros_like(allocation)
+        net_pre_trf: FloatMatrix = np.zeros_like(allocation)
+        net_post_trf: FloatMatrix = np.zeros_like(allocation)
+        trf_to_og: FloatMatrix = np.zeros_like(allocation)
 
-        prev_undeductible = _as_float_array(np.zeros(2), "previous undeductible cost")
+        prev_undeductible: FloatArray = np.zeros(2)
 
         for i in range(self.project_duration):
-            allocation_year = _as_float_array(
-                cast(npt.ArrayLike, allocation[i]), "allocation year"
-            )
-            tobe_deducted_base = _as_float_array(
-                cast(npt.ArrayLike, tobe_deducted[i]), "cost-to-deduct year"
-            )
+            allocation_year = cast(FloatArray, allocation[i])
+            tobe_deducted_base = cast(FloatArray, tobe_deducted[i])
             tobe_deducted_year: FloatArray = (
                 tobe_deducted_base + prev_undeductible
             )
@@ -3955,21 +3934,15 @@ class GrossSplit(BaseProject):
             undeduct_after: FloatArray = undeductible_pre_transfer_year.copy()
 
             # Transfer between oil and gas
-            trf_to = _as_float_array(np.zeros(2), "transfer year")
+            trf_to: FloatArray = np.zeros(2)
 
-            oil_net_pre_transfer = _as_float(
-                cast(object, net_pre_transfer_year[0]), "oil net profit before transfer"
+            oil_net_pre_transfer = float(cast(np.float64, net_pre_transfer_year[0]))
+            gas_undeductible_pre_transfer = float(
+                cast(np.float64, undeductible_pre_transfer_year[1])
             )
-            gas_undeductible_pre_transfer = _as_float(
-                cast(object, undeductible_pre_transfer_year[1]),
-                "gas undeductible cost before transfer",
-            )
-            gas_net_pre_transfer = _as_float(
-                cast(object, net_pre_transfer_year[1]), "gas net profit before transfer"
-            )
-            oil_undeductible_pre_transfer = _as_float(
-                cast(object, undeductible_pre_transfer_year[0]),
-                "oil undeductible cost before transfer",
+            gas_net_pre_transfer = float(cast(np.float64, net_pre_transfer_year[1]))
+            oil_undeductible_pre_transfer = float(
+                cast(np.float64, undeductible_pre_transfer_year[0])
             )
             if oil_net_pre_transfer > 0 and gas_undeductible_pre_transfer > 0:
                 """
