@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.typing import NDArray
 
-from . import RPDModel
+from .rpd import RPDModel
 
 
 def oil_ltp_predict(volume: float) -> NDArray[np.float64]:

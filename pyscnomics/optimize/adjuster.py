@@ -2,16 +2,262 @@
 Configuration to undertake sensitivity analysis.
 """
 
-import numpy as np
+from collections.abc import Mapping
 from dataclasses import dataclass, field
+from datetime import date
+from numbers import Real
+from typing import (
+    Literal,
+    TypeAlias,
+    TypeVar,
+    TypedDict,
+)
 
-from pyscnomics.econ.revenue import Lifting
-from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX
+import numpy as np
+import numpy.typing as npt
 
-from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts.costrecovery import CostRecovery
+from pyscnomics.contracts.costrecovery import RCICPInput
 from pyscnomics.contracts.gross_split import GrossSplit
+from pyscnomics.contracts.project import BaseProject, require_float_array
 from pyscnomics.contracts.transition import Transition
+from pyscnomics.econ.revenue import Lifting
+from pyscnomics.econ.costs import ASR, CapitalCost, Intangible, OPEX
+from pyscnomics.econ.selection import (
+    DeprMethod,
+    DiscountingMode,
+    FTPTaxRegime,
+    InflationAppliedTo,
+    NPVSelection,
+    OtherRevenue,
+    TaxRegime,
+    TaxSplitTypeCR,
+)
+
+
+PSCKey: TypeAlias = Literal["PSC 1", "PSC 2"]
+T = TypeVar("T")
+NumericArray: TypeAlias = npt.NDArray[np.float64]
+SingleAggregate: TypeAlias = tuple[T, ...]
+TransitionAggregate: TypeAlias = dict[PSCKey, SingleAggregate[T]]
+Aggregate: TypeAlias = SingleAggregate[T] | TransitionAggregate[T]
+
+LiftingAggregate: TypeAlias = SingleAggregate[Lifting]
+LiftingTransitionAggregate: TypeAlias = TransitionAggregate[Lifting]
+LiftingAggregateInput: TypeAlias = LiftingAggregate | LiftingTransitionAggregate
+LiftingAggregateOutput: TypeAlias = LiftingAggregate | LiftingTransitionAggregate
+
+OpexAggregate: TypeAlias = SingleAggregate[OPEX]
+OpexTransitionAggregate: TypeAlias = TransitionAggregate[OPEX]
+OpexAggregateInput: TypeAlias = OpexAggregate | OpexTransitionAggregate
+OpexAggregateOutput: TypeAlias = OpexAggregate | OpexTransitionAggregate
+
+CapitalAggregate: TypeAlias = SingleAggregate[CapitalCost]
+CapitalTransitionAggregate: TypeAlias = TransitionAggregate[CapitalCost]
+CapitalAggregateInput: TypeAlias = CapitalAggregate | CapitalTransitionAggregate
+CapitalAggregateOutput: TypeAlias = CapitalAggregate | CapitalTransitionAggregate
+
+IntangibleAggregate: TypeAlias = SingleAggregate[Intangible]
+IntangibleTransitionAggregate: TypeAlias = TransitionAggregate[Intangible]
+IntangibleAggregateInput: TypeAlias = (
+    IntangibleAggregate | IntangibleTransitionAggregate
+)
+IntangibleAggregateOutput: TypeAlias = (
+    IntangibleAggregate | IntangibleTransitionAggregate
+)
+
+ASRAggregate: TypeAlias = SingleAggregate[ASR]
+ASRTransitionAggregate: TypeAlias = TransitionAggregate[ASR]
+ASRAggregateInput: TypeAlias = ASRAggregate | ASRTransitionAggregate
+
+ScalarOrPSC: TypeAlias = T | dict[PSCKey, T]
+NumericValue: TypeAlias = float | int | NumericArray
+ConfigValue: TypeAlias = (
+    NumericValue | None | TaxRegime | str | FTPTaxRegime | DeprMethod | OtherRevenue
+)
+ConfigT = TypeVar("ConfigT", bound=ConfigValue)
+
+SingleContract: TypeAlias = BaseProject | CostRecovery | GrossSplit
+TransitionContracts: TypeAlias = dict[PSCKey, CostRecovery | GrossSplit]
+PSCState: TypeAlias = SingleContract | TransitionContracts
+ContractArguments: TypeAlias = dict[str, object]
+TransitionArguments: TypeAlias = dict[PSCKey, ContractArguments]
+ArgumentsState: TypeAlias = ContractArguments | TransitionArguments
+SummaryArguments: TypeAlias = dict[str, object]
+ActivationResult: TypeAlias = tuple[
+    SingleContract | Transition, ArgumentsState | None, SummaryArguments
+]
+
+
+@dataclass
+class GeneralConfigData:
+    discount_rate_start_year: int
+    discount_rate: float
+    type_of_contract: str
+    start_date_project: date
+    end_date_project: date
+    oil_onstream_date: date | None
+    gas_onstream_date: date | None
+    start_date_project_second: date
+    end_date_project_second: date
+    oil_onstream_date_second: date | None
+    gas_onstream_date_second: date | None
+    inflation_rate_applied_to: InflationAppliedTo | None
+
+
+@dataclass
+class FiscalConfigData:
+    npv_mode: NPVSelection
+    discounting_mode: DiscountingMode
+    inflation_rate: ScalarOrPSC[NumericValue | None]
+    tax_mode: ScalarOrPSC[TaxRegime | str]
+    tax_rate: ScalarOrPSC[NumericValue | None]
+    tax_payment_config: ScalarOrPSC[FTPTaxRegime | str]
+    asr_future_rate: ScalarOrPSC[float | int]
+    depreciation_method: ScalarOrPSC[DeprMethod | str]
+    decline_factor: ScalarOrPSC[float | int]
+    vat_rate: ScalarOrPSC[NumericValue]
+    lbt_rate: ScalarOrPSC[NumericValue]
+    sulfur_revenue_config: ScalarOrPSC[OtherRevenue | str]
+    electricity_revenue_config: ScalarOrPSC[OtherRevenue | str]
+    co2_revenue_config: ScalarOrPSC[OtherRevenue | str]
+    transferred_unrec_cost: float
+    sunk_cost_reference_year: int
+
+
+@dataclass
+class DMOConfig:
+    dmo_is_weighted: bool
+    oil_dmo_volume: float | NumericArray
+    oil_dmo_fee: float | NumericArray
+    oil_dmo_period: int
+    gas_dmo_volume: float | NumericArray
+    gas_dmo_fee: float | NumericArray
+    gas_dmo_period: int
+
+
+@dataclass
+class CostRecoveryConfig(DMOConfig):
+    oil_ftp_availability: bool
+    oil_ftp_is_shared: bool
+    oil_ftp_portion: float | NumericArray
+    gas_ftp_availability: bool
+    gas_ftp_is_shared: bool
+    gas_ftp_portion: float | NumericArray
+    split_type: TaxSplitTypeCR
+    icp_sliding_scale: RCICPInput
+    indicator_rc_split_sliding_scale: NumericArray | None
+    oil_ctr_pretax: float | NumericArray
+    gas_ctr_pretax: float | NumericArray
+    ic_oil: float | NumericArray
+    ic_gas: float | NumericArray
+    ic_availability: bool
+    oil_cr_cap_rate: float
+    gas_cr_cap_rate: float
+
+
+@dataclass
+class GrossSplitConfig(DMOConfig):
+    field_status: str
+    field_location: str
+    reservoir_depth: str
+    infrastructure_availability: str
+    reservoir_type: str
+    oil_api: str
+    domestic_content_use: str
+    production_stage: str
+    co2_content: str
+    h2s_content: str
+    ministry_discretion_split: float
+
+
+@dataclass
+class AdjustDataInput:
+    """Concrete attribute contract for the legacy adjustment data boundary."""
+
+    general_config_data: GeneralConfigData
+    fiscal_config_data: FiscalConfigData
+    oil_lifting_aggregate_total: LiftingAggregateInput
+    gas_lifting_aggregate_total: LiftingAggregateInput
+    sulfur_lifting_aggregate: LiftingAggregateInput
+    electricity_lifting_aggregate: LiftingAggregateInput
+    co2_lifting_aggregate: LiftingAggregateInput
+    capital_cost_aggregate: CapitalAggregateInput
+    intangible_cost_aggregate: IntangibleAggregateInput
+    opex_aggregate: OpexAggregateInput
+    asr_cost_aggregate: ASRAggregateInput
+    psc_cr_data: CostRecoveryConfig | None
+    psc_gs_data: GrossSplitConfig | None
+    psc_transition_cr_to_cr: Mapping[str, CostRecoveryConfig] | None
+    psc_transition_cr_to_gs: Mapping[str, CostRecoveryConfig | GrossSplitConfig] | None
+    psc_transition_gs_to_gs: Mapping[str, GrossSplitConfig] | None
+    psc_transition_gs_to_cr: Mapping[str, GrossSplitConfig | CostRecoveryConfig] | None
+
+
+class SensitivityData(TypedDict):
+    oil_lifting_aggregate_total: LiftingAggregateOutput
+    gas_lifting_aggregate_total: LiftingAggregateOutput
+    sulfur_lifting_aggregate: LiftingAggregateOutput
+    electricity_lifting_aggregate: LiftingAggregateOutput
+    co2_lifting_aggregate: LiftingAggregateOutput
+    opex_aggregate: OpexAggregateOutput
+    tangible_cost_aggregate: CapitalAggregateOutput
+    intangible_cost_aggregate: IntangibleAggregateOutput
+
+
+def _single_lifting_total(data: SensitivityData) -> LiftingAggregate:
+    return (
+        _single_aggregate(data["oil_lifting_aggregate_total"])
+        + _single_aggregate(data["gas_lifting_aggregate_total"])
+        + _single_aggregate(data["sulfur_lifting_aggregate"])
+        + _single_aggregate(data["electricity_lifting_aggregate"])
+        + _single_aggregate(data["co2_lifting_aggregate"])
+    )
+
+
+def _transition_lifting_total(data: SensitivityData) -> LiftingTransitionAggregate:
+    oil = _transition_aggregate(data["oil_lifting_aggregate_total"])
+    gas = _transition_aggregate(data["gas_lifting_aggregate_total"])
+    sulfur = _transition_aggregate(data["sulfur_lifting_aggregate"])
+    electricity = _transition_aggregate(data["electricity_lifting_aggregate"])
+    co2 = _transition_aggregate(data["co2_lifting_aggregate"])
+    return {
+        psc: oil[psc] + gas[psc] + sulfur[psc] + electricity[psc] + co2[psc]
+        for psc in PSC_KEYS
+    }
+
+
+def _single_aggregate(value: Aggregate[T]) -> SingleAggregate[T]:
+    if not isinstance(value, tuple):
+        raise AdjustDataException("A single-contract aggregate must be a tuple")
+    return value
+
+
+def _transition_aggregate(value: Aggregate[T]) -> TransitionAggregate[T]:
+    if not isinstance(value, dict):
+        raise AdjustDataException("A transition aggregate must be a PSC mapping")
+    return value
+
+
+def _single_config(value: ConfigT | Mapping[PSCKey, ConfigT]) -> ConfigT:
+    if isinstance(value, Mapping):
+        raise AdjustDataException("A single-contract config must be scalar")
+    return value
+
+
+def _transition_config(value: ConfigT | dict[PSCKey, ConfigT], psc: PSCKey) -> ConfigT:
+    if not isinstance(value, dict):
+        raise AdjustDataException("A transition config must be a PSC mapping")
+    if psc not in value:
+        raise AdjustDataException(f"Transition config is missing {psc}")
+    return value[psc]
+
+
+def _multiplier(values: NumericArray, index: int) -> float:
+    value = values.flat[index]
+    if not isinstance(value, Real):
+        raise AdjustDataException("Sensitivity multipliers must be numeric")
+    return float(value)
 
 
 class AdjustDataException(Exception):
@@ -20,12 +266,244 @@ class AdjustDataException(Exception):
     pass
 
 
-def get_price_and_rate_adjustment(
-    contract_type: str,
-    lifting_aggregate: tuple | dict,
+PSC_KEYS: tuple[PSCKey, PSCKey] = ("PSC 1", "PSC 2")
+
+
+def _adjust_lifting(
+    lifting: Lifting,
     price_multiplier: float,
     rate_multiplier: float,
-) -> tuple | dict:
+) -> Lifting:
+    return Lifting(
+        start_year=lifting.start_year,
+        end_year=lifting.end_year,
+        lifting_rate=lifting.lifting_rate * rate_multiplier,
+        price=lifting.price * price_multiplier,
+        prod_year=lifting.prod_year,
+        fluid_type=lifting.fluid_type,
+        ghv=lifting.ghv,
+        prod_rate=lifting.prod_rate,
+        prod_rate_baseline=lifting.prod_rate_baseline,
+    )
+
+
+def _adjust_opex(opex: OPEX, multiplier: float) -> OPEX:
+    return OPEX(
+        start_year=opex.start_year,
+        end_year=opex.end_year,
+        expense_year=opex.expense_year,
+        cost_allocation=opex.cost_allocation,
+        cost_type=opex.cost_type,
+        description=opex.description,
+        tax_portion=opex.tax_portion,
+        tax_discount=opex.tax_discount,
+        fixed_cost=require_float_array(opex.fixed_cost, "fixed_cost") * multiplier,
+        prod_rate=opex.prod_rate,
+        cost_per_volume=require_float_array(opex.cost_per_volume, "cost_per_volume")
+        * multiplier,
+    )
+
+
+def _adjust_capital_cost(capital: CapitalCost, multiplier: float) -> CapitalCost:
+    return CapitalCost(
+        start_year=capital.start_year,
+        end_year=capital.end_year,
+        expense_year=capital.expense_year,
+        cost=require_float_array(capital.cost, "cost") * multiplier,
+        cost_allocation=capital.cost_allocation,
+        cost_type=capital.cost_type,
+        description=capital.description,
+        tax_portion=capital.tax_portion,
+        tax_discount=capital.tax_discount,
+        pis_year=capital.pis_year,
+        salvage_value=capital.salvage_value,
+        useful_life=capital.useful_life,
+        depreciation_factor=capital.depreciation_factor,
+        is_ic_applied=capital.is_ic_applied,
+    )
+
+
+def _adjust_intangible(intangible: Intangible, multiplier: float) -> Intangible:
+    return Intangible(
+        start_year=intangible.start_year,
+        end_year=intangible.end_year,
+        expense_year=intangible.expense_year,
+        cost=require_float_array(intangible.cost, "cost") * multiplier,
+        cost_allocation=intangible.cost_allocation,
+        cost_type=intangible.cost_type,
+        description=intangible.description,
+        tax_portion=intangible.tax_portion,
+        tax_discount=intangible.tax_discount,
+    )
+
+
+def _cost_recovery_config(
+    config: CostRecoveryConfig | GrossSplitConfig | None,
+) -> CostRecoveryConfig:
+    if not isinstance(config, CostRecoveryConfig):
+        raise AdjustDataException("Expected a Cost Recovery configuration")
+    return config
+
+
+def _gross_split_config(
+    config: CostRecoveryConfig | GrossSplitConfig | None,
+) -> GrossSplitConfig:
+    if not isinstance(config, GrossSplitConfig):
+        raise AdjustDataException("Expected a Gross Split configuration")
+    return config
+
+
+def _project_dates(
+    general: GeneralConfigData, psc: PSCKey
+) -> tuple[date, date, date | None, date | None, int]:
+    if psc == "PSC 1":
+        start_date = general.start_date_project
+        end_date = general.end_date_project
+        oil_onstream_date = general.oil_onstream_date
+        gas_onstream_date = general.gas_onstream_date
+    else:
+        start_date = general.start_date_project_second
+        end_date = general.end_date_project_second
+        oil_onstream_date = general.oil_onstream_date_second
+        gas_onstream_date = general.gas_onstream_date_second
+    return start_date, end_date, oil_onstream_date, gas_onstream_date, start_date.year
+
+
+def _build_cost_recovery(
+    general: GeneralConfigData,
+    config: CostRecoveryConfig,
+    lifting: LiftingAggregate,
+    capital_cost: CapitalAggregate,
+    intangible_cost: IntangibleAggregate,
+    opex: OpexAggregate,
+    asr_cost: ASRAggregate,
+    psc: PSCKey,
+) -> CostRecovery:
+    start_date, end_date, oil_onstream_date, gas_onstream_date, approval_year = (
+        _project_dates(general, psc)
+    )
+    return CostRecovery(
+        start_date=start_date,
+        end_date=end_date,
+        approval_year=approval_year,
+        oil_onstream_date=oil_onstream_date,
+        gas_onstream_date=gas_onstream_date,
+        lifting=lifting,
+        capital_cost=capital_cost,
+        intangible_cost=intangible_cost,
+        opex=opex,
+        asr_cost=asr_cost,
+        oil_ftp_is_available=config.oil_ftp_availability,
+        oil_ftp_is_shared=config.oil_ftp_is_shared,
+        oil_ftp_portion=config.oil_ftp_portion,
+        gas_ftp_is_available=config.gas_ftp_availability,
+        gas_ftp_is_shared=config.gas_ftp_is_shared,
+        gas_ftp_portion=config.gas_ftp_portion,
+        tax_split_type=config.split_type,
+        condition_dict=config.icp_sliding_scale,
+        indicator_rc_icp_sliding=config.indicator_rc_split_sliding_scale,
+        oil_ctr_pretax_share=config.oil_ctr_pretax,
+        gas_ctr_pretax_share=config.gas_ctr_pretax,
+        oil_ic_rate=config.ic_oil,
+        gas_ic_rate=config.ic_gas,
+        ic_is_available=config.ic_availability,
+        oil_cr_cap_rate=config.oil_cr_cap_rate,
+        gas_cr_cap_rate=config.gas_cr_cap_rate,
+        oil_dmo_volume_portion=config.oil_dmo_volume,
+        oil_dmo_fee_portion=config.oil_dmo_fee,
+        oil_dmo_holiday_duration=config.oil_dmo_period,
+        gas_dmo_volume_portion=config.gas_dmo_volume,
+        gas_dmo_fee_portion=config.gas_dmo_fee,
+        gas_dmo_holiday_duration=config.gas_dmo_period,
+    )
+
+
+def _build_gross_split(
+    general: GeneralConfigData,
+    config: GrossSplitConfig,
+    lifting: LiftingAggregate,
+    capital_cost: CapitalAggregate,
+    intangible_cost: IntangibleAggregate,
+    opex: OpexAggregate,
+    asr_cost: ASRAggregate,
+    psc: PSCKey,
+) -> GrossSplit:
+    start_date, end_date, oil_onstream_date, gas_onstream_date, approval_year = (
+        _project_dates(general, psc)
+    )
+    return GrossSplit(
+        start_date=start_date,
+        end_date=end_date,
+        approval_year=approval_year,
+        oil_onstream_date=oil_onstream_date,
+        gas_onstream_date=gas_onstream_date,
+        lifting=lifting,
+        capital_cost=capital_cost,
+        intangible_cost=intangible_cost,
+        opex=opex,
+        asr_cost=asr_cost,
+        field_status=config.field_status,
+        field_loc=config.field_location,
+        res_depth=config.reservoir_depth,
+        infra_avail=config.infrastructure_availability,
+        res_type=config.reservoir_type,
+        api_oil=config.oil_api,
+        domestic_use=config.domestic_content_use,
+        prod_stage=config.production_stage,
+        co2_content=config.co2_content,
+        h2s_content=config.h2s_content,
+        split_ministry_disc=config.ministry_discretion_split,
+        oil_dmo_volume_portion=config.oil_dmo_volume,
+        oil_dmo_fee_portion=config.oil_dmo_fee,
+        oil_dmo_holiday_duration=config.oil_dmo_period,
+        gas_dmo_volume_portion=config.gas_dmo_volume,
+        gas_dmo_fee_portion=config.gas_dmo_fee,
+        gas_dmo_holiday_duration=config.gas_dmo_period,
+    )
+
+
+U = TypeVar("U", bound=ConfigValue)
+
+
+def _contract_value(value: U | dict[PSCKey, U], psc: PSCKey | None) -> U:
+    if psc is None:
+        return _single_config(value)
+    return _transition_config(value, psc)
+
+
+def _build_contract_arguments(
+    general: GeneralConfigData,
+    fiscal: FiscalConfigData,
+    config: DMOConfig,
+    psc: PSCKey | None,
+    is_cost_recovery: bool,
+) -> ContractArguments:
+    arguments: ContractArguments = {
+        "sulfur_revenue": _contract_value(fiscal.sulfur_revenue_config, psc),
+        "electricity_revenue": _contract_value(fiscal.electricity_revenue_config, psc),
+        "co2_revenue": _contract_value(fiscal.co2_revenue_config, psc),
+        "is_dmo_end_weighted": config.dmo_is_weighted,
+        "tax_regime": _contract_value(fiscal.tax_mode, psc),
+        "effective_tax_rate": _contract_value(fiscal.tax_rate, psc),
+        "depr_method": _contract_value(fiscal.depreciation_method, psc),
+        "vat_rate": _contract_value(fiscal.vat_rate, psc),
+        "inflation_rate": _contract_value(fiscal.inflation_rate, psc),
+        "inflation_rate_applied_to": general.inflation_rate_applied_to,
+    }
+    if is_cost_recovery:
+        arguments["ftp_tax_regime"] = _contract_value(fiscal.tax_payment_config, psc)
+        arguments["decline_factor"] = _contract_value(fiscal.decline_factor, psc)
+    else:
+        arguments["decline_factor"] = _contract_value(fiscal.decline_factor, psc)
+    return arguments
+
+
+def get_price_and_rate_adjustment(
+    contract_type: str,
+    lifting_aggregate: LiftingAggregateInput,
+    price_multiplier: float,
+    rate_multiplier: float,
+) -> LiftingAggregateOutput:
     """
     Adjust price and lifting rate for sensitivity analysis.
 
@@ -45,111 +523,28 @@ def get_price_and_rate_adjustment(
     tuple or dict
         A new instance of lifting aggregate with updated price and lifting rate.
     """
-    # For single contract
     if "Transition" not in contract_type:
-        # Extract price and lifting_rate data from the original lifting_aggregate data
-        lifting_aggregate_attrs = {
-            "price": (
-                [lifting_aggregate[i].price for i, val in enumerate(lifting_aggregate)]
-            ),
-            "rate": (
-                [
-                    lifting_aggregate[i].lifting_rate
-                    for i, val in enumerate(lifting_aggregate)
-                ]
-            ),
-        }
-
-        # Modify price and lifting_rate data
-        updated_attrs = {
-            "price": [pr * price_multiplier for pr in lifting_aggregate_attrs["price"]],
-            "rate": [rt * rate_multiplier for rt in lifting_aggregate_attrs["rate"]],
-        }
-
-        # Return new tuple of modified lifting_aggregate data
+        aggregate = _single_aggregate(lifting_aggregate)
         return tuple(
-            [
-                Lifting(
-                    start_year=lifting_aggregate[i].start_year,
-                    end_year=lifting_aggregate[i].end_year,
-                    lifting_rate=updated_attrs["rate"][i],
-                    price=updated_attrs["price"][i],
-                    prod_year=lifting_aggregate[i].prod_year,
-                    fluid_type=lifting_aggregate[i].fluid_type,
-                    ghv=lifting_aggregate[i].ghv,
-                    prod_rate=lifting_aggregate[i].prod_rate,
-                )
-                for i, val in enumerate(lifting_aggregate)
-            ]
+            _adjust_lifting(item, price_multiplier, rate_multiplier)
+            for item in aggregate
         )
 
-    # For transition contract
-    else:
-        # Extract price and lifting_rate data from the original lifting_aggregate data
-        lifting_aggregate_attrs = {
-            "price": {
-                psc: (
-                    [
-                        lifting_aggregate[psc][i].price
-                        for i, val in enumerate(lifting_aggregate[psc])
-                    ]
-                )
-                for psc in ["PSC 1", "PSC 2"]
-            },
-            "rate": {
-                psc: (
-                    [
-                        lifting_aggregate[psc][i].lifting_rate
-                        for i, val in enumerate(lifting_aggregate[psc])
-                    ]
-                )
-                for psc in ["PSC 1", "PSC 2"]
-            },
-        }
-
-        # Perform modification to price and lifting_rate data
-        updated_attrs = {
-            "price": {
-                psc: [
-                    pr * price_multiplier
-                    for pr in lifting_aggregate_attrs["price"][psc]
-                ]
-                for psc in ["PSC 1", "PSC 2"]
-            },
-            "rate": {
-                psc: [
-                    rt * rate_multiplier for rt in lifting_aggregate_attrs["rate"][psc]
-                ]
-                for psc in ["PSC 1", "PSC 2"]
-            },
-        }
-
-        # Return new dictionary of modified lifting_aggregate data
-        return {
-            psc: tuple(
-                [
-                    Lifting(
-                        start_year=lifting_aggregate[psc][i].start_year,
-                        end_year=lifting_aggregate[psc][i].end_year,
-                        lifting_rate=updated_attrs["rate"][psc][i],
-                        price=updated_attrs["price"][psc][i],
-                        prod_year=lifting_aggregate[psc][i].prod_year,
-                        fluid_type=lifting_aggregate[psc][i].fluid_type,
-                        ghv=lifting_aggregate[psc][i].ghv,
-                        prod_rate=lifting_aggregate[psc][i].prod_rate,
-                    )
-                    for i, val in enumerate(lifting_aggregate[psc])
-                ]
-            )
-            for psc in ["PSC 1", "PSC 2"]
-        }
+    aggregate = _transition_aggregate(lifting_aggregate)
+    return {
+        psc: tuple(
+            _adjust_lifting(item, price_multiplier, rate_multiplier)
+            for item in aggregate[psc]
+        )
+        for psc in PSC_KEYS
+    }
 
 
 def get_rate_adjustment(
     contract_type: str,
-    lifting_aggregate: tuple | dict,
+    lifting_aggregate: LiftingAggregateInput,
     rate_multiplier: float,
-) -> tuple | dict:
+) -> LiftingAggregateOutput:
     """
     Adjust lifting rate for sensitivity analysis.
 
@@ -167,78 +562,24 @@ def get_rate_adjustment(
     tuple or dict
         A new instance of lifting aggregate with updated lifting rate.
     """
-    # For single contract
     if "Transition" not in contract_type:
-        # Extract lifting rate data from the original lifting_aggregate
-        lifting_aggregate_rate = [
-            lifting_aggregate[i].lifting_rate for i, val in enumerate(lifting_aggregate)
-        ]
+        aggregate = _single_aggregate(lifting_aggregate)
+        return tuple(_adjust_lifting(item, 1.0, rate_multiplier) for item in aggregate)
 
-        # Modify lifting rate data
-        updated_rate = [rt * rate_multiplier for rt in lifting_aggregate_rate]
-
-        # Return a new tuple of modified lifting_aggregate
-        return tuple(
-            [
-                Lifting(
-                    start_year=lifting_aggregate[i].start_year,
-                    end_year=lifting_aggregate[i].end_year,
-                    lifting_rate=updated_rate[i],
-                    price=lifting_aggregate[i].price,
-                    prod_year=lifting_aggregate[i].prod_year,
-                    fluid_type=lifting_aggregate[i].fluid_type,
-                    ghv=lifting_aggregate[i].ghv,
-                    prod_rate=lifting_aggregate[i].prod_rate,
-                )
-                for i, val in enumerate(lifting_aggregate)
-            ]
+    aggregate = _transition_aggregate(lifting_aggregate)
+    return {
+        psc: tuple(
+            _adjust_lifting(item, 1.0, rate_multiplier) for item in aggregate[psc]
         )
-
-    # For transition contract
-    else:
-        # Extract lifting rate data from the original lifting_aggregate
-        lifting_aggregate_rate = {
-            psc: (
-                [
-                    lifting_aggregate[psc][i].lifting_rate
-                    for i, val in enumerate(lifting_aggregate[psc])
-                ]
-            )
-            for psc in ["PSC 1", "PSC 2"]
-        }
-
-        # Modify lifting rate data
-        updated_rate = {
-            psc: [rt * rate_multiplier for rt in lifting_aggregate_rate[psc]]
-            for psc in ["PSC 1", "PSC 2"]
-        }
-
-        # Return a new dictionary of modified lifting_aggregate
-        return {
-            psc: tuple(
-                [
-                    Lifting(
-                        start_year=lifting_aggregate[psc][i].start_year,
-                        end_year=lifting_aggregate[psc][i].end_year,
-                        lifting_rate=updated_rate[psc][i],
-                        price=lifting_aggregate[psc][i].price,
-                        prod_year=lifting_aggregate[psc][i].prod_year,
-                        fluid_type=lifting_aggregate[psc][i].fluid_type,
-                        ghv=lifting_aggregate[psc][i].ghv,
-                        prod_rate=lifting_aggregate[psc][i].prod_rate,
-                    )
-                    for i, val in enumerate(lifting_aggregate[psc])
-                ]
-            )
-            for psc in ["PSC 1", "PSC 2"]
-        }
+        for psc in PSC_KEYS
+    }
 
 
 def get_opex_adjustment(
     contract_type: str,
-    opex_aggregate: tuple | dict,
+    opex_aggregate: OpexAggregateInput,
     opex_multiplier: float,
-) -> tuple | dict:
+) -> OpexAggregateOutput:
     """
     Adjust opex for sensitivity analysis.
 
@@ -256,127 +597,22 @@ def get_opex_adjustment(
     tuple or dict
         A new instance of opex aggregate with updated fixed_cost and cost_per_volume.
     """
-    # For single contract
     if "Transition" not in contract_type:
-        # Extract fixed_cost and cost_per_volume data from the original opex_aggregate
-        opex_aggregate_attrs = {
-            "fixed_cost": (
-                [opex_aggregate[i].fixed_cost for i, val in enumerate(opex_aggregate)]
-            ),
-            "cost_per_volume": (
-                [
-                    opex_aggregate[i].cost_per_volume
-                    for i, val in enumerate(opex_aggregate)
-                ]
-            ),
-        }
+        aggregate = _single_aggregate(opex_aggregate)
+        return tuple(_adjust_opex(item, opex_multiplier) for item in aggregate)
 
-        # Modify fixed_cost and cost_per_volume
-        updated_attrs = {
-            "fixed_cost": (
-                [fc * opex_multiplier for fc in opex_aggregate_attrs["fixed_cost"]]
-            ),
-            "cost_per_volume": (
-                [
-                    cpv * opex_multiplier
-                    for cpv in opex_aggregate_attrs["cost_per_volume"]
-                ]
-            ),
-        }
-
-        # Return a new tuple of modified opex_aggregate
-        return tuple(
-            [
-                OPEX(
-                    start_year=opex_aggregate[i].start_year,
-                    end_year=opex_aggregate[i].end_year,
-                    expense_year=opex_aggregate[i].expense_year,
-                    cost_allocation=opex_aggregate[i].cost_allocation,
-                    description=opex_aggregate[i].description,
-                    vat_portion=opex_aggregate[i].vat_portion,
-                    vat_discount=opex_aggregate[i].vat_discount,
-                    lbt_portion=opex_aggregate[i].lbt_portion,
-                    lbt_discount=opex_aggregate[i].lbt_discount,
-                    fixed_cost=updated_attrs["fixed_cost"][i],
-                    prod_rate=opex_aggregate[i].prod_rate,
-                    cost_per_volume=updated_attrs["cost_per_volume"][i],
-                )
-                for i, val in enumerate(opex_aggregate)
-            ]
-        )
-
-    # For transition contract
-    else:
-        # Extract fixed_cost and cost_per_volume data from the original opex_aggregate
-        opex_aggregate_attrs = {
-            "fixed_cost": {
-                psc: (
-                    [
-                        opex_aggregate[psc][i].fixed_cost
-                        for i, val in enumerate(opex_aggregate[psc])
-                    ]
-                )
-                for psc in ["PSC 1", "PSC 2"]
-            },
-            "cost_per_volume": {
-                psc: (
-                    [
-                        opex_aggregate[psc][i].cost_per_volume
-                        for i, val in enumerate(opex_aggregate[psc])
-                    ]
-                )
-                for psc in ["PSC 1", "PSC 2"]
-            },
-        }
-
-        # Modify fixed_cost and cost_per_volume data
-        updated_attrs = {
-            "fixed_cost": {
-                psc: [
-                    fc * opex_multiplier
-                    for fc in opex_aggregate_attrs["fixed_cost"][psc]
-                ]
-                for psc in ["PSC 1", "PSC 2"]
-            },
-            "cost_per_volume": {
-                psc: [
-                    cpv * opex_multiplier
-                    for cpv in opex_aggregate_attrs["cost_per_volume"][psc]
-                ]
-                for psc in ["PSC 1", "PSC 2"]
-            },
-        }
-
-        # Return a new dictionary with modified fixed_cost and cost_per_volume
-        return {
-            psc: tuple(
-                [
-                    OPEX(
-                        start_year=opex_aggregate[psc][i].start_year,
-                        end_year=opex_aggregate[psc][i].end_year,
-                        expense_year=opex_aggregate[psc][i].expense_year,
-                        cost_allocation=opex_aggregate[psc][i].cost_allocation,
-                        description=opex_aggregate[psc][i].description,
-                        vat_portion=opex_aggregate[psc][i].vat_portion,
-                        vat_discount=opex_aggregate[psc][i].vat_discount,
-                        lbt_portion=opex_aggregate[psc][i].lbt_portion,
-                        lbt_discount=opex_aggregate[psc][i].lbt_discount,
-                        fixed_cost=updated_attrs["fixed_cost"][psc][i],
-                        prod_rate=opex_aggregate[psc][i].prod_rate,
-                        cost_per_volume=updated_attrs["cost_per_volume"][psc][i],
-                    )
-                    for i, val in enumerate(opex_aggregate[psc])
-                ]
-            )
-            for psc in ["PSC 1", "PSC 2"]
-        }
+    aggregate = _transition_aggregate(opex_aggregate)
+    return {
+        psc: tuple(_adjust_opex(item, opex_multiplier) for item in aggregate[psc])
+        for psc in PSC_KEYS
+    }
 
 
 def get_tangible_adjustment(
     contract_type: str,
-    tangible_aggregate: tuple | dict,
+    tangible_aggregate: CapitalAggregateInput,
     tangible_multiplier: float,
-) -> tuple | dict:
+) -> CapitalAggregateOutput:
     """
     Adjust tangible cost for sensitivity analysis.
 
@@ -394,1522 +630,382 @@ def get_tangible_adjustment(
     tuple or dict
         A new instance of tangible cost aggregate with updated cost.
     """
-    # For single contract
     if "Transition" not in contract_type:
-        # Extract cost data from the original tangible_cost_aggregate
-        tangible_aggregate_cost = [
-            tangible_aggregate[i].cost for i, val in enumerate(tangible_aggregate)
-        ]
-
-        # Modify cost data
-        updated_cost = [cst * tangible_multiplier for cst in tangible_aggregate_cost]
-
-        # Return a new tuple of Tangible with modified cost
+        aggregate = _single_aggregate(tangible_aggregate)
         return tuple(
-            [
-                CapitalCost(
-                    start_year=tangible_aggregate[i].start_year,
-                    end_year=tangible_aggregate[i].end_year,
-                    cost=updated_cost[i],
-                    expense_year=tangible_aggregate[i].expense_year,
-                    cost_allocation=tangible_aggregate[i].cost_allocation,
-                    description=tangible_aggregate[i].description,
-                    vat_portion=tangible_aggregate[i].vat_portion,
-                    vat_discount=tangible_aggregate[i].vat_discount,
-                    lbt_portion=tangible_aggregate[i].lbt_portion,
-                    lbt_discount=tangible_aggregate[i].lbt_discount,
-                    pis_year=tangible_aggregate[i].pis_year,
-                    salvage_value=tangible_aggregate[i].salvage_value,
-                    useful_life=tangible_aggregate[i].useful_life,
-                    depreciation_factor=tangible_aggregate[i].depreciation_factor,
-                    is_ic_applied=tangible_aggregate[i].is_ic_applied,
-                )
-                for i, val in enumerate(tangible_aggregate)
-            ]
+            _adjust_capital_cost(item, tangible_multiplier) for item in aggregate
         )
 
-    # For transition contract
-    else:
-        # Extract cost data from the original tangible_cost_aggregate
-        tangible_aggregate_cost = {
-            psc: (
-                [
-                    tangible_aggregate[psc][i].cost
-                    for i, val in enumerate(tangible_aggregate[psc])
-                ]
-            )
-            for psc in ["PSC 1", "PSC 2"]
-        }
-
-        # Modify cost data
-        updated_cost = {
-            psc: [cst * tangible_multiplier for cst in tangible_aggregate_cost[psc]]
-            for psc in ["PSC 1", "PSC 2"]
-        }
-
-        # Return a new dictionary of tuple of Tangible with modified cost
-        return {
-            psc: tuple(
-                [
-                    CapitalCost(
-                        start_year=tangible_aggregate[psc][i].start_year,
-                        end_year=tangible_aggregate[psc][i].end_year,
-                        cost=updated_cost[psc][i],
-                        expense_year=tangible_aggregate[psc][i].expense_year,
-                        cost_allocation=tangible_aggregate[psc][i].cost_allocation,
-                        description=tangible_aggregate[psc][i].description,
-                        vat_portion=tangible_aggregate[psc][i].vat_portion,
-                        vat_discount=tangible_aggregate[psc][i].vat_discount,
-                        lbt_portion=tangible_aggregate[psc][i].lbt_portion,
-                        lbt_discount=tangible_aggregate[psc][i].lbt_discount,
-                        pis_year=tangible_aggregate[psc][i].pis_year,
-                        salvage_value=tangible_aggregate[psc][i].salvage_value,
-                        useful_life=tangible_aggregate[psc][i].useful_life,
-                        depreciation_factor=tangible_aggregate[psc][
-                            i
-                        ].depreciation_factor,
-                        is_ic_applied=tangible_aggregate[psc][i].is_ic_applied,
-                    )
-                    for i, val in enumerate(tangible_aggregate[psc])
-                ]
-            )
-            for psc in ["PSC 1", "PSC 2"]
-        }
+    aggregate = _transition_aggregate(tangible_aggregate)
+    return {
+        psc: tuple(
+            _adjust_capital_cost(item, tangible_multiplier) for item in aggregate[psc]
+        )
+        for psc in PSC_KEYS
+    }
 
 
 def get_intangible_adjustment(
     contract_type: str,
-    intangible_aggregate: tuple | dict,
+    intangible_aggregate: IntangibleAggregateInput,
     intangible_multiplier: float,
-) -> tuple | dict:
+) -> IntangibleAggregateOutput:
     """
     Adjust intangible cost for sensitivity analysis.
 
-    Parameters
-    ----------
-    contract_type: str
-        The type of contract.
-    intangible_aggregate: tuple | dict
-        The aggregate of intangible.
-    intangible_multiplier: float
-        A scalar multiplier to adjust intangible cost.
-
-    Returns
-    -------
-    tuple or dict
-        A new instance of intangible cost aggregate with updated cost.
+    The aggregate keeps its historical tuple shape for single contracts and PSC
+    mapping shape for transitions while only the cost field is scaled.
     """
-    # For single contract
     if "Transition" not in contract_type:
-        # Extract cost data from the original intangible_cost_aggregate
-        intangible_aggregate_cost = [
-            intangible_aggregate[i].cost for i, val in enumerate(intangible_aggregate)
-        ]
-
-        # Modify cost data
-        updated_cost = [
-            cst * intangible_multiplier for cst in intangible_aggregate_cost
-        ]
-
-        # Return a new tuple of Intangible with modified cost
+        aggregate = _single_aggregate(intangible_aggregate)
         return tuple(
-            [
-                Intangible(
-                    start_year=intangible_aggregate[i].start_year,
-                    end_year=intangible_aggregate[i].end_year,
-                    cost=updated_cost[i],
-                    expense_year=intangible_aggregate[i].expense_year,
-                    cost_allocation=intangible_aggregate[i].cost_allocation,
-                    description=intangible_aggregate[i].description,
-                    vat_portion=intangible_aggregate[i].vat_portion,
-                    vat_discount=intangible_aggregate[i].vat_discount,
-                    lbt_portion=intangible_aggregate[i].lbt_portion,
-                    lbt_discount=intangible_aggregate[i].lbt_discount,
-                )
-                for i, val in enumerate(intangible_aggregate)
-            ]
+            _adjust_intangible(item, intangible_multiplier) for item in aggregate
         )
 
-    # For transition contract
-    else:
-        # Extract cost data from the original intangible_cost_aggregate
-        intangible_aggregate_cost = {
-            psc: (
-                [
-                    intangible_aggregate[psc][i].cost
-                    for i, val in enumerate(intangible_aggregate[psc])
-                ]
-            )
-            for psc in ["PSC 1", "PSC 2"]
-        }
-
-        # Modify cost data
-        updated_cost = {
-            psc: [cst * intangible_multiplier for cst in intangible_aggregate_cost[psc]]
-            for psc in ["PSC 1", "PSC 2"]
-        }
-
-        # Return a new dictionary of tuple of Intangible with modified cost
-        return {
-            psc: tuple(
-                [
-                    Intangible(
-                        start_year=intangible_aggregate[psc][i].start_year,
-                        end_year=intangible_aggregate[psc][i].end_year,
-                        cost=updated_cost[psc][i],
-                        expense_year=intangible_aggregate[psc][i].expense_year,
-                        cost_allocation=intangible_aggregate[psc][i].cost_allocation,
-                        description=intangible_aggregate[psc][i].description,
-                        vat_portion=intangible_aggregate[psc][i].vat_portion,
-                        vat_discount=intangible_aggregate[psc][i].vat_discount,
-                        lbt_portion=intangible_aggregate[psc][i].lbt_portion,
-                        lbt_discount=intangible_aggregate[psc][i].lbt_discount,
-                    )
-                    for i, val in enumerate(intangible_aggregate[psc])
-                ]
-            )
-            for psc in ["PSC 1", "PSC 2"]
-        }
+    aggregate = _transition_aggregate(intangible_aggregate)
+    return {
+        psc: tuple(
+            _adjust_intangible(item, intangible_multiplier) for item in aggregate[psc]
+        )
+        for psc in PSC_KEYS
+    }
 
 
 @dataclass
 class AdjustData:
-    """
-    Class to adjust data for sensitivity study.
+    """Prepare sensitivity-adjusted inputs and activate a contract."""
 
-    Parameters
-    ----------
-    workbook_path: str
-    data: object
-    multipliers: np.ndarray
+    multipliers: NumericArray
+    workbook_path: str | None = field(default=None)
+    data: AdjustDataInput | None = field(default=None, repr=False)
 
-    Attributes
-    ----------
-    contract_type: str
-    summary_arguments: dict
-    sensitivity_data: dict
-    psc: CostRecovery
-    psc_arguments: dict
-    """
+    contract_type: str | None = field(default=None, init=False, repr=False)
+    summary_arguments: SummaryArguments | None = field(
+        default=None, init=False, repr=False
+    )
+    psc: PSCState | None = field(default=None, init=False, repr=False)
+    psc_arguments: ArgumentsState | None = field(default=None, init=False, repr=False)
+    sensitivity_data: SensitivityData | None = field(default=None, init=False)
+    transition: Transition | None = field(default=None, init=False, repr=False)
+    transition_arguments: ContractArguments | None = field(
+        default=None, init=False, repr=False
+    )
+    _data: AdjustDataInput = field(init=False, repr=False)
 
-    # Parameters
-    multipliers: np.ndarray
-    workbook_path: str = field(default=None)
-    data: object = field(default=None, repr=False)
+    def _require_data(self) -> AdjustDataInput:
+        if self.data is None:
+            raise AdjustDataException("AdjustData requires an input data object")
+        return self.data
 
-    # Attributes to be defined later
-    contract_type: str = field(default=None, init=False, repr=False)
-    summary_arguments: dict = field(default=None, init=False, repr=False)
-    psc: CostRecovery | GrossSplit | dict = field(default=None, init=False, repr=False)
-    psc_arguments: dict = field(default=None, init=False, repr=False)
-    sensitivity_data: dict = field(default=None, init=False)
-    transition: Transition = field(default=None, init=False, repr=False)
-    transition_arguments: dict = field(default=None, init=False, repr=False)
+    def _require_summary_arguments(self) -> SummaryArguments:
+        if self.summary_arguments is None:
+            raise AdjustDataException("AdjustData has not been initialized")
+        return self.summary_arguments
 
-    def __post_init__(self):
-        # Prepare attribute workbook_path
-        if self.workbook_path is None:
-            self.workbook_path = None
+    def _require_sensitivity_data(self) -> SensitivityData:
+        if self.sensitivity_data is None:
+            raise AdjustDataException("AdjustData has not been initialized")
+        return self.sensitivity_data
 
-        # Prepare attribute summary_arguments
-        self.summary_arguments = {
-            "reference_year": self.data.general_config_data.discount_rate_start_year,
-            "inflation_rate": self.data.fiscal_config_data.inflation_rate,
-            "discount_rate": self.data.general_config_data.discount_rate,
-            "npv_mode": self.data.fiscal_config_data.npv_mode,
-            "discounting_mode": self.data.fiscal_config_data.discounting_mode,
+    def __post_init__(self) -> None:
+        data = self._require_data()
+        self._data = data
+        self.contract_type = data.general_config_data.type_of_contract
+        summary: SummaryArguments = {
+            "reference_year": data.general_config_data.discount_rate_start_year,
+            "inflation_rate": data.fiscal_config_data.inflation_rate,
+            "discount_rate": data.general_config_data.discount_rate,
+            "npv_mode": data.fiscal_config_data.npv_mode,
+            "discounting_mode": data.fiscal_config_data.discounting_mode,
         }
-
-        # Prepare attribute contract_type
-        self.contract_type = self.data.general_config_data.type_of_contract
-
-        # Prepare parameter sensitivity data
-        self.sensitivity_data = {
-            # Adjust oil and condensate lifting data
-            "oil_lifting_aggregate_total": (
-                get_price_and_rate_adjustment(
-                    contract_type=self.contract_type,
-                    lifting_aggregate=self.data.oil_lifting_aggregate_total,
-                    price_multiplier=self.multipliers[0],
-                    rate_multiplier=self.multipliers[4],
-                )
+        self.summary_arguments = summary
+        sensitivity: SensitivityData = {
+            "oil_lifting_aggregate_total": get_price_and_rate_adjustment(
+                contract_type=self.contract_type,
+                lifting_aggregate=data.oil_lifting_aggregate_total,
+                price_multiplier=_multiplier(self.multipliers, 0),
+                rate_multiplier=_multiplier(self.multipliers, 4),
             ),
-            # Adjust gas, lpg proprane, and lpg butane lifting data
-            "gas_lifting_aggregate_total": (
-                get_price_and_rate_adjustment(
-                    contract_type=self.contract_type,
-                    lifting_aggregate=self.data.gas_lifting_aggregate_total,
-                    price_multiplier=self.multipliers[1],
-                    rate_multiplier=self.multipliers[4],
-                )
+            "gas_lifting_aggregate_total": get_price_and_rate_adjustment(
+                contract_type=self.contract_type,
+                lifting_aggregate=data.gas_lifting_aggregate_total,
+                price_multiplier=_multiplier(self.multipliers, 1),
+                rate_multiplier=_multiplier(self.multipliers, 4),
             ),
-            # Adjust sulfur lifting data
-            "sulfur_lifting_aggregate": (
-                get_rate_adjustment(
-                    contract_type=self.contract_type,
-                    lifting_aggregate=self.data.sulfur_lifting_aggregate,
-                    rate_multiplier=self.multipliers[4],
-                )
+            "sulfur_lifting_aggregate": get_rate_adjustment(
+                contract_type=self.contract_type,
+                lifting_aggregate=data.sulfur_lifting_aggregate,
+                rate_multiplier=_multiplier(self.multipliers, 4),
             ),
-            # Adjust electricity lifting data
-            "electricity_lifting_aggregate": (
-                get_rate_adjustment(
-                    contract_type=self.contract_type,
-                    lifting_aggregate=self.data.electricity_lifting_aggregate,
-                    rate_multiplier=self.multipliers[4],
-                )
+            "electricity_lifting_aggregate": get_rate_adjustment(
+                contract_type=self.contract_type,
+                lifting_aggregate=data.electricity_lifting_aggregate,
+                rate_multiplier=_multiplier(self.multipliers, 4),
             ),
-            # Adjust CO2 lifting data
-            "co2_lifting_aggregate": (
-                get_rate_adjustment(
-                    contract_type=self.contract_type,
-                    lifting_aggregate=self.data.co2_lifting_aggregate,
-                    rate_multiplier=self.multipliers[4],
-                )
+            "co2_lifting_aggregate": get_rate_adjustment(
+                contract_type=self.contract_type,
+                lifting_aggregate=data.co2_lifting_aggregate,
+                rate_multiplier=_multiplier(self.multipliers, 4),
             ),
-            # Adjust OPEX data
-            "opex_aggregate": (
-                get_opex_adjustment(
-                    contract_type=self.contract_type,
-                    opex_aggregate=self.data.opex_aggregate,
-                    opex_multiplier=self.multipliers[2],
-                )
+            "opex_aggregate": get_opex_adjustment(
+                contract_type=self.contract_type,
+                opex_aggregate=data.opex_aggregate,
+                opex_multiplier=_multiplier(self.multipliers, 2),
             ),
-            # Adjust CAPEX data: tangible
-            "tangible_cost_aggregate": (
-                get_tangible_adjustment(
-                    contract_type=self.contract_type,
-                    tangible_aggregate=self.data.capital_cost_aggregate,
-                    tangible_multiplier=self.multipliers[3],
-                )
+            "tangible_cost_aggregate": get_tangible_adjustment(
+                contract_type=self.contract_type,
+                tangible_aggregate=data.capital_cost_aggregate,
+                tangible_multiplier=_multiplier(self.multipliers, 3),
             ),
-            # Adjust CAPEX data: intangible
-            "intangible_cost_aggregate": (
-                get_intangible_adjustment(
-                    contract_type=self.contract_type,
-                    intangible_aggregate=self.data.intangible_cost_aggregate,
-                    intangible_multiplier=self.multipliers[3],
-                )
+            "intangible_cost_aggregate": get_intangible_adjustment(
+                contract_type=self.contract_type,
+                intangible_aggregate=data.intangible_cost_aggregate,
+                intangible_multiplier=_multiplier(self.multipliers, 3),
             ),
         }
+        self.sensitivity_data = sensitivity
 
-    def _get_single_contract_project(self) -> tuple:
-        """
-        Get details for a single Production Sharing Contract with BaseProject.
-
-        Returns
-        -------
-        psc: BaseProject
-            Object representing the BaseProject contract.
-        psc_arguments: dict
-            Arguments specific to the Cost Recovery contract.
-        summary_arguments: dict
-            Arguments for the contract summary.
-
-        Notes
-        -----
-        This method creates an instance of BaseProject class.
-        It populates the attributes of BaseProject object with relevant data.
-        """
-        # Prepare total lifting data
-        lifting_total = (
-            self.sensitivity_data["oil_lifting_aggregate_total"]
-            + self.sensitivity_data["gas_lifting_aggregate_total"]
-            + self.sensitivity_data["sulfur_lifting_aggregate"]
-            + self.sensitivity_data["electricity_lifting_aggregate"]
-            + self.sensitivity_data["co2_lifting_aggregate"]
+    def _get_single_contract_project(self) -> ActivationResult:
+        data = self._data
+        general = data.general_config_data
+        fiscal = data.fiscal_config_data
+        sensitivity = self._require_sensitivity_data()
+        summary = self._require_summary_arguments()
+        psc = BaseProject(
+            start_date=general.start_date_project,
+            end_date=general.end_date_project,
+            approval_year=general.start_date_project.year,
+            oil_onstream_date=general.oil_onstream_date,
+            gas_onstream_date=general.gas_onstream_date,
+            lifting=_single_lifting_total(sensitivity),
+            capital_cost=_single_aggregate(sensitivity["tangible_cost_aggregate"]),
+            intangible_cost=_single_aggregate(sensitivity["intangible_cost_aggregate"]),
+            opex=_single_aggregate(sensitivity["opex_aggregate"]),
+            asr_cost=_single_aggregate(data.asr_cost_aggregate),
         )
-
-        # Create an instance of Project
-        self.psc = BaseProject(
-            start_date=self.data.general_config_data.start_date_project,
-            end_date=self.data.general_config_data.end_date_project,
-            oil_onstream_date=self.data.general_config_data.oil_onstream_date,
-            gas_onstream_date=self.data.general_config_data.gas_onstream_date,
-            lifting=lifting_total,
-            capital_cost=self.sensitivity_data["tangible_cost_aggregate"],
-            intangible_cost=self.sensitivity_data["intangible_cost_aggregate"],
-            opex=self.sensitivity_data["opex_aggregate"],
-            asr_cost=self.data.asr_cost_aggregate,
-        )
-
-        # Specify arguments for Project
-        self.psc_arguments = {
-            "vat_rate": self.data.fiscal_config_data.vat_rate,
-            "lbt_rate": self.data.fiscal_config_data.lbt_rate,
-            "inflation_rate": self.data.fiscal_config_data.inflation_rate,
-            "future_rate": float(self.data.fiscal_config_data.asr_future_rate),
-            # "year_ref": None,
-            # "tax_type": None,
+        project_arguments: ContractArguments = {
+            "sulfur_revenue": _single_config(fiscal.sulfur_revenue_config),
+            "electricity_revenue": _single_config(fiscal.electricity_revenue_config),
+            "co2_revenue": _single_config(fiscal.co2_revenue_config),
+            "vat_rate": _single_config(fiscal.vat_rate),
+            "inflation_rate": _single_config(fiscal.inflation_rate),
+            "inflation_rate_applied_to": general.inflation_rate_applied_to,
         }
+        self.psc = psc
+        self.psc_arguments = project_arguments
+        summary["contract"] = psc
+        return psc, None, summary
 
-        # Filling the summary contract argument
-        self.summary_arguments["contract"] = self.psc
-
-        return self.psc, None, self.summary_arguments
-
-    def _get_single_contract_cr(self) -> tuple:
-        """
-        Get details for a single Production Sharing Contract with Cost Recovery (PSC CR).
-
-        Returns
-        -------
-        psc: CostRecovery
-            Object representing the Cost Recovery contract.
-        psc_arguments: dict
-            Arguments specific to the Cost Recovery contract.
-        summary_arguments: dict
-            Arguments for the contract summary.
-
-        Notes
-        -----
-        This method creates an instance of the PSC CostRecovery class.
-        It populates the attributes of PSC CostRecovery object with relevant data.
-        """
-        # Prepare total lifting data
-        lifting_total = (
-            self.sensitivity_data["oil_lifting_aggregate_total"]
-            + self.sensitivity_data["gas_lifting_aggregate_total"]
-            + self.sensitivity_data["sulfur_lifting_aggregate"]
-            + self.sensitivity_data["electricity_lifting_aggregate"]
-            + self.sensitivity_data["co2_lifting_aggregate"]
+    def _get_single_contract_cr(self) -> ActivationResult:
+        data = self._data
+        general = data.general_config_data
+        fiscal = data.fiscal_config_data
+        sensitivity = self._require_sensitivity_data()
+        summary = self._require_summary_arguments()
+        config = _cost_recovery_config(data.psc_cr_data)
+        psc = _build_cost_recovery(
+            general=general,
+            config=config,
+            lifting=_single_lifting_total(sensitivity),
+            capital_cost=_single_aggregate(sensitivity["tangible_cost_aggregate"]),
+            intangible_cost=_single_aggregate(sensitivity["intangible_cost_aggregate"]),
+            opex=_single_aggregate(sensitivity["opex_aggregate"]),
+            asr_cost=_single_aggregate(data.asr_cost_aggregate),
+            psc="PSC 1",
         )
-
-        # Create an instance of PSC CR
-        self.psc = CostRecovery(
-            start_date=self.data.general_config_data.start_date_project,
-            end_date=self.data.general_config_data.end_date_project,
-            oil_onstream_date=self.data.general_config_data.oil_onstream_date,
-            gas_onstream_date=self.data.general_config_data.gas_onstream_date,
-            lifting=lifting_total,
-            capital_cost=self.sensitivity_data["tangible_cost_aggregate"],
-            intangible_cost=self.sensitivity_data["intangible_cost_aggregate"],
-            opex=self.sensitivity_data["opex_aggregate"],
-            asr_cost=self.data.asr_cost_aggregate,
-            oil_ftp_is_available=self.data.psc_cr_data.oil_ftp_availability,
-            oil_ftp_is_shared=self.data.psc_cr_data.oil_ftp_is_shared,
-            oil_ftp_portion=self.data.psc_cr_data.oil_ftp_portion,
-            gas_ftp_is_available=self.data.psc_cr_data.gas_ftp_availability,
-            gas_ftp_is_shared=self.data.psc_cr_data.gas_ftp_is_shared,
-            gas_ftp_portion=self.data.psc_cr_data.gas_ftp_portion,
-            tax_split_type=self.data.psc_cr_data.split_type,
-            condition_dict=self.data.psc_cr_data.icp_sliding_scale,
-            indicator_rc_icp_sliding=self.data.psc_cr_data.indicator_rc_split_sliding_scale,
-            oil_ctr_pretax_share=self.data.psc_cr_data.oil_ctr_pretax,
-            gas_ctr_pretax_share=self.data.psc_cr_data.gas_ctr_pretax,
-            oil_ic_rate=self.data.psc_cr_data.ic_oil,
-            gas_ic_rate=self.data.psc_cr_data.ic_gas,
-            ic_is_available=self.data.psc_cr_data.ic_availability,
-            oil_cr_cap_rate=self.data.psc_cr_data.oil_cr_cap_rate,
-            gas_cr_cap_rate=self.data.psc_cr_data.gas_cr_cap_rate,
-            oil_dmo_volume_portion=self.data.psc_cr_data.oil_dmo_volume,
-            oil_dmo_fee_portion=self.data.psc_cr_data.oil_dmo_fee,
-            oil_dmo_holiday_duration=self.data.psc_cr_data.oil_dmo_period,
-            gas_dmo_volume_portion=self.data.psc_cr_data.gas_dmo_volume,
-            gas_dmo_fee_portion=self.data.psc_cr_data.gas_dmo_fee,
-            gas_dmo_holiday_duration=self.data.psc_cr_data.gas_dmo_period,
+        arguments = _build_contract_arguments(
+            general=general,
+            fiscal=fiscal,
+            config=config,
+            psc=None,
+            is_cost_recovery=True,
         )
+        self.psc = psc
+        self.psc_arguments = arguments
+        summary["contract"] = psc
+        return psc, arguments, summary
 
-        # Specify arguments for PSC CR
-        self.psc_arguments = {
-            "sulfur_revenue": self.data.fiscal_config_data.sulfur_revenue_config,
-            "electricity_revenue": self.data.fiscal_config_data.electricity_revenue_config,
-            "co2_revenue": self.data.fiscal_config_data.co2_revenue_config,
-            "is_dmo_end_weighted": self.data.psc_cr_data.dmo_is_weighted,
-            "tax_regime": self.data.fiscal_config_data.tax_mode,
-            "tax_rate": self.data.fiscal_config_data.tax_rate,
-            "ftp_tax_regime": self.data.fiscal_config_data.tax_payment_config,
-            "sunk_cost_reference_year": self.data.fiscal_config_data.sunk_cost_reference_year,
-            "depr_method": self.data.fiscal_config_data.depreciation_method,
-            "decline_factor": self.data.fiscal_config_data.decline_factor,
-            "vat_rate": self.data.fiscal_config_data.vat_rate,
-            "lbt_rate": self.data.fiscal_config_data.lbt_rate,
-            "inflation_rate": self.data.fiscal_config_data.inflation_rate,
-            "future_rate": float(self.data.fiscal_config_data.asr_future_rate),
-            "inflation_rate_applied_to": self.data.general_config_data.inflation_rate_applied_to,
-            # "year_ref": None,
-            # "tax_type": None,
-        }
-
-        # Fill the summary contract argument
-        self.summary_arguments["contract"] = self.psc
-
-        return self.psc, self.psc_arguments, self.summary_arguments
-
-    def _get_single_contract_gs(self) -> tuple:
-        """
-        Get details for a single Production Sharing Contract with Gross Split (PSC GS).
-
-        Returns
-        -------
-        psc: CostRecovery
-            Object representing the Gross Split contract.
-        psc_arguments: dict
-            Arguments specific to the Gross Split contract.
-        summary_arguments: dict
-            Arguments for the contract summary.
-
-        Notes
-        -----
-        This method creates an instance of the PSC GrossSplit class.
-        It populates the attributes of PSC GrossSplit object with relevant data.
-        """
-        # Prepare total lifting data
-        lifting_total = (
-            self.sensitivity_data["oil_lifting_aggregate_total"]
-            + self.sensitivity_data["gas_lifting_aggregate_total"]
-            + self.sensitivity_data["sulfur_lifting_aggregate"]
-            + self.sensitivity_data["electricity_lifting_aggregate"]
-            + self.sensitivity_data["co2_lifting_aggregate"]
+    def _get_single_contract_gs(self) -> ActivationResult:
+        data = self._data
+        general = data.general_config_data
+        fiscal = data.fiscal_config_data
+        sensitivity = self._require_sensitivity_data()
+        summary = self._require_summary_arguments()
+        config = _gross_split_config(data.psc_gs_data)
+        psc = _build_gross_split(
+            general=general,
+            config=config,
+            lifting=_single_lifting_total(sensitivity),
+            capital_cost=_single_aggregate(sensitivity["tangible_cost_aggregate"]),
+            intangible_cost=_single_aggregate(sensitivity["intangible_cost_aggregate"]),
+            opex=_single_aggregate(sensitivity["opex_aggregate"]),
+            asr_cost=_single_aggregate(data.asr_cost_aggregate),
+            psc="PSC 1",
         )
-
-        # Create an instance of PSC GS
-        self.psc = GrossSplit(
-            start_date=self.data.general_config_data.start_date_project,
-            end_date=self.data.general_config_data.end_date_project,
-            oil_onstream_date=self.data.general_config_data.oil_onstream_date,
-            gas_onstream_date=self.data.general_config_data.gas_onstream_date,
-            lifting=lifting_total,
-            capital_cost=self.sensitivity_data["tangible_cost_aggregate"],
-            intangible_cost=self.sensitivity_data["intangible_cost_aggregate"],
-            opex=self.sensitivity_data["opex_aggregate"],
-            asr_cost=self.data.asr_cost_aggregate,
-            field_status=self.data.psc_gs_data.field_status,
-            field_loc=self.data.psc_gs_data.field_location,
-            res_depth=self.data.psc_gs_data.reservoir_depth,
-            infra_avail=self.data.psc_gs_data.infrastructure_availability,
-            res_type=self.data.psc_gs_data.reservoir_type,
-            api_oil=self.data.psc_gs_data.oil_api,
-            domestic_use=self.data.psc_gs_data.domestic_content_use,
-            prod_stage=self.data.psc_gs_data.production_stage,
-            co2_content=self.data.psc_gs_data.co2_content,
-            h2s_content=self.data.psc_gs_data.h2s_content,
-            base_split_ctr_oil=self.data.psc_gs_data.oil_base_split,
-            base_split_ctr_gas=self.data.psc_gs_data.gas_base_split,
-            split_ministry_disc=self.data.psc_gs_data.ministry_discretion_split,
-            oil_dmo_volume_portion=self.data.psc_gs_data.oil_dmo_volume,
-            oil_dmo_fee_portion=self.data.psc_gs_data.oil_dmo_fee,
-            oil_dmo_holiday_duration=self.data.psc_gs_data.oil_dmo_period,
-            gas_dmo_volume_portion=self.data.psc_gs_data.gas_dmo_volume,
-            gas_dmo_fee_portion=self.data.psc_gs_data.gas_dmo_fee,
-            gas_dmo_holiday_duration=self.data.psc_gs_data.gas_dmo_period,
+        arguments = _build_contract_arguments(
+            general=general,
+            fiscal=fiscal,
+            config=config,
+            psc=None,
+            is_cost_recovery=False,
         )
+        self.psc = psc
+        self.psc_arguments = arguments
+        summary["contract"] = psc
+        return psc, arguments, summary
 
-        # Specify arguments for PSC GS
-        self.psc_arguments = {
-            "sulfur_revenue": self.data.fiscal_config_data.sulfur_revenue_config,
-            "electricity_revenue": self.data.fiscal_config_data.electricity_revenue_config,
-            "co2_revenue": self.data.fiscal_config_data.co2_revenue_config,
-            "is_dmo_end_weighted": self.data.psc_gs_data.dmo_is_weighted,
-            "tax_regime": self.data.fiscal_config_data.tax_mode,
-            "tax_rate": self.data.fiscal_config_data.tax_rate,
-            "sunk_cost_reference_year": self.data.fiscal_config_data.sunk_cost_reference_year,
-            "depr_method": self.data.fiscal_config_data.depreciation_method,
-            "decline_factor": self.data.fiscal_config_data.depreciation_method,
-            "vat_rate": self.data.fiscal_config_data.vat_rate,
-            "lbt_rate": self.data.fiscal_config_data.lbt_rate,
-            "inflation_rate": self.data.fiscal_config_data.inflation_rate,
-            "future_rate": float(self.data.fiscal_config_data.asr_future_rate),
-            "inflation_rate_applied_to": self.data.general_config_data.inflation_rate_applied_to,
-            # "regime":,
-            # "year_ref":,
-            # "tax_type":,
-        }
+    def _get_transition_contract(
+        self,
+        config1: CostRecoveryConfig | GrossSplitConfig,
+        config2: CostRecoveryConfig | GrossSplitConfig,
+        is_cost_recovery1: bool,
+        is_cost_recovery2: bool,
+    ) -> ActivationResult:
+        data = self._data
+        general = data.general_config_data
+        fiscal = data.fiscal_config_data
+        sensitivity = self._require_sensitivity_data()
+        summary = self._require_summary_arguments()
+        lifting_total = _transition_lifting_total(sensitivity)
+        capital_cost = _transition_aggregate(sensitivity["tangible_cost_aggregate"])
+        intangible_cost = _transition_aggregate(
+            sensitivity["intangible_cost_aggregate"]
+        )
+        opex = _transition_aggregate(sensitivity["opex_aggregate"])
+        asr_cost = _transition_aggregate(data.asr_cost_aggregate)
 
-        # Filling the summary contract argument
-        self.summary_arguments["contract"] = self.psc
-
-        return self.psc, self.psc_arguments, self.summary_arguments
-
-    def _get_transition_contract_cr_to_cr(self) -> tuple:
-        """
-        Get details for a transition Production Sharing Contract from
-        Cost Recovery to Cost Recovery (CR-CR).
-
-        Returns
-        -------
-        transition: Transition
-            Object representing the transition from Cost Recovery to Cost Recovery.
-        transition_arguments: dict
-            Arguments specific to the transition.
-        summary_arguments: dict
-            Arguments for the transition summary.
-
-        Notes
-        -----
-        This method defines configurations for PSC transition CR to CR. It creates
-        instances and populates the attributes of CostRecovery objects for both cases,
-        respectively.
-        """
-        # Define keys for transition CR-CR
-        keys = ["Cost Recovery Config", "Cost Recovery Config (2)"]
-
-        # Prepare total lifting data
-        lifting_total = {
-            i: (
-                self.sensitivity_data["oil_lifting_aggregate_total"][i]
-                + self.sensitivity_data["gas_lifting_aggregate_total"][i]
-                + self.sensitivity_data["sulfur_lifting_aggregate"][i]
-                + self.sensitivity_data["electricity_lifting_aggregate"][i]
-                + self.sensitivity_data["co2_lifting_aggregate"][i]
-            )
-            for i in ["PSC 1", "PSC 2"]
-        }
-
-        # Create an instance of PSC transition CR-CR
-        self.psc = {
-            "PSC 1": CostRecovery(
-                start_date=self.data.general_config_data.start_date_project,
-                end_date=self.data.general_config_data.end_date_project,
-                oil_onstream_date=self.data.general_config_data.oil_onstream_date,
-                gas_onstream_date=self.data.general_config_data.gas_onstream_date,
+        if is_cost_recovery1:
+            config_cr1 = _cost_recovery_config(config1)
+            contract1: CostRecovery | GrossSplit = _build_cost_recovery(
+                general=general,
+                config=config_cr1,
                 lifting=lifting_total["PSC 1"],
-                capital_cost=self.sensitivity_data["tangible_cost_aggregate"]["PSC 1"],
-                intangible_cost=self.sensitivity_data["intangible_cost_aggregate"][
-                    "PSC 1"
-                ],
-                opex=self.sensitivity_data["opex_aggregate"]["PSC 1"],
-                asr_cost=self.data.asr_cost_aggregate["PSC 1"],
-                oil_ftp_is_available=self.data.psc_transition_cr_to_cr[
-                    keys[0]
-                ].oil_ftp_availability,
-                oil_ftp_is_shared=self.data.psc_transition_cr_to_cr[
-                    keys[0]
-                ].oil_ftp_is_shared,
-                oil_ftp_portion=self.data.psc_transition_cr_to_cr[
-                    keys[0]
-                ].oil_ftp_portion,
-                gas_ftp_is_available=self.data.psc_transition_cr_to_cr[
-                    keys[0]
-                ].gas_ftp_availability,
-                gas_ftp_is_shared=self.data.psc_transition_cr_to_cr[
-                    keys[0]
-                ].gas_ftp_is_shared,
-                gas_ftp_portion=self.data.psc_transition_cr_to_cr[
-                    keys[0]
-                ].gas_ftp_portion,
-                tax_split_type=self.data.psc_transition_cr_to_cr[keys[0]].split_type,
-                condition_dict=self.data.psc_transition_cr_to_cr[
-                    keys[0]
-                ].icp_sliding_scale,
-                indicator_rc_icp_sliding=(
-                    self.data.psc_transition_cr_to_cr[
-                        keys[0]
-                    ].indicator_rc_split_sliding_scale
-                ),
-                oil_ctr_pretax_share=self.data.psc_transition_cr_to_cr[
-                    keys[0]
-                ].oil_ctr_pretax,
-                gas_ctr_pretax_share=self.data.psc_transition_cr_to_cr[
-                    keys[0]
-                ].gas_ctr_pretax,
-                oil_ic_rate=self.data.psc_transition_cr_to_cr[keys[0]].ic_oil,
-                gas_ic_rate=self.data.psc_transition_cr_to_cr[keys[0]].ic_gas,
-                ic_is_available=self.data.psc_transition_cr_to_cr[
-                    keys[0]
-                ].ic_availability,
-                oil_cr_cap_rate=self.data.psc_transition_cr_to_cr[
-                    keys[0]
-                ].oil_cr_cap_rate,
-                gas_cr_cap_rate=self.data.psc_transition_cr_to_cr[
-                    keys[0]
-                ].gas_cr_cap_rate,
-                oil_dmo_volume_portion=self.data.psc_transition_cr_to_cr[
-                    keys[0]
-                ].oil_dmo_volume,
-                oil_dmo_fee_portion=self.data.psc_transition_cr_to_cr[
-                    keys[0]
-                ].oil_dmo_fee,
-                oil_dmo_holiday_duration=self.data.psc_transition_cr_to_cr[
-                    keys[0]
-                ].oil_dmo_period,
-                gas_dmo_volume_portion=self.data.psc_transition_cr_to_cr[
-                    keys[0]
-                ].gas_dmo_volume,
-                gas_dmo_fee_portion=self.data.psc_transition_cr_to_cr[
-                    keys[0]
-                ].gas_dmo_fee,
-                gas_dmo_holiday_duration=self.data.psc_transition_cr_to_cr[
-                    keys[0]
-                ].gas_dmo_period,
-            ),
-            "PSC 2": CostRecovery(
-                start_date=self.data.general_config_data.start_date_project_second,
-                end_date=self.data.general_config_data.end_date_project_second,
-                oil_onstream_date=self.data.general_config_data.oil_onstream_date_second,
-                gas_onstream_date=self.data.general_config_data.gas_onstream_date_second,
-                lifting=lifting_total["PSC 2"],
-                capital_cost=self.sensitivity_data["tangible_cost_aggregate"]["PSC 2"],
-                intangible_cost=self.sensitivity_data["intangible_cost_aggregate"][
-                    "PSC 2"
-                ],
-                opex=self.sensitivity_data["opex_aggregate"]["PSC 2"],
-                asr_cost=self.data.asr_cost_aggregate["PSC 2"],
-                oil_ftp_is_available=self.data.psc_transition_cr_to_cr[
-                    keys[1]
-                ].oil_ftp_availability,
-                oil_ftp_is_shared=self.data.psc_transition_cr_to_cr[
-                    keys[1]
-                ].oil_ftp_is_shared,
-                oil_ftp_portion=self.data.psc_transition_cr_to_cr[
-                    keys[1]
-                ].oil_ftp_portion,
-                gas_ftp_is_available=self.data.psc_transition_cr_to_cr[
-                    keys[1]
-                ].gas_ftp_availability,
-                gas_ftp_is_shared=self.data.psc_transition_cr_to_cr[
-                    keys[1]
-                ].gas_ftp_is_shared,
-                gas_ftp_portion=self.data.psc_transition_cr_to_cr[
-                    keys[1]
-                ].gas_ftp_portion,
-                tax_split_type=self.data.psc_transition_cr_to_cr[keys[1]].split_type,
-                condition_dict=self.data.psc_transition_cr_to_cr[
-                    keys[1]
-                ].icp_sliding_scale,
-                indicator_rc_icp_sliding=(
-                    self.data.psc_transition_cr_to_cr[
-                        keys[1]
-                    ].indicator_rc_split_sliding_scale
-                ),
-                oil_ctr_pretax_share=self.data.psc_transition_cr_to_cr[
-                    keys[1]
-                ].oil_ctr_pretax,
-                gas_ctr_pretax_share=self.data.psc_transition_cr_to_cr[
-                    keys[1]
-                ].gas_ctr_pretax,
-                oil_ic_rate=self.data.psc_transition_cr_to_cr[keys[1]].ic_oil,
-                gas_ic_rate=self.data.psc_transition_cr_to_cr[keys[1]].ic_gas,
-                ic_is_available=self.data.psc_transition_cr_to_cr[
-                    keys[1]
-                ].ic_availability,
-                oil_cr_cap_rate=self.data.psc_transition_cr_to_cr[
-                    keys[1]
-                ].oil_cr_cap_rate,
-                gas_cr_cap_rate=self.data.psc_transition_cr_to_cr[
-                    keys[1]
-                ].gas_cr_cap_rate,
-                oil_dmo_volume_portion=self.data.psc_transition_cr_to_cr[
-                    keys[1]
-                ].oil_dmo_volume,
-                oil_dmo_fee_portion=self.data.psc_transition_cr_to_cr[
-                    keys[1]
-                ].oil_dmo_fee,
-                oil_dmo_holiday_duration=self.data.psc_transition_cr_to_cr[
-                    keys[1]
-                ].oil_dmo_period,
-                gas_dmo_volume_portion=self.data.psc_transition_cr_to_cr[
-                    keys[1]
-                ].gas_dmo_volume,
-                gas_dmo_fee_portion=self.data.psc_transition_cr_to_cr[
-                    keys[1]
-                ].gas_dmo_fee,
-                gas_dmo_holiday_duration=self.data.psc_transition_cr_to_cr[
-                    keys[1]
-                ].gas_dmo_period,
-            ),
-        }
-
-        # Specify arguments for PSC transition CR-CR
-        self.psc_arguments = {
-            "PSC 1": {
-                "sulfur_revenue": self.data.fiscal_config_data.sulfur_revenue_config[
-                    "PSC 1"
-                ],
-                "electricity_revenue": self.data.fiscal_config_data.electricity_revenue_config[
-                    "PSC 1"
-                ],
-                "co2_revenue": self.data.fiscal_config_data.co2_revenue_config["PSC 1"],
-                "is_dmo_end_weighted": self.data.psc_transition_cr_to_cr[
-                    keys[0]
-                ].dmo_is_weighted,
-                "tax_regime": self.data.fiscal_config_data.tax_mode["PSC 1"],
-                "tax_rate": self.data.fiscal_config_data.tax_rate["PSC 1"],
-                "ftp_tax_regime": self.data.fiscal_config_data.tax_payment_config[
-                    "PSC 1"
-                ],
-                "sunk_cost_reference_year": self.data.fiscal_config_data.sunk_cost_reference_year,
-                "depr_method": self.data.fiscal_config_data.depreciation_method[
-                    "PSC 1"
-                ],
-                "decline_factor": self.data.fiscal_config_data.decline_factor["PSC 1"],
-                "vat_rate": self.data.fiscal_config_data.vat_rate["PSC 1"],
-                "lbt_rate": self.data.fiscal_config_data.lbt_rate["PSC 1"],
-                "inflation_rate": self.data.fiscal_config_data.inflation_rate["PSC 1"],
-                "future_rate": float(
-                    self.data.fiscal_config_data.asr_future_rate["PSC 1"]
-                ),
-                "inflation_rate_applied_to": self.data.general_config_data.inflation_rate_applied_to,
-                # "year_ref": None,
-                # "tax_type": None,
-            },
-            "PSC 2": {
-                "sulfur_revenue": self.data.fiscal_config_data.sulfur_revenue_config[
-                    "PSC 2"
-                ],
-                "electricity_revenue": self.data.fiscal_config_data.electricity_revenue_config[
-                    "PSC 2"
-                ],
-                "co2_revenue": self.data.fiscal_config_data.co2_revenue_config["PSC 2"],
-                "is_dmo_end_weighted": self.data.psc_transition_cr_to_cr[
-                    keys[1]
-                ].dmo_is_weighted,
-                "tax_regime": self.data.fiscal_config_data.tax_mode["PSC 2"],
-                "tax_rate": self.data.fiscal_config_data.tax_rate["PSC 2"],
-                "ftp_tax_regime": self.data.fiscal_config_data.tax_payment_config[
-                    "PSC 2"
-                ],
-                "sunk_cost_reference_year": self.data.fiscal_config_data.sunk_cost_reference_year,
-                "depr_method": self.data.fiscal_config_data.depreciation_method[
-                    "PSC 2"
-                ],
-                "decline_factor": self.data.fiscal_config_data.decline_factor["PSC 2"],
-                "vat_rate": self.data.fiscal_config_data.vat_rate["PSC 2"],
-                "lbt_rate": self.data.fiscal_config_data.lbt_rate["PSC 2"],
-                "inflation_rate": self.data.fiscal_config_data.inflation_rate["PSC 2"],
-                "future_rate": float(
-                    self.data.fiscal_config_data.asr_future_rate["PSC 2"]
-                ),
-                "inflation_rate_applied_to": self.data.general_config_data.inflation_rate_applied_to,
-                # "year_ref": None,
-                # "tax_type": None,
-            },
-        }
-
-        # Create an instance of transition object
-        self.transition = Transition(
-            contract1=self.psc["PSC 1"],
-            contract2=self.psc["PSC 2"],
-            argument_contract1=self.psc_arguments["PSC 1"],
-            argument_contract2=self.psc_arguments["PSC 2"],
-        )
-
-        self.summary_arguments["contract"] = self.transition
-        self.transition_arguments = {
-            "unrec_portion": self.data.fiscal_config_data.transferred_unrec_cost
-        }
-
-        return self.transition, self.transition_arguments, self.summary_arguments
-
-    def _get_transition_contract_cr_to_gs(self) -> tuple:
-        """
-        Get details for a transition Production Sharing Contract from
-        Cost Recovery to Gross Split (CR-GS).
-
-        Returns
-        -------
-        transition: Transition
-            Object representing the transition from Cost Recovery to Gross Split.
-        transition_arguments: dict
-            Arguments specific to the transition.
-        summary_arguments: dict
-            Arguments for the transition summary.
-
-        Notes
-        -----
-        This method defines configurations for PSC transition CR to GS. It creates
-        instances and populates the attributes of CostRecovery and GrossSplit objects,
-        respectively.
-        """
-        # Define keys for transition CR-GS
-        keys = ["Cost Recovery Config", "Gross Split Config"]
-
-        # Prepare total lifting data
-        lifting_total = {
-            i: (
-                self.sensitivity_data["oil_lifting_aggregate_total"][i]
-                + self.sensitivity_data["gas_lifting_aggregate_total"][i]
-                + self.sensitivity_data["sulfur_lifting_aggregate"][i]
-                + self.sensitivity_data["electricity_lifting_aggregate"][i]
-                + self.sensitivity_data["co2_lifting_aggregate"][i]
+                capital_cost=capital_cost["PSC 1"],
+                intangible_cost=intangible_cost["PSC 1"],
+                opex=opex["PSC 1"],
+                asr_cost=asr_cost["PSC 1"],
+                psc="PSC 1",
             )
-            for i in ["PSC 1", "PSC 2"]
-        }
-
-        # Create an instance of PSC transition CR-GS
-        self.psc = {
-            "PSC 1": CostRecovery(
-                start_date=self.data.general_config_data.start_date_project,
-                end_date=self.data.general_config_data.end_date_project,
-                oil_onstream_date=self.data.general_config_data.oil_onstream_date,
-                gas_onstream_date=self.data.general_config_data.gas_onstream_date,
+        else:
+            config_gs1 = _gross_split_config(config1)
+            contract1 = _build_gross_split(
+                general=general,
+                config=config_gs1,
                 lifting=lifting_total["PSC 1"],
-                capital_cost=self.sensitivity_data["tangible_cost_aggregate"]["PSC 1"],
-                intangible_cost=self.sensitivity_data["intangible_cost_aggregate"][
-                    "PSC 1"
-                ],
-                opex=self.sensitivity_data["opex_aggregate"]["PSC 1"],
-                asr_cost=self.data.asr_cost_aggregate["PSC 1"],
-                oil_ftp_is_available=self.data.psc_transition_cr_to_gs[
-                    keys[0]
-                ].oil_ftp_availability,
-                oil_ftp_is_shared=self.data.psc_transition_cr_to_gs[
-                    keys[0]
-                ].oil_ftp_is_shared,
-                oil_ftp_portion=self.data.psc_transition_cr_to_gs[
-                    keys[0]
-                ].oil_ftp_portion,
-                gas_ftp_is_available=self.data.psc_transition_cr_to_gs[
-                    keys[0]
-                ].gas_ftp_availability,
-                gas_ftp_is_shared=self.data.psc_transition_cr_to_gs[
-                    keys[0]
-                ].gas_ftp_is_shared,
-                gas_ftp_portion=self.data.psc_transition_cr_to_gs[
-                    keys[0]
-                ].gas_ftp_portion,
-                tax_split_type=self.data.psc_transition_cr_to_gs[keys[0]].split_type,
-                condition_dict=self.data.psc_transition_cr_to_gs[
-                    keys[0]
-                ].icp_sliding_scale,
-                indicator_rc_icp_sliding=(
-                    self.data.psc_transition_cr_to_gs[
-                        keys[0]
-                    ].indicator_rc_split_sliding_scale
-                ),
-                oil_ctr_pretax_share=self.data.psc_transition_cr_to_gs[
-                    keys[0]
-                ].oil_ctr_pretax,
-                gas_ctr_pretax_share=self.data.psc_transition_cr_to_gs[
-                    keys[0]
-                ].gas_ctr_pretax,
-                oil_ic_rate=self.data.psc_transition_cr_to_gs[keys[0]].ic_oil,
-                gas_ic_rate=self.data.psc_transition_cr_to_gs[keys[0]].ic_gas,
-                ic_is_available=self.data.psc_transition_cr_to_gs[
-                    keys[0]
-                ].ic_availability,
-                oil_cr_cap_rate=self.data.psc_transition_cr_to_gs[
-                    keys[0]
-                ].oil_cr_cap_rate,
-                gas_cr_cap_rate=self.data.psc_transition_cr_to_gs[
-                    keys[0]
-                ].gas_cr_cap_rate,
-                oil_dmo_volume_portion=self.data.psc_transition_cr_to_gs[
-                    keys[0]
-                ].oil_dmo_volume,
-                oil_dmo_fee_portion=self.data.psc_transition_cr_to_gs[
-                    keys[0]
-                ].oil_dmo_fee,
-                oil_dmo_holiday_duration=self.data.psc_transition_cr_to_gs[
-                    keys[0]
-                ].oil_dmo_period,
-                gas_dmo_volume_portion=self.data.psc_transition_cr_to_gs[
-                    keys[0]
-                ].gas_dmo_volume,
-                gas_dmo_fee_portion=self.data.psc_transition_cr_to_gs[
-                    keys[0]
-                ].gas_dmo_fee,
-                gas_dmo_holiday_duration=self.data.psc_transition_cr_to_gs[
-                    keys[0]
-                ].gas_dmo_period,
-            ),
-            "PSC 2": GrossSplit(
-                start_date=self.data.general_config_data.start_date_project_second,
-                end_date=self.data.general_config_data.end_date_project_second,
-                oil_onstream_date=self.data.general_config_data.oil_onstream_date_second,
-                gas_onstream_date=self.data.general_config_data.gas_onstream_date_second,
-                lifting=lifting_total["PSC 2"],
-                capital_cost=self.sensitivity_data["tangible_cost_aggregate"]["PSC 2"],
-                intangible_cost=self.sensitivity_data["intangible_cost_aggregate"][
-                    "PSC 2"
-                ],
-                opex=self.sensitivity_data["opex_aggregate"]["PSC 2"],
-                asr_cost=self.data.asr_cost_aggregate["PSC 2"],
-                field_status=self.data.psc_transition_cr_to_gs[keys[1]].field_status,
-                field_loc=self.data.psc_transition_cr_to_gs[keys[1]].field_location,
-                res_depth=self.data.psc_transition_cr_to_gs[keys[1]].reservoir_depth,
-                infra_avail=self.data.psc_transition_cr_to_gs[
-                    keys[1]
-                ].infrastructure_availability,
-                res_type=self.data.psc_transition_cr_to_gs[keys[1]].reservoir_type,
-                api_oil=self.data.psc_transition_cr_to_gs[keys[1]].oil_api,
-                domestic_use=self.data.psc_transition_cr_to_gs[
-                    keys[1]
-                ].domestic_content_use,
-                prod_stage=self.data.psc_transition_cr_to_gs[keys[1]].production_stage,
-                co2_content=self.data.psc_transition_cr_to_gs[keys[1]].co2_content,
-                h2s_content=self.data.psc_transition_cr_to_gs[keys[1]].h2s_content,
-                base_split_ctr_oil=self.data.psc_transition_cr_to_gs[
-                    keys[1]
-                ].oil_base_split,
-                base_split_ctr_gas=self.data.psc_transition_cr_to_gs[
-                    keys[1]
-                ].gas_base_split,
-                split_ministry_disc=self.data.psc_transition_cr_to_gs[
-                    keys[1]
-                ].ministry_discretion_split,
-                oil_dmo_volume_portion=self.data.psc_transition_cr_to_gs[
-                    keys[1]
-                ].oil_dmo_volume,
-                oil_dmo_fee_portion=self.data.psc_transition_cr_to_gs[
-                    keys[1]
-                ].oil_dmo_fee,
-                oil_dmo_holiday_duration=self.data.psc_transition_cr_to_gs[
-                    keys[1]
-                ].oil_dmo_period,
-                gas_dmo_volume_portion=self.data.psc_transition_cr_to_gs[
-                    keys[1]
-                ].gas_dmo_volume,
-                gas_dmo_fee_portion=self.data.psc_transition_cr_to_gs[
-                    keys[1]
-                ].gas_dmo_fee,
-                gas_dmo_holiday_duration=self.data.psc_transition_cr_to_gs[
-                    keys[1]
-                ].gas_dmo_period,
-            ),
-        }
-
-        # Specify arguments for PSC transition CR-GS
-        self.psc_arguments = {
-            "PSC 1": {
-                "sulfur_revenue": self.data.fiscal_config_data.sulfur_revenue_config[
-                    "PSC 1"
-                ],
-                "electricity_revenue": self.data.fiscal_config_data.electricity_revenue_config[
-                    "PSC 1"
-                ],
-                "co2_revenue": self.data.fiscal_config_data.co2_revenue_config["PSC 1"],
-                "is_dmo_end_weighted": self.data.psc_transition_cr_to_gs[
-                    keys[0]
-                ].dmo_is_weighted,
-                "tax_regime": self.data.fiscal_config_data.tax_mode["PSC 1"],
-                "tax_rate": self.data.fiscal_config_data.tax_rate["PSC 1"],
-                "ftp_tax_regime": self.data.fiscal_config_data.tax_payment_config[
-                    "PSC 1"
-                ],
-                "sunk_cost_reference_year": self.data.fiscal_config_data.sunk_cost_reference_year,
-                "depr_method": self.data.fiscal_config_data.depreciation_method[
-                    "PSC 1"
-                ],
-                "decline_factor": self.data.fiscal_config_data.decline_factor["PSC 1"],
-                "vat_rate": self.data.fiscal_config_data.vat_rate["PSC 1"],
-                "lbt_rate": self.data.fiscal_config_data.lbt_rate["PSC 1"],
-                "inflation_rate": self.data.fiscal_config_data.inflation_rate["PSC 1"],
-                "future_rate": float(
-                    self.data.fiscal_config_data.asr_future_rate["PSC 1"]
-                ),
-                "inflation_rate_applied_to": self.data.general_config_data.inflation_rate_applied_to,
-                # "year_ref": None,
-                # "tax_type": None,
-            },
-            "PSC 2": {
-                "sulfur_revenue": self.data.fiscal_config_data.sulfur_revenue_config[
-                    "PSC 2"
-                ],
-                "electricity_revenue": self.data.fiscal_config_data.electricity_revenue_config[
-                    "PSC 2"
-                ],
-                "co2_revenue": self.data.fiscal_config_data.co2_revenue_config["PSC 2"],
-                "is_dmo_end_weighted": self.data.psc_transition_cr_to_gs[
-                    keys[1]
-                ].dmo_is_weighted,
-                "tax_regime": self.data.fiscal_config_data.tax_mode["PSC 2"],
-                "tax_rate": self.data.fiscal_config_data.tax_rate["PSC 2"],
-                "sunk_cost_reference_year": self.data.fiscal_config_data.sunk_cost_reference_year,
-                "depr_method": self.data.fiscal_config_data.depreciation_method[
-                    "PSC 2"
-                ],
-                "decline_factor": self.data.fiscal_config_data.decline_factor["PSC 2"],
-                "vat_rate": self.data.fiscal_config_data.vat_rate["PSC 2"],
-                "lbt_rate": self.data.fiscal_config_data.lbt_rate["PSC 2"],
-                "inflation_rate": self.data.fiscal_config_data.inflation_rate["PSC 2"],
-                "future_rate": float(
-                    self.data.fiscal_config_data.asr_future_rate["PSC 2"]
-                ),
-                "inflation_rate_applied_to": self.data.general_config_data.inflation_rate_applied_to,
-                # "regime": None,
-                # "year_ref": None,
-                # "tax_type": None,
-            },
-        }
-
-        # Create an instance of transition object
-        self.transition = Transition(
-            contract1=self.psc["PSC 1"],
-            contract2=self.psc["PSC 2"],
-            argument_contract1=self.psc_arguments["PSC 1"],
-            argument_contract2=self.psc_arguments["PSC 2"],
-        )
-
-        self.summary_arguments["contract"] = self.transition
-        self.transition_arguments = {
-            "unrec_portion": self.data.fiscal_config_data.transferred_unrec_cost
-        }
-
-        return self.transition, self.transition_arguments, self.summary_arguments
-
-    def _get_transition_contract_gs_to_gs(self) -> tuple:
-        """
-        Get details for a transition Production Sharing Contract from
-        Gross Split to Gross Split (GS-GS).
-
-        Returns
-        -------
-        transition: Transition
-            Object representing the transition from Gross Split to Gross Split.
-        transition_arguments: dict
-            Arguments specific to the transition.
-        summary_arguments: dict
-            Arguments for the transition summary.
-
-        Notes
-        -----
-        This method defines configurations for PSC transition GS to GS. It creates
-        instances and populates the attributes of GrossSplit objects for both cases,
-        respectively.
-        """
-        # Define keys for transition GS-GS
-        keys = ["Gross Split Config", "Gross Split Config (2)"]
-
-        # Prepare total lifting data
-        lifting_total = {
-            i: (
-                self.sensitivity_data["oil_lifting_aggregate_total"][i]
-                + self.sensitivity_data["gas_lifting_aggregate_total"][i]
-                + self.sensitivity_data["sulfur_lifting_aggregate"][i]
-                + self.sensitivity_data["electricity_lifting_aggregate"][i]
-                + self.sensitivity_data["co2_lifting_aggregate"][i]
+                capital_cost=capital_cost["PSC 1"],
+                intangible_cost=intangible_cost["PSC 1"],
+                opex=opex["PSC 1"],
+                asr_cost=asr_cost["PSC 1"],
+                psc="PSC 1",
             )
-            for i in ["PSC 1", "PSC 2"]
-        }
 
-        # Create an instance of PSC transition GS-GS
-        self.psc = {
-            "PSC 1": GrossSplit(
-                start_date=self.data.general_config_data.start_date_project,
-                end_date=self.data.general_config_data.end_date_project,
-                oil_onstream_date=self.data.general_config_data.oil_onstream_date,
-                gas_onstream_date=self.data.general_config_data.gas_onstream_date,
-                lifting=lifting_total["PSC 1"],
-                capital_cost=self.sensitivity_data["tangible_cost_aggregate"]["PSC 1"],
-                intangible_cost=self.sensitivity_data["intangible_cost_aggregate"][
-                    "PSC 1"
-                ],
-                opex=self.sensitivity_data["opex_aggregate"]["PSC 1"],
-                asr_cost=self.data.asr_cost_aggregate["PSC 1"],
-                field_status=self.data.psc_transition_gs_to_gs[keys[0]].field_status,
-                field_loc=self.data.psc_transition_gs_to_gs[keys[0]].field_location,
-                res_depth=self.data.psc_transition_gs_to_gs[keys[0]].reservoir_depth,
-                infra_avail=self.data.psc_transition_gs_to_gs[
-                    keys[0]
-                ].infrastructure_availability,
-                res_type=self.data.psc_transition_gs_to_gs[keys[0]].reservoir_type,
-                api_oil=self.data.psc_transition_gs_to_gs[keys[0]].oil_api,
-                domestic_use=self.data.psc_transition_gs_to_gs[
-                    keys[0]
-                ].domestic_content_use,
-                prod_stage=self.data.psc_transition_gs_to_gs[keys[0]].production_stage,
-                co2_content=self.data.psc_transition_gs_to_gs[keys[0]].co2_content,
-                h2s_content=self.data.psc_transition_gs_to_gs[keys[0]].h2s_content,
-                base_split_ctr_oil=self.data.psc_transition_gs_to_gs[
-                    keys[0]
-                ].oil_base_split,
-                base_split_ctr_gas=self.data.psc_transition_gs_to_gs[
-                    keys[0]
-                ].gas_base_split,
-                split_ministry_disc=self.data.psc_transition_gs_to_gs[
-                    keys[0]
-                ].ministry_discretion_split,
-                oil_dmo_volume_portion=self.data.psc_transition_gs_to_gs[
-                    keys[0]
-                ].oil_dmo_volume,
-                oil_dmo_fee_portion=self.data.psc_transition_gs_to_gs[
-                    keys[0]
-                ].oil_dmo_fee,
-                oil_dmo_holiday_duration=self.data.psc_transition_gs_to_gs[
-                    keys[0]
-                ].oil_dmo_period,
-                gas_dmo_volume_portion=self.data.psc_transition_gs_to_gs[
-                    keys[0]
-                ].gas_dmo_volume,
-                gas_dmo_fee_portion=self.data.psc_transition_gs_to_gs[
-                    keys[0]
-                ].gas_dmo_fee,
-                gas_dmo_holiday_duration=self.data.psc_transition_gs_to_gs[
-                    keys[0]
-                ].gas_dmo_period,
-            ),
-            "PSC 2": GrossSplit(
-                start_date=self.data.general_config_data.start_date_project_second,
-                end_date=self.data.general_config_data.end_date_project_second,
-                oil_onstream_date=self.data.general_config_data.oil_onstream_date_second,
-                gas_onstream_date=self.data.general_config_data.gas_onstream_date_second,
+        if is_cost_recovery2:
+            config_cr2 = _cost_recovery_config(config2)
+            contract2: CostRecovery | GrossSplit = _build_cost_recovery(
+                general=general,
+                config=config_cr2,
                 lifting=lifting_total["PSC 2"],
-                capital_cost=self.sensitivity_data["tangible_cost_aggregate"]["PSC 2"],
-                intangible_cost=self.sensitivity_data["intangible_cost_aggregate"][
-                    "PSC 2"
-                ],
-                opex=self.sensitivity_data["opex_aggregate"]["PSC 2"],
-                asr_cost=self.data.asr_cost_aggregate["PSC 2"],
-                field_status=self.data.psc_transition_gs_to_gs[keys[1]].field_status,
-                field_loc=self.data.psc_transition_gs_to_gs[keys[1]].field_location,
-                res_depth=self.data.psc_transition_gs_to_gs[keys[1]].reservoir_depth,
-                infra_avail=self.data.psc_transition_gs_to_gs[
-                    keys[1]
-                ].infrastructure_availability,
-                res_type=self.data.psc_transition_gs_to_gs[keys[1]].reservoir_type,
-                api_oil=self.data.psc_transition_gs_to_gs[keys[1]].oil_api,
-                domestic_use=self.data.psc_transition_gs_to_gs[
-                    keys[1]
-                ].domestic_content_use,
-                prod_stage=self.data.psc_transition_gs_to_gs[keys[1]].production_stage,
-                co2_content=self.data.psc_transition_gs_to_gs[keys[1]].co2_content,
-                h2s_content=self.data.psc_transition_gs_to_gs[keys[1]].h2s_content,
-                base_split_ctr_oil=self.data.psc_transition_gs_to_gs[
-                    keys[1]
-                ].oil_base_split,
-                base_split_ctr_gas=self.data.psc_transition_gs_to_gs[
-                    keys[1]
-                ].gas_base_split,
-                split_ministry_disc=self.data.psc_transition_gs_to_gs[
-                    keys[1]
-                ].ministry_discretion_split,
-                oil_dmo_volume_portion=self.data.psc_transition_gs_to_gs[
-                    keys[1]
-                ].oil_dmo_volume,
-                oil_dmo_fee_portion=self.data.psc_transition_gs_to_gs[
-                    keys[1]
-                ].oil_dmo_fee,
-                oil_dmo_holiday_duration=self.data.psc_transition_gs_to_gs[
-                    keys[1]
-                ].oil_dmo_period,
-                gas_dmo_volume_portion=self.data.psc_transition_gs_to_gs[
-                    keys[1]
-                ].gas_dmo_volume,
-                gas_dmo_fee_portion=self.data.psc_transition_gs_to_gs[
-                    keys[1]
-                ].gas_dmo_fee,
-                gas_dmo_holiday_duration=self.data.psc_transition_gs_to_gs[
-                    keys[1]
-                ].gas_dmo_period,
-            ),
-        }
-
-        # Specify arguments for PSC transition GS-GS
-        self.psc_arguments = {
-            "PSC 1": {
-                "sulfur_revenue": self.data.fiscal_config_data.sulfur_revenue_config[
-                    "PSC 1"
-                ],
-                "electricity_revenue": self.data.fiscal_config_data.electricity_revenue_config[
-                    "PSC 1"
-                ],
-                "co2_revenue": self.data.fiscal_config_data.co2_revenue_config["PSC 1"],
-                "is_dmo_end_weighted": self.data.psc_transition_gs_to_gs[
-                    keys[0]
-                ].dmo_is_weighted,
-                "tax_regime": self.data.fiscal_config_data.tax_mode["PSC 1"],
-                "tax_rate": self.data.fiscal_config_data.tax_rate["PSC 1"],
-                "sunk_cost_reference_year": self.data.fiscal_config_data.sunk_cost_reference_year,
-                "depr_method": self.data.fiscal_config_data.depreciation_method[
-                    "PSC 1"
-                ],
-                "decline_factor": self.data.fiscal_config_data.decline_factor["PSC 1"],
-                "vat_rate": self.data.fiscal_config_data.vat_rate["PSC 1"],
-                "lbt_rate": self.data.fiscal_config_data.lbt_rate["PSC 1"],
-                "inflation_rate": self.data.fiscal_config_data.inflation_rate["PSC 1"],
-                "future_rate": float(
-                    self.data.fiscal_config_data.asr_future_rate["PSC 1"]
-                ),
-                "inflation_rate_applied_to": self.data.general_config_data.inflation_rate_applied_to,
-                # "regime": None,
-                # "year_ref": None,
-                # "tax_type": None,
-            },
-            "PSC 2": {
-                "sulfur_revenue": self.data.fiscal_config_data.sulfur_revenue_config[
-                    "PSC 2"
-                ],
-                "electricity_revenue": self.data.fiscal_config_data.electricity_revenue_config[
-                    "PSC 2"
-                ],
-                "co2_revenue": self.data.fiscal_config_data.co2_revenue_config["PSC 2"],
-                "is_dmo_end_weighted": self.data.psc_transition_gs_to_gs[
-                    keys[1]
-                ].dmo_is_weighted,
-                "tax_regime": self.data.fiscal_config_data.tax_mode["PSC 2"],
-                "tax_rate": self.data.fiscal_config_data.tax_rate["PSC 2"],
-                "sunk_cost_reference_year": self.data.fiscal_config_data.sunk_cost_reference_year,
-                "depr_method": self.data.fiscal_config_data.depreciation_method[
-                    "PSC 2"
-                ],
-                "decline_factor": self.data.fiscal_config_data.decline_factor["PSC 2"],
-                "vat_rate": self.data.fiscal_config_data.vat_rate["PSC 2"],
-                "lbt_rate": self.data.fiscal_config_data.lbt_rate["PSC 2"],
-                "inflation_rate": self.data.fiscal_config_data.inflation_rate["PSC 2"],
-                "future_rate": float(
-                    self.data.fiscal_config_data.asr_future_rate["PSC 2"]
-                ),
-                "inflation_rate_applied_to": self.data.general_config_data.inflation_rate_applied_to,
-                # "regime": None,
-                # "year_ref": None,
-                # "tax_type": None,
-            },
-        }
-
-        # Create an instance of transition object
-        self.transition = Transition(
-            contract1=self.psc["PSC 1"],
-            contract2=self.psc["PSC 2"],
-            argument_contract1=self.psc_arguments["PSC 1"],
-            argument_contract2=self.psc_arguments["PSC 2"],
-        )
-
-        self.summary_arguments["contract"] = self.transition
-        self.transition_arguments = {
-            "unrec_portion": self.data.fiscal_config_data.transferred_unrec_cost
-        }
-
-        return self.transition, self.transition_arguments, self.summary_arguments
-
-    def _get_transition_contract_gs_to_cr(self) -> tuple:
-        """
-        Get details for a transition Production Sharing Contract from
-        Gross Split to Cost Recovery (GS-CR).
-
-        Returns
-        -------
-        transition: Transition
-            Object representing the transition from Gross Split to Cost Recovery.
-        transition_arguments: dict
-            Arguments specific to the transition.
-        summary_arguments: dict
-            Arguments for the transition summary.
-
-        Notes
-        -----
-        This method defines configurations for PSC transition GS to CR. It creates
-        instances and populates the attributes of GrossSplit and CostRecovery objects,
-        respectively.
-        """
-        # Define keys for transition GS-CR
-        keys = ["Gross Split Config", "Cost Recovery Config"]
-
-        # Prepare total lifting data
-        lifting_total = {
-            i: (
-                self.sensitivity_data["oil_lifting_aggregate_total"][i]
-                + self.sensitivity_data["gas_lifting_aggregate_total"][i]
-                + self.sensitivity_data["sulfur_lifting_aggregate"][i]
-                + self.sensitivity_data["electricity_lifting_aggregate"][i]
-                + self.sensitivity_data["co2_lifting_aggregate"][i]
+                capital_cost=capital_cost["PSC 2"],
+                intangible_cost=intangible_cost["PSC 2"],
+                opex=opex["PSC 2"],
+                asr_cost=asr_cost["PSC 2"],
+                psc="PSC 2",
             )
-            for i in ["PSC 1", "PSC 2"]
-        }
-
-        # Create an instance of PSC transition GS-CR
-        self.psc = {
-            "PSC 1": GrossSplit(
-                start_date=self.data.general_config_data.start_date_project,
-                end_date=self.data.general_config_data.end_date_project,
-                oil_onstream_date=self.data.general_config_data.oil_onstream_date,
-                gas_onstream_date=self.data.general_config_data.gas_onstream_date,
-                lifting=lifting_total["PSC 1"],
-                capital_cost=self.sensitivity_data["tangible_cost_aggregate"]["PSC 1"],
-                intangible_cost=self.sensitivity_data["intangible_cost_aggregate"][
-                    "PSC 1"
-                ],
-                opex=self.sensitivity_data["opex_aggregate"]["PSC 1"],
-                asr_cost=self.data.asr_cost_aggregate["PSC 1"],
-                field_status=self.data.psc_transition_gs_to_cr[keys[0]].field_status,
-                field_loc=self.data.psc_transition_gs_to_cr[keys[0]].field_location,
-                res_depth=self.data.psc_transition_gs_to_cr[keys[0]].reservoir_depth,
-                infra_avail=self.data.psc_transition_gs_to_cr[
-                    keys[0]
-                ].infrastructure_availability,
-                res_type=self.data.psc_transition_gs_to_cr[keys[0]].reservoir_type,
-                api_oil=self.data.psc_transition_gs_to_cr[keys[0]].oil_api,
-                domestic_use=self.data.psc_transition_gs_to_cr[
-                    keys[0]
-                ].domestic_content_use,
-                prod_stage=self.data.psc_transition_gs_to_cr[keys[0]].production_stage,
-                co2_content=self.data.psc_transition_gs_to_cr[keys[0]].co2_content,
-                h2s_content=self.data.psc_transition_gs_to_cr[keys[0]].h2s_content,
-                base_split_ctr_oil=self.data.psc_transition_gs_to_cr[
-                    keys[0]
-                ].oil_base_split,
-                base_split_ctr_gas=self.data.psc_transition_gs_to_cr[
-                    keys[0]
-                ].gas_base_split,
-                split_ministry_disc=self.data.psc_transition_gs_to_cr[
-                    keys[0]
-                ].ministry_discretion_split,
-                oil_dmo_volume_portion=self.data.psc_transition_gs_to_cr[
-                    keys[0]
-                ].oil_dmo_volume,
-                oil_dmo_fee_portion=self.data.psc_transition_gs_to_cr[
-                    keys[0]
-                ].oil_dmo_fee,
-                oil_dmo_holiday_duration=self.data.psc_transition_gs_to_cr[
-                    keys[0]
-                ].oil_dmo_period,
-                gas_dmo_volume_portion=self.data.psc_transition_gs_to_cr[
-                    keys[0]
-                ].gas_dmo_volume,
-                gas_dmo_fee_portion=self.data.psc_transition_gs_to_cr[
-                    keys[0]
-                ].gas_dmo_fee,
-                gas_dmo_holiday_duration=self.data.psc_transition_gs_to_cr[
-                    keys[0]
-                ].gas_dmo_period,
-            ),
-            "PSC 2": CostRecovery(
-                start_date=self.data.general_config_data.start_date_project_second,
-                end_date=self.data.general_config_data.end_date_project_second,
-                oil_onstream_date=self.data.general_config_data.oil_onstream_date_second,
-                gas_onstream_date=self.data.general_config_data.gas_onstream_date_second,
+        else:
+            config_gs2 = _gross_split_config(config2)
+            contract2 = _build_gross_split(
+                general=general,
+                config=config_gs2,
                 lifting=lifting_total["PSC 2"],
-                capital_cost=self.sensitivity_data["tangible_cost_aggregate"]["PSC 2"],
-                intangible_cost=self.sensitivity_data["intangible_cost_aggregate"][
-                    "PSC 2"
-                ],
-                opex=self.sensitivity_data["opex_aggregate"]["PSC 2"],
-                asr_cost=self.data.asr_cost_aggregate["PSC 2"],
-                oil_ftp_is_available=self.data.psc_transition_gs_to_cr[
-                    keys[1]
-                ].oil_ftp_availability,
-                oil_ftp_is_shared=self.data.psc_transition_gs_to_cr[
-                    keys[1]
-                ].oil_ftp_is_shared,
-                oil_ftp_portion=self.data.psc_transition_gs_to_cr[
-                    keys[1]
-                ].oil_ftp_portion,
-                gas_ftp_is_available=self.data.psc_transition_gs_to_cr[
-                    keys[1]
-                ].gas_ftp_availability,
-                gas_ftp_is_shared=self.data.psc_transition_gs_to_cr[
-                    keys[1]
-                ].gas_ftp_is_shared,
-                gas_ftp_portion=self.data.psc_transition_gs_to_cr[
-                    keys[1]
-                ].gas_ftp_portion,
-                tax_split_type=self.data.psc_transition_gs_to_cr[keys[1]].split_type,
-                condition_dict=self.data.psc_transition_gs_to_cr[
-                    keys[1]
-                ].icp_sliding_scale,
-                indicator_rc_icp_sliding=(
-                    self.data.psc_transition_gs_to_cr[
-                        keys[1]
-                    ].indicator_rc_split_sliding_scale
-                ),
-                oil_ctr_pretax_share=self.data.psc_transition_gs_to_cr[
-                    keys[1]
-                ].oil_ctr_pretax,
-                gas_ctr_pretax_share=self.data.psc_transition_gs_to_cr[
-                    keys[1]
-                ].gas_ctr_pretax,
-                oil_ic_rate=self.data.psc_transition_gs_to_cr[keys[1]].ic_oil,
-                gas_ic_rate=self.data.psc_transition_gs_to_cr[keys[1]].ic_gas,
-                ic_is_available=self.data.psc_transition_gs_to_cr[
-                    keys[1]
-                ].ic_availability,
-                oil_cr_cap_rate=self.data.psc_transition_gs_to_cr[
-                    keys[1]
-                ].oil_cr_cap_rate,
-                gas_cr_cap_rate=self.data.psc_transition_gs_to_cr[
-                    keys[1]
-                ].gas_cr_cap_rate,
-                oil_dmo_volume_portion=self.data.psc_transition_gs_to_cr[
-                    keys[1]
-                ].oil_dmo_volume,
-                oil_dmo_fee_portion=self.data.psc_transition_gs_to_cr[
-                    keys[1]
-                ].oil_dmo_fee,
-                oil_dmo_holiday_duration=self.data.psc_transition_gs_to_cr[
-                    keys[1]
-                ].oil_dmo_period,
-                gas_dmo_volume_portion=self.data.psc_transition_gs_to_cr[
-                    keys[1]
-                ].gas_dmo_volume,
-                gas_dmo_fee_portion=self.data.psc_transition_gs_to_cr[
-                    keys[1]
-                ].gas_dmo_fee,
-                gas_dmo_holiday_duration=self.data.psc_transition_gs_to_cr[
-                    keys[1]
-                ].gas_dmo_period,
+                capital_cost=capital_cost["PSC 2"],
+                intangible_cost=intangible_cost["PSC 2"],
+                opex=opex["PSC 2"],
+                asr_cost=asr_cost["PSC 2"],
+                psc="PSC 2",
+            )
+
+        contracts: TransitionContracts = {"PSC 1": contract1, "PSC 2": contract2}
+        arguments: TransitionArguments = {
+            "PSC 1": _build_contract_arguments(
+                general=general,
+                fiscal=fiscal,
+                config=config1,
+                psc="PSC 1",
+                is_cost_recovery=is_cost_recovery1,
+            ),
+            "PSC 2": _build_contract_arguments(
+                general=general,
+                fiscal=fiscal,
+                config=config2,
+                psc="PSC 2",
+                is_cost_recovery=is_cost_recovery2,
             ),
         }
-
-        # Specify arguments for PSC transition GS-CR
-        self.psc_arguments = {
-            "PSC 1": {
-                "sulfur_revenue": self.data.fiscal_config_data.sulfur_revenue_config[
-                    "PSC 1"
-                ],
-                "electricity_revenue": self.data.fiscal_config_data.electricity_revenue_config[
-                    "PSC 1"
-                ],
-                "co2_revenue": self.data.fiscal_config_data.co2_revenue_config["PSC 1"],
-                "is_dmo_end_weighted": self.data.psc_transition_gs_to_cr[
-                    keys[0]
-                ].dmo_is_weighted,
-                "tax_regime": self.data.fiscal_config_data.tax_mode["PSC 1"],
-                "tax_rate": self.data.fiscal_config_data.tax_rate["PSC 1"],
-                "sunk_cost_reference_year": self.data.fiscal_config_data.sunk_cost_reference_year,
-                "depr_method": self.data.fiscal_config_data.depreciation_method[
-                    "PSC 1"
-                ],
-                "decline_factor": self.data.fiscal_config_data.decline_factor["PSC 1"],
-                "vat_rate": self.data.fiscal_config_data.vat_rate["PSC 1"],
-                "lbt_rate": self.data.fiscal_config_data.lbt_rate["PSC 1"],
-                "inflation_rate": self.data.fiscal_config_data.inflation_rate["PSC 1"],
-                "future_rate": float(
-                    self.data.fiscal_config_data.asr_future_rate["PSC 1"]
-                ),
-                "inflation_rate_applied_to": self.data.general_config_data.inflation_rate_applied_to,
-                # "regime": None,
-                # "year_ref": None,
-                # "tax_type": None,
-            },
-            "PSC 2": {
-                "sulfur_revenue": self.data.fiscal_config_data.sulfur_revenue_config[
-                    "PSC 2"
-                ],
-                "electricity_revenue": self.data.fiscal_config_data.electricity_revenue_config[
-                    "PSC 2"
-                ],
-                "co2_revenue": self.data.fiscal_config_data.co2_revenue_config["PSC 2"],
-                "is_dmo_end_weighted": self.data.psc_transition_gs_to_cr[
-                    keys[1]
-                ].dmo_is_weighted,
-                "tax_regime": self.data.fiscal_config_data.tax_mode["PSC 2"],
-                "tax_rate": self.data.fiscal_config_data.tax_rate["PSC 2"],
-                "ftp_tax_regime": self.data.fiscal_config_data.tax_payment_config[
-                    "PSC 2"
-                ],
-                "sunk_cost_reference_year": self.data.fiscal_config_data.sunk_cost_reference_year,
-                "depr_method": self.data.fiscal_config_data.depreciation_method[
-                    "PSC 2"
-                ],
-                "decline_factor": self.data.fiscal_config_data.decline_factor["PSC 2"],
-                "vat_rate": self.data.fiscal_config_data.vat_rate["PSC 2"],
-                "lbt_rate": self.data.fiscal_config_data.lbt_rate["PSC 2"],
-                "inflation_rate": self.data.fiscal_config_data.inflation_rate["PSC 2"],
-                "future_rate": float(
-                    self.data.fiscal_config_data.asr_future_rate["PSC 2"]
-                ),
-                "inflation_rate_applied_to": self.data.general_config_data.inflation_rate_applied_to,
-                # "year_ref": None,
-                # "tax_type": None,
-            },
+        transition = Transition(
+            contract1=contracts["PSC 1"],
+            contract2=contracts["PSC 2"],
+            argument_contract1=arguments["PSC 1"],
+            argument_contract2=arguments["PSC 2"],
+        )
+        transition_arguments: ContractArguments = {
+            "unrec_portion": fiscal.transferred_unrec_cost
         }
+        self.psc = contracts
+        self.psc_arguments = arguments
+        self.transition = transition
+        self.transition_arguments = transition_arguments
+        summary["contract"] = transition
+        return transition, transition_arguments, summary
 
-        # Create an instance of transition object
-        self.transition = Transition(
-            contract1=self.psc["PSC 1"],
-            contract2=self.psc["PSC 2"],
-            argument_contract1=self.psc_arguments["PSC 1"],
-            argument_contract2=self.psc_arguments["PSC 2"],
+    def _get_transition_contract_cr_to_cr(self) -> ActivationResult:
+        data = self._data
+        configs = data.psc_transition_cr_to_cr
+        if configs is None:
+            raise AdjustDataException("Missing CR-to-CR transition configuration")
+        return self._get_transition_contract(
+            config1=configs["Cost Recovery Config"],
+            config2=configs["Cost Recovery Config (2)"],
+            is_cost_recovery1=True,
+            is_cost_recovery2=True,
         )
 
-        self.summary_arguments["contract"] = self.transition
-        self.transition_arguments = {
-            "unrec_portion": self.data.fiscal_config_data.transferred_unrec_cost
-        }
+    def _get_transition_contract_cr_to_gs(self) -> ActivationResult:
+        data = self._data
+        configs = data.psc_transition_cr_to_gs
+        if configs is None:
+            raise AdjustDataException("Missing CR-to-GS transition configuration")
+        return self._get_transition_contract(
+            config1=configs["Cost Recovery Config"],
+            config2=configs["Gross Split Config"],
+            is_cost_recovery1=True,
+            is_cost_recovery2=False,
+        )
 
-        return self.transition, self.transition_arguments, self.summary_arguments
+    def _get_transition_contract_gs_to_gs(self) -> ActivationResult:
+        data = self._data
+        configs = data.psc_transition_gs_to_gs
+        if configs is None:
+            raise AdjustDataException("Missing GS-to-GS transition configuration")
+        return self._get_transition_contract(
+            config1=configs["Gross Split Config"],
+            config2=configs["Gross Split Config (2)"],
+            is_cost_recovery1=False,
+            is_cost_recovery2=False,
+        )
 
-    def activate(self):
+    def _get_transition_contract_gs_to_cr(self) -> ActivationResult:
+        data = self._data
+        configs = data.psc_transition_gs_to_cr
+        if configs is None:
+            raise AdjustDataException("Missing GS-to-CR transition configuration")
+        return self._get_transition_contract(
+            config1=configs["Gross Split Config"],
+            config2=configs["Cost Recovery Config"],
+            is_cost_recovery1=False,
+            is_cost_recovery2=True,
+        )
+
+    def activate(self) -> ActivationResult:
         """
         Activate the Production Sharing Contract based on its type.
 
@@ -1963,12 +1059,12 @@ class AdjustData:
         else:
             raise AdjustDataException(
                 f"The filled contract type ({self.contract_type}) is not available. "
-                f"The available contract types are: "
-                f"(1) Project, "
-                f"(2) PSC Cost Recovery (CR), "
-                f"(3) PSC Gross Split (GS), "
-                f"(4) Transition CR - CR, "
-                f"(5) Transition CR - GS, "
-                f"(6) Transition GS - GS, "
-                f"(7) Transition GS - CR."
+                + "The available contract types are: "
+                + "(1) Project, "
+                + "(2) PSC Cost Recovery (CR), "
+                + "(3) PSC Gross Split (GS), "
+                + "(4) Transition CR - CR, "
+                + "(5) Transition CR - GS, "
+                + "(6) Transition GS - GS, "
+                + "(7) Transition GS - CR."
             )

@@ -1,14 +1,21 @@
+from typing import Callable, Literal, TypeAlias, TypeVar, TypedDict
+
+import numpy as np
+import numpy.typing as npt
 from scipy.optimize import minimize_scalar
 
 from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.gross_split import GrossSplit
+from pyscnomics.contracts.project import require_float_array
 from pyscnomics.contracts.transition import Transition
 from pyscnomics.econ.selection import (
     OptimizationParameter,
-    OptimizationTarget,
     FluidType,
+    OptimizationTarget,
+    DiscountingMode,
+    NPVSelection,
 )
-from pyscnomics.tools.summary import get_summary
+from pyscnomics.tools.summary import SummaryResult, get_summary
 
 from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR, LBT
 from pyscnomics.optimize.optimization import adjust_useful_life_years
@@ -20,14 +27,114 @@ class OptimizationExceptionTransition(Exception):
     pass
 
 
+_SummaryValue: TypeAlias = float | np.float64
+_OptimizationScalar: TypeAlias = float | np.float64
+_OptimizationValue: TypeAlias = str | _OptimizationScalar
+
+
+class _TransitionRunArguments(TypedDict, total=False):
+    unrec_portion: float
+
+
+class _SummaryArguments(TypedDict, total=False):
+    contract: Transition
+    reference_year: int | None
+    discount_rate: float
+    npv_mode: NPVSelection
+    discounting_mode: DiscountingMode
+    inflation_rate: float
+    profitability_discounted: bool
+
+
+_DynamicArguments: TypeAlias = _TransitionRunArguments | _SummaryArguments
+_CostItem = TypeVar("_CostItem")
+
+
+class _OptimizationConfiguration(TypedDict):
+    parameter: list[OptimizationParameter]
+    min: npt.NDArray[np.float64]
+    max: npt.NDArray[np.float64]
+
+
+def _required_items(items: tuple[_CostItem, ...] | None) -> tuple[_CostItem, ...]:
+    """Retain the original iterable failure for uninitialized schedules."""
+
+    if items is None:
+        raise TypeError("'NoneType' object is not iterable")
+    return items
+
+
+def _run_transition(contract: Transition, arguments: _TransitionRunArguments) -> None:
+    """Run Transition while preserving its public dynamic keyword payload."""
+
+    contract.run(**arguments)
+
+
+def _get_summary(arguments: _SummaryArguments) -> SummaryResult:
+    """Call the shared summary helper through its dynamic keyword boundary."""
+
+    return get_summary(**arguments)
+
+
+def _read_optimization_result(
+    result: object,
+) -> tuple[_OptimizationScalar, _OptimizationScalar]:
+    """Validate the mapping interface returned by SciPy's scalar optimizer."""
+
+    if not isinstance(result, dict):
+        raise OptimizationExceptionTransition(
+            "scalar optimization returned an invalid result"
+        )
+    if not isinstance(result["fun"], float) or not isinstance(result["x"], float):
+        raise OptimizationExceptionTransition(
+            "scalar optimization returned an invalid result"
+        )
+    return result["fun"], result["x"]
+
+
+def _summary_scalar(value: object, target_parameter: str) -> _SummaryValue:
+    """Validate that an optimization target resolves to a scalar summary value."""
+
+    if isinstance(value, float):
+        return value
+    if type(value) is np.float64:
+        return value
+    raise TypeError(f"Summary target {target_parameter} must be a scalar value")
+
+
+def _run_float(value: _OptimizationScalar) -> float:
+    """Expose a scalar as the float type required by contract run arguments."""
+
+    return value if isinstance(value, float) else float(value)
+
+
+def _optimization_bound_value(
+    bounds: npt.NDArray[np.float64], index: int
+) -> _OptimizationScalar:
+    """Read and validate a scalar bound from the optimization configuration."""
+
+    if bounds.ndim != 1 or bounds.dtype != np.dtype(np.float64):
+        raise TypeError("optimization bounds must be a one-dimensional float64 array")
+    return bounds.flat[index]
+
+
+def _minimize_scalar(
+    objective: Callable[[float], _SummaryValue],
+    bounds: tuple[_OptimizationScalar, _OptimizationScalar],
+) -> object:
+    """Call SciPy at its untyped boundary and validate its result separately."""
+
+    return minimize_scalar(objective, bounds=bounds, method="bounded")
+
+
 def adjust_contract(
     contract: Transition,
-    contract_arguments: dict,
+    contract_arguments: _TransitionRunArguments,
     variable: OptimizationParameter,
-    value: float,
-    summary_argument: dict,
+    value: _OptimizationScalar,
+    summary_argument: _SummaryArguments,
     target_parameter: str,
-) -> tuple[float, Transition]:
+) -> tuple[_SummaryValue, Transition]:
     """
     The function used to adjust the variable within a psc contract object.
     This function will be used by optimize_psc().
@@ -53,6 +160,8 @@ def adjust_contract(
         The result of the target parameter and contract object that has been modified and run.
 
     """
+    contract_value: float = value if isinstance(value, float) else float(value)
+
     # When the optimization is VAT
     if variable is OptimizationParameter.VAT_DISCOUNT:
         contract = adjust_cost_element(
@@ -80,66 +189,68 @@ def adjust_contract(
     if isinstance(contract.contract2, CostRecovery):
         # Changing the attributes of the contract based on the chosen variable
         if variable is OptimizationParameter.OIL_CTR_PRETAX:
-            contract.contract2.oil_ctr_pretax_share = value
+            contract.contract2.oil_ctr_pretax_share = contract_value
 
         if variable is OptimizationParameter.GAS_CTR_PRETAX:
-            contract.contract2.gas_ctr_pretax_share = value
+            contract.contract2.gas_ctr_pretax_share = contract_value
 
         if variable is OptimizationParameter.OIL_FTP_PORTION:
-            contract.contract2.oil_ftp_portion = value
+            contract.contract2.oil_ftp_portion = contract_value
 
         if variable is OptimizationParameter.GAS_FTP_PORTION:
-            contract.contract2.gas_ftp_portion = value
+            contract.contract2.gas_ftp_portion = contract_value
 
         if variable is OptimizationParameter.OIL_IC:
-            contract.contract2.oil_ic_rate = value
+            contract.contract2.oil_ic_rate = contract_value
 
         if variable is OptimizationParameter.GAS_IC:
-            contract.contract2.gas_ic_rate = value
+            contract.contract2.gas_ic_rate = contract_value
 
         if variable is OptimizationParameter.OIL_DMO_FEE:
-            contract.contract2.oil_dmo_fee_portion = value
+            contract.contract2.oil_dmo_fee_portion = contract_value
 
         if variable is OptimizationParameter.GAS_DMO_FEE:
-            contract.contract2.gas_dmo_fee_portion = value
+            contract.contract2.gas_dmo_fee_portion = contract_value
 
         if variable is OptimizationParameter.VAT_RATE:
-            contract.argument_contract2["vat_rate"] = value
+            contract.argument_contract2["vat_rate"] = _run_float(value)
 
         if variable is OptimizationParameter.EFFECTIVE_TAX_RATE:
-            contract.argument_contract2["effective_tax_rate"] = value
+            contract.argument_contract2["effective_tax_rate"] = _run_float(value)
 
     # The condition when contract is Gross Split
     if isinstance(contract.contract2, GrossSplit):
         # Changing the attributes of the contract based on the chosen variable
         if variable is OptimizationParameter.MINISTERIAL_DISCRETION:
-            contract.contract2.split_ministry_disc = value
+            contract.contract2.split_ministry_disc = contract_value
 
         if variable is OptimizationParameter.OIL_DMO_FEE:
-            contract.contract2.oil_dmo_fee_portion = value
+            contract.contract2.oil_dmo_fee_portion = contract_value
 
         if variable is OptimizationParameter.GAS_DMO_FEE:
-            contract.contract2.gas_dmo_fee_portion = value
+            contract.contract2.gas_dmo_fee_portion = contract_value
 
         if variable is OptimizationParameter.VAT_RATE:
-            contract.argument_contract2["vat_rate"] = value
+            contract.argument_contract2["vat_rate"] = _run_float(value)
 
         if variable is OptimizationParameter.EFFECTIVE_TAX_RATE:
-            contract.argument_contract2["effective_tax_rate"] = value
+            contract.argument_contract2["effective_tax_rate"] = _run_float(value)
 
     # Running the contract
-    contract.run(**contract_arguments)
+    _run_transition(contract, contract_arguments)
 
     # Get the summary of the new contract and get its value of the targeted optimization
     summary_argument["contract"] = contract
-    result_psc: float = get_summary(**summary_argument)[target_parameter]
+    result_psc = _summary_scalar(
+        _get_summary(summary_argument)[target_parameter], target_parameter
+    )
 
     return result_psc, contract
 
 
 def adjust_cost_element(
     contract: Transition,
-    adjustment_value: float = 1,
+    adjustment_value: _OptimizationScalar = 1,
     adjustment_variable: OptimizationParameter = OptimizationParameter.VAT_DISCOUNT,
 ) -> Transition:
     """
@@ -162,12 +273,19 @@ def adjust_cost_element(
 
     """
 
-    capital_adjusted = contract.contract2.capital_cost
-    intangible_adjusted = contract.contract2.intangible_cost
-    opex_adjusted = contract.contract2.opex
-    asr_adjusted = contract.contract2.asr_cost
-    lbt_adjusted = contract.contract2.lbt_cost
-    cos_adjusted = contract.contract2.cost_of_sales
+    adjustment_value = (
+        adjustment_value
+        if isinstance(adjustment_value, float)
+        else float(adjustment_value)
+    )
+    contract2 = contract.contract2
+
+    capital_adjusted = contract2.capital_cost
+    intangible_adjusted = contract2.intangible_cost
+    opex_adjusted = contract2.opex
+    asr_adjusted = contract2.asr_cost
+    lbt_adjusted = contract2.lbt_cost
+    cos_adjusted = contract2.cost_of_sales
 
     # Condition when the VAT of each cost element will be adjusted
     if adjustment_variable == OptimizationParameter.VAT_DISCOUNT:
@@ -189,7 +307,7 @@ def adjust_cost_element(
                     depreciation_factor=tan.depreciation_factor,
                     is_ic_applied=tan.is_ic_applied,
                 )
-                for tan in contract.contract2.capital_cost
+                for tan in _required_items(contract2.capital_cost)
             ]
         )
 
@@ -206,7 +324,7 @@ def adjust_cost_element(
                     tax_portion=intang.tax_portion,
                     tax_discount=adjustment_value,
                 )
-                for intang in contract.contract2.intangible_cost
+                for intang in _required_items(contract2.intangible_cost)
             ]
         )
 
@@ -225,7 +343,7 @@ def adjust_cost_element(
                     prod_rate=opx.prod_rate,
                     cost_per_volume=opx.cost_per_volume,
                 )
-                for opx in contract.contract2.opex
+                for opx in _required_items(contract2.opex)
             ]
         )
 
@@ -244,7 +362,7 @@ def adjust_cost_element(
                     final_year=asr.final_year,
                     future_rate=asr.future_rate,
                 )
-                for asr in contract.contract2.asr_cost
+                for asr in _required_items(contract2.asr_cost)
             ]
         )
 
@@ -268,7 +386,7 @@ def adjust_cost_element(
                     njop_building=bt.njop_building,
                     gross_revenue=bt.gross_revenue,
                 )
-                for bt in contract.contract2.lbt_cost
+                for bt in _required_items(contract2.lbt_cost)
             ]
         )
 
@@ -287,120 +405,125 @@ def adjust_cost_element(
                     tax_discount=tan.tax_discount,
                     pis_year=tan.pis_year,
                     salvage_value=tan.salvage_value,
-                    useful_life=adjust_useful_life_years(
-                        adjustment_value=adjustment_value,
-                        useful_life_array=tan.useful_life,
+                    useful_life=np.asarray(
+                        adjust_useful_life_years(
+                            adjustment_value=adjustment_value,
+                            useful_life_array=require_float_array(
+                                tan.useful_life, "useful_life"
+                            ),
+                        ),
+                        dtype=np.float64,
                     ),
                     depreciation_factor=tan.depreciation_factor,
                     is_ic_applied=tan.is_ic_applied,
                 )
-                for tan in contract.contract2.capital_cost
+                for tan in _required_items(contract2.capital_cost)
             ]
         )
 
     # Condition when the chosen option is not recognized
     else:
         raise OptimizationExceptionTransition(
-            f"Adjustment Variable {adjustment_variable} "
-            f"do not exist. It should be VAT or LBT in string data type"
+            f"Adjustment Variable {adjustment_variable} do not exist. It should be VAT or LBT in string data type"
         )
 
     # Condition where only one fluid is produced
-    produced_fluid = [i.fluid_type for i in contract.contract2.lifting]
+    produced_fluid = [item.fluid_type for item in _required_items(contract2.lifting)]
 
     if FluidType.OIL not in produced_fluid:
         oil_onstream_date = None
     else:
-        oil_onstream_date = contract.contract2.oil_onstream_date
+        oil_onstream_date = contract2.oil_onstream_date
 
     if FluidType.GAS not in produced_fluid:
         gas_onstream_date = None
     else:
-        gas_onstream_date = contract.contract2.gas_onstream_date
+        gas_onstream_date = contract2.gas_onstream_date
 
     # When the contract is CostRecovery, parsing back the adjusted cost elements
     # to the cost recovery contract
-    if isinstance(contract.contract2, CostRecovery):
+    if isinstance(contract2, CostRecovery):
         contract2_adjusted = CostRecovery(
-            start_date=contract.contract2.start_date,
-            end_date=contract.contract2.end_date,
+            start_date=contract2.start_date,
+            end_date=contract2.end_date,
+            approval_year=contract2.approval_year,
             oil_onstream_date=oil_onstream_date,
             gas_onstream_date=gas_onstream_date,
-            lifting=contract.contract2.lifting,
+            is_pod_1=contract2.is_pod_1,
+            is_strict=contract2.is_strict,
+            lifting=contract2.lifting,
             capital_cost=capital_adjusted,
             intangible_cost=intangible_adjusted,
             opex=opex_adjusted,
             asr_cost=asr_adjusted,
             lbt_cost=lbt_adjusted,
             cost_of_sales=cos_adjusted,
-            oil_ftp_is_available=contract.contract2.oil_ftp_is_available,
-            oil_ftp_is_shared=contract.contract2.oil_ftp_is_shared,
-            oil_ftp_portion=contract.contract2.oil_ftp_portion,
-            gas_ftp_is_available=contract.contract2.gas_ftp_is_available,
-            gas_ftp_is_shared=contract.contract2.gas_ftp_is_shared,
-            gas_ftp_portion=contract.contract2.gas_ftp_portion,
-            tax_split_type=contract.contract2.tax_split_type,
-            condition_dict=contract.contract2.condition_dict,
-            indicator_rc_icp_sliding=contract.contract2.indicator_rc_icp_sliding,
-            oil_ctr_pretax_share=contract.contract2.oil_ctr_pretax_share,
-            gas_ctr_pretax_share=contract.contract2.gas_ctr_pretax_share,
-            oil_ic_rate=contract.contract2.oil_ic_rate,
-            gas_ic_rate=contract.contract2.gas_ic_rate,
-            ic_is_available=contract.contract2.ic_is_available,
-            oil_cr_cap_rate=contract.contract2.oil_cr_cap_rate,
-            gas_cr_cap_rate=contract.contract2.gas_cr_cap_rate,
-            oil_dmo_volume_portion=contract.contract2.oil_dmo_volume_portion,
-            oil_dmo_fee_portion=contract.contract2.oil_dmo_fee_portion,
-            oil_dmo_holiday_duration=contract.contract2.oil_dmo_holiday_duration,
-            gas_dmo_volume_portion=contract.contract2.gas_dmo_volume_portion,
-            gas_dmo_fee_portion=contract.contract2.gas_dmo_fee_portion,
-            gas_dmo_holiday_duration=contract.contract2.gas_dmo_holiday_duration,
-            oil_carry_forward_depreciation=contract.contract2.oil_carry_forward_depreciation,
-            gas_carry_forward_depreciation=contract.contract2.gas_carry_forward_depreciation,
+            oil_ftp_is_available=contract2.oil_ftp_is_available,
+            oil_ftp_is_shared=contract2.oil_ftp_is_shared,
+            oil_ftp_portion=contract2.oil_ftp_portion,
+            gas_ftp_is_available=contract2.gas_ftp_is_available,
+            gas_ftp_is_shared=contract2.gas_ftp_is_shared,
+            gas_ftp_portion=contract2.gas_ftp_portion,
+            tax_split_type=contract2.tax_split_type,
+            condition_dict=contract2.condition_dict,
+            indicator_rc_icp_sliding=contract2.indicator_rc_icp_sliding,
+            oil_ctr_pretax_share=contract2.oil_ctr_pretax_share,
+            gas_ctr_pretax_share=contract2.gas_ctr_pretax_share,
+            oil_ic_rate=contract2.oil_ic_rate,
+            gas_ic_rate=contract2.gas_ic_rate,
+            ic_is_available=contract2.ic_is_available,
+            oil_cr_cap_rate=contract2.oil_cr_cap_rate,
+            gas_cr_cap_rate=contract2.gas_cr_cap_rate,
+            oil_dmo_volume_portion=contract2.oil_dmo_volume_portion,
+            oil_dmo_fee_portion=contract2.oil_dmo_fee_portion,
+            oil_dmo_holiday_duration=contract2.oil_dmo_holiday_duration,
+            gas_dmo_volume_portion=contract2.gas_dmo_volume_portion,
+            gas_dmo_fee_portion=contract2.gas_dmo_fee_portion,
+            gas_dmo_holiday_duration=contract2.gas_dmo_holiday_duration,
+            oil_carry_forward_depreciation=contract2.oil_carry_forward_depreciation,
+            gas_carry_forward_depreciation=contract2.gas_carry_forward_depreciation,
         )
 
     # When the contract is GrossSplit, parsing back the adjusted cost elements
     # to the gross split contract
-    elif isinstance(contract.contract2, GrossSplit):
+    else:
         contract2_adjusted = GrossSplit(
-            start_date=contract.contract2.start_date,
-            end_date=contract.contract2.end_date,
+            start_date=contract2.start_date,
+            end_date=contract2.end_date,
+            approval_year=contract2.approval_year,
             oil_onstream_date=oil_onstream_date,
             gas_onstream_date=gas_onstream_date,
-            lifting=contract.contract2.lifting,
+            is_pod_1=contract2.is_pod_1,
+            is_strict=contract2.is_strict,
+            lifting=contract2.lifting,
             capital_cost=capital_adjusted,
             intangible_cost=intangible_adjusted,
             opex=opex_adjusted,
             asr_cost=asr_adjusted,
             lbt_cost=lbt_adjusted,
             cost_of_sales=cos_adjusted,
-            field_status=contract.contract2.field_status,
-            field_loc=contract.contract2.field_loc,
-            res_depth=contract.contract2.res_depth,
-            infra_avail=contract.contract2.infra_avail,
-            res_type=contract.contract2.res_type,
-            api_oil=contract.contract2.api_oil,
-            domestic_use=contract.contract2.domestic_use,
-            prod_stage=contract.contract2.prod_stage,
-            co2_content=contract.contract2.co2_content,
-            h2s_content=contract.contract2.h2s_content,
-            base_split_ctr_oil=contract.contract2.base_split_ctr_oil,
-            base_split_ctr_gas=contract.contract2.base_split_ctr_gas,
-            split_ministry_disc=contract.contract2.split_ministry_disc,
-            oil_dmo_volume_portion=contract.contract2.oil_dmo_volume_portion,
-            oil_dmo_fee_portion=contract.contract2.oil_dmo_fee_portion,
-            oil_dmo_holiday_duration=contract.contract2.oil_dmo_holiday_duration,
-            gas_dmo_volume_portion=contract.contract2.gas_dmo_volume_portion,
-            gas_dmo_fee_portion=contract.contract2.gas_dmo_fee_portion,
-            gas_dmo_holiday_duration=contract.contract2.gas_dmo_holiday_duration,
-            oil_carry_forward_depreciation=contract.contract2.oil_carry_forward_depreciation,
-            gas_carry_forward_depreciation=contract.contract2.gas_carry_forward_depreciation,
-        )
-
-    # When the contract is not recognized, raise an exception
-    else:
-        raise OptimizationExceptionTransition(
-            f"Contract Type {type(contract)} , is not recognized for optimization module"
+            field_status=contract2.field_status,
+            field_loc=contract2.field_loc,
+            res_depth=contract2.res_depth,
+            infra_avail=contract2.infra_avail,
+            res_type=contract2.res_type,
+            api_oil=contract2.api_oil,
+            domestic_use=contract2.domestic_use,
+            prod_stage=contract2.prod_stage,
+            co2_content=contract2.co2_content,
+            h2s_content=contract2.h2s_content,
+            field_reserves_2024=contract2.field_reserves_2024,
+            infra_avail_2024=contract2.infra_avail_2024,
+            field_loc_2024=contract2.field_loc_2024,
+            split_ministry_disc=contract2.split_ministry_disc,
+            oil_dmo_volume_portion=contract2.oil_dmo_volume_portion,
+            oil_dmo_fee_portion=contract2.oil_dmo_fee_portion,
+            oil_dmo_holiday_duration=contract2.oil_dmo_holiday_duration,
+            gas_dmo_volume_portion=contract2.gas_dmo_volume_portion,
+            gas_dmo_fee_portion=contract2.gas_dmo_fee_portion,
+            gas_dmo_holiday_duration=contract2.gas_dmo_holiday_duration,
+            oil_carry_forward_depreciation=contract2.oil_carry_forward_depreciation,
+            gas_carry_forward_depreciation=contract2.gas_carry_forward_depreciation,
         )
 
     # Replacing the second contract with the contract_adjusted
@@ -411,13 +534,18 @@ def adjust_cost_element(
 
 
 def optimize_psc_core(
-    dict_optimization: dict,
+    dict_optimization: _OptimizationConfiguration,
     contract: Transition,
-    contract_arguments: dict,
-    target_optimization_value: float,
-    summary_argument: dict,
+    contract_arguments: _TransitionRunArguments,
+    target_optimization_value: _SummaryValue,
+    summary_argument: _SummaryArguments,
     target_parameter: OptimizationTarget = OptimizationTarget.IRR,
-) -> tuple[list[str], list[str | float], float | None, list[Transition]]:
+) -> tuple[
+    list[str],
+    list[_OptimizationValue],
+    _SummaryValue | None,
+    list[Transition],
+]:
     """
     The function to get contract variable(s) that resulting the desired target or
     contract's economic target.
@@ -467,72 +595,58 @@ def optimize_psc_core(
     """
     # Changing the Optimization selection from Enum to string in order to retrieve
     # the result from summary dictionary
-    if target_parameter is OptimizationTarget.IRR:
-        target_parameter = "ctr_irr"
-
-    elif target_parameter is OptimizationTarget.NPV:
-        target_parameter = "ctr_npv"
-
-    elif target_parameter is OptimizationTarget.PI:
-        target_parameter = "ctr_pi"
-
-    else:
+    target_param_mapping: dict[OptimizationTarget, str] = {
+        OptimizationTarget.IRR: "ctr_irr",
+        OptimizationTarget.NPV: "ctr_npv",
+        OptimizationTarget.PI: "ctr_pi",
+    }
+    try:
+        target_param = target_param_mapping[target_parameter]
+    except KeyError as error:
         raise OptimizationExceptionTransition(
-            f"target {target_parameter} "
-            f"is should be one of: {[OptimizationTarget.value]}"
-        )
+            f"target {target_parameter} is should be one of: {[item.value for item in OptimizationTarget]}"
+        ) from error
 
     # Changing the parameters list[str] into list[OptimizationParameters(Enum)]
-    list_params: list[OptimizationParameter] = dict_optimization["parameter"]
+    list_params = dict_optimization["parameter"]
 
     # Defining Base Value list to contain value of optimized parameters
     # and status of the optimization
-    list_params_value: list[str | float] = ["Base Value"] * len(list_params)
+    list_params_value: list[_OptimizationValue] = ["Base Value"] * len(list_params)
 
     # Defining the empty result of optimization target, will be defined later
-    result_optimization: float | None = None
+    result_optimization: _SummaryValue | None = None
 
     # Defining the executed contract list
     list_executed_contract: list[Transition] = []
 
     psc = contract
-    for index, param in enumerate(list_params):
+    param_bound_source: dict[OptimizationParameter, Literal["min", "max"]] = {
+        OptimizationParameter.OIL_CTR_PRETAX: "max",
+        OptimizationParameter.GAS_CTR_PRETAX: "max",
+        OptimizationParameter.OIL_FTP_PORTION: "min",
+        OptimizationParameter.GAS_FTP_PORTION: "min",
+        OptimizationParameter.OIL_IC: "max",
+        OptimizationParameter.GAS_IC: "max",
+        OptimizationParameter.OIL_DMO_FEE: "max",
+        OptimizationParameter.GAS_DMO_FEE: "max",
+        OptimizationParameter.VAT_RATE: "min",
+        OptimizationParameter.EFFECTIVE_TAX_RATE: "min",
+        OptimizationParameter.MINISTERIAL_DISCRETION: "max",
+        OptimizationParameter.VAT_DISCOUNT: "max",
+        OptimizationParameter.LBT_DISCOUNT: "max",
+        OptimizationParameter.DEPRECIATION_ACCELERATION: "max",
+    }
 
-        # Get the maximum value of each params
-        if param is OptimizationParameter.OIL_CTR_PRETAX:
-            max_value: float = dict_optimization["max"][index]
-        elif param is OptimizationParameter.GAS_CTR_PRETAX:
-            max_value = dict_optimization["max"][index]
-        elif param is OptimizationParameter.OIL_FTP_PORTION:
-            max_value = dict_optimization["min"][index]
-        elif param is OptimizationParameter.GAS_FTP_PORTION:
-            max_value = dict_optimization["min"][index]
-        elif param is OptimizationParameter.OIL_IC:
-            max_value = dict_optimization["max"][index]
-        elif param is OptimizationParameter.GAS_IC:
-            max_value = dict_optimization["max"][index]
-        elif param is OptimizationParameter.OIL_DMO_FEE:
-            max_value = dict_optimization["max"][index]
-        elif param is OptimizationParameter.GAS_DMO_FEE:
-            max_value = dict_optimization["max"][index]
-        elif param is OptimizationParameter.VAT_RATE:
-            max_value = dict_optimization["min"][index]
-        elif param is OptimizationParameter.EFFECTIVE_TAX_RATE:
-            max_value = dict_optimization["min"][index]
-        elif param is OptimizationParameter.VAT_DISCOUNT:
-            max_value = dict_optimization["max"][index]
-        elif param is OptimizationParameter.LBT_DISCOUNT:
-            max_value = dict_optimization["max"][index]
-        elif param is OptimizationParameter.DEPRECIATION_ACCELERATION:
-            max_value = dict_optimization["max"][index]
-        elif param is OptimizationParameter.MINISTERIAL_DISCRETION:
-            max_value = dict_optimization["max"][index]
-        else:
+    for index, param in enumerate(list_params):
+        try:
+            bound_key = param_bound_source[param]
+        except KeyError as error:
             raise OptimizationExceptionTransition(
-                f" Optimization parameter, {param}, is not recognized."
-                f" Optimization parameter should be chosen "
-                f"from OptimizationParameter enum."
-            )
+                f"Optimization parameter, {param}, is not recognized. Optimization parameter should be chosen from OptimizationParameter enum."
+            ) from error
+
+        max_value = _optimization_bound_value(dict_optimization[bound_key], index)
 
         # Changing the Contract parameter value based on the given input
         result_psc, psc = adjust_contract(
@@ -541,40 +655,37 @@ def optimize_psc_core(
             variable=param,
             value=max_value,
             summary_argument=summary_argument,
-            target_parameter=target_parameter,
+            target_parameter=target_param,
         )
 
         # Able to conduct optimization since the result is greater than the target
         if result_psc > target_optimization_value:
             # Defining the upper and lower limit of the optimized variable
-            bounds: tuple[float, float] = (
-                dict_optimization["min"][index],
-                dict_optimization["max"][index],
+            bounds: tuple[_OptimizationScalar, _OptimizationScalar] = (
+                _optimization_bound_value(dict_optimization["min"], index),
+                _optimization_bound_value(dict_optimization["max"], index),
             )
 
-            def objective_run(new_value: float) -> float:
-                result_psc_obj, executed_contract = adjust_contract(
+            def objective_run(new_value: float) -> _SummaryValue:
+                result_psc_obj, _ = adjust_contract(
                     contract=psc,
                     contract_arguments=contract_arguments,
                     variable=param,
                     value=new_value,
                     summary_argument=summary_argument,
-                    target_parameter=target_parameter,
+                    target_parameter=target_param,
                 )
 
                 result_obj = abs(result_psc_obj - target_optimization_value)
                 return result_obj
 
             # Optimization of the objective function
-            optim_result = minimize_scalar(
-                objective_run, bounds=bounds, method="bounded"
-            )
+            optim_result = _minimize_scalar(objective_run, bounds)
 
             # Difference value from target and optimization result
-            optimized_diff: float = optim_result.fun
-
-            # Optimized Parameter Value
-            optimized_parameter: float = optim_result.x
+            optimized_diff, optimized_parameter = _read_optimization_result(
+                optim_result
+            )
 
             # Result of the objective function
             function_result = optimized_diff + target_optimization_value
@@ -592,7 +703,7 @@ def optimize_psc_core(
                 variable=param,
                 value=optimized_parameter,
                 summary_argument=summary_argument,
-                target_parameter=target_parameter,
+                target_parameter=target_param,
             )[1]
 
             # Filling the list with executed contract
@@ -618,7 +729,7 @@ def optimize_psc_core(
             list_executed_contract.append(psc)
 
     # Converting the list of enum into list of str enum value
-    list_str: list[str] = [enum_value.value for enum_value in list_params]
+    list_str = [enum_value.value for enum_value in list_params]
 
     # # Printing for debugging
     # print(list_str)

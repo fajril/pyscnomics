@@ -1,5 +1,9 @@
-import numpy as np
+import math
+
+import numpy as _numpy
 from numpy.typing import NDArray
+
+np = _numpy
 
 
 class RPDModel:
@@ -56,7 +60,11 @@ class RPDModel:
         self._q_min = volume * self._q_min_ratio
         rate_rampup = self._calc_rampup()
         rate_decline = self._calc_decline()
-        rate_plateau = self._calc_plateau(volume, rate_rampup.sum(), rate_decline.sum())
+        rate_plateau = self._calc_plateau(
+            volume,
+            math.fsum(rate_rampup),
+            math.fsum(rate_decline),
+        )
         rate = np.concatenate([rate_rampup, rate_plateau, rate_decline])
         return self._adj_rate(volume, rate)
 
@@ -76,7 +84,6 @@ class RPDModel:
         """
         return np.cumsum(self.predict(volume))
 
-
     def _calc_rampup(self) -> NDArray[np.float64]:
         if self._year_rampup == 0:
             return np.asarray([])
@@ -84,7 +91,7 @@ class RPDModel:
         return np.arange(self._year_rampup + 1) * slope
 
     def _calc_decline(self) -> NDArray[np.float64]:
-        year_decline: float = np.log(self._q_min / self._q_plateau) / (-self._drate)
+        year_decline = math.log(self._q_min / self._q_plateau) / (-self._drate)
         year = np.arange(year_decline)
         rate = self._q_plateau * np.exp(-self._drate * year)
         return rate
@@ -98,7 +105,9 @@ class RPDModel:
         year_plateau = int(vol_plateau / self._q_plateau)
         return np.ones(year_plateau) * self._q_plateau
 
-    def _adj_rate(self, volume: float, rate: NDArray[np.float64]) -> NDArray[np.float64]:
+    def _adj_rate(
+        self, volume: float, rate: NDArray[np.float64]
+    ) -> NDArray[np.float64]:
         rate_adj = rate * volume / np.sum(rate)
         rate_adj = np.round(rate_adj, 3)
         rate_adj[-1] += volume - rate_adj.sum()

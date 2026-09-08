@@ -5,40 +5,278 @@ This Code is made to detached the sensitivity module in the previous version
 which depended with the excel into fully able to be run in python.
 """
 
-from typing import Literal, TypeAlias, overload
+from collections.abc import Mapping
+from datetime import date
+from enum import Enum
+from typing import Literal, TypeAlias, TypedDict, TypeGuard, TypeVar, overload
 
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
 
 from pyscnomics.econ import Lifting, FluidType
 # from pyscnomics.io.aggregator import Aggregate
 # from pyscnomics.optimize.adjuster import AdjustData
 
-from pyscnomics.contracts.project import BaseProject
+from pyscnomics.contracts.project import BaseProject, require_float_array
 from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.gross_split import GrossSplit
 from pyscnomics.contracts.transition import Transition
 from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX
+from pyscnomics.econ.selection import (
+    DiscountingMode,
+    InflationAppliedTo,
+    NPVSelection,
+    OtherRevenue,
+)
+from pyscnomics.contracts.run_arguments import (
+    validate_cost_recovery_run_arguments,
+    validate_gross_split_run_arguments,
+)
 
 
+FloatArray: TypeAlias = npt.NDArray[np.float64]
+_Contract: TypeAlias = BaseProject | CostRecovery | GrossSplit
+_ContractArguments: TypeAlias = dict[str, object]
+_SummaryArguments: TypeAlias = dict[str, object]
+_SummaryValue: TypeAlias = float | int | np.float64 | None
+_Summary: TypeAlias = Mapping[str, _SummaryValue]
+_Multiplier: TypeAlias = float | np.float64
 _SensitivityFrames: TypeAlias = dict[str, pd.DataFrame]
-_SensitivityValues: TypeAlias = dict[str, object]
+_SensitivityValues: TypeAlias = dict[str, dict[np.float64, dict[str, _SummaryValue]]]
 _SensitivityResult: TypeAlias = _SensitivityFrames | _SensitivityValues
+_Item = TypeVar("_Item")
+_EnumValue = TypeVar("_EnumValue", bound=Enum)
+_SENSITIVITY_INDICATORS = (
+    "ctr_npv",
+    "ctr_irr",
+    "ctr_pi",
+    "ctr_pot",
+    "gov_take",
+    "ctr_net_share",
+)
+
+
+class _BaseProjectRunArguments(TypedDict, total=False):
+    sulfur_revenue: OtherRevenue
+    electricity_revenue: OtherRevenue
+    co2_revenue: OtherRevenue
+    vat_rate: FloatArray | float
+    year_inflation: npt.NDArray[np.int64] | None
+    inflation_rate: FloatArray | float
+    inflation_rate_applied_to: InflationAppliedTo | None
+
+
+class _ValidatedSummaryArguments(TypedDict, total=False):
+    discount_rate: float
+    npv_mode: NPVSelection
+    discounting_mode: DiscountingMode
+    discount_rate_start_year: int | None
+    inflation_rate: float
+    profitability_discounted: bool
+
+
+class _AdjustedParameters(TypedDict):
+    capital: tuple[CapitalCost, ...]
+    intangible: tuple[Intangible, ...]
+    opex: tuple[OPEX, ...]
+    lifting: tuple[Lifting, ...]
+
+
+class _OnstreamDates(TypedDict):
+    oil: date | None
+    gas: date | None
+
+
+def _is_float_array(value: object) -> TypeGuard[FloatArray]:
+    return isinstance(value, np.ndarray) and value.dtype == np.dtype(np.float64)
+
+
+def _is_year_array(value: object) -> TypeGuard[npt.NDArray[np.int64]]:
+    return isinstance(value, np.ndarray) and value.dtype == np.dtype(np.int64)
+
+
+def _require_enum(value: object, expected: type[_EnumValue], name: str) -> _EnumValue:
+    if not isinstance(value, expected):
+        raise SensitivityException(f"{name} has an invalid value")
+    return value
+
+
+def _require_float(value: object, name: str) -> float:
+    if not isinstance(value, float):
+        raise SensitivityException(f"{name} must be a float")
+    return value
+
+
+def _is_summary_value(value: object) -> TypeGuard[float | int | np.float64]:
+    return isinstance(value, (float, int)) or type(value) is np.float64
+
+
+def _validate_base_project_run_arguments(
+    arguments: Mapping[str, object],
+) -> _BaseProjectRunArguments:
+    allowed = frozenset(_BaseProjectRunArguments.__annotations__)
+    if any(key not in allowed for key in arguments):
+        raise SensitivityException("contract arguments contain an unsupported keyword")
+
+    result: _BaseProjectRunArguments = {}
+    for key in ("sulfur_revenue", "electricity_revenue", "co2_revenue"):
+        if key in arguments:
+            revenue = _require_enum(arguments[key], OtherRevenue, key)
+            if key == "sulfur_revenue":
+                result["sulfur_revenue"] = revenue
+            elif key == "electricity_revenue":
+                result["electricity_revenue"] = revenue
+            else:
+                result["co2_revenue"] = revenue
+
+    for key in ("vat_rate", "inflation_rate"):
+        if key in arguments:
+            value = arguments[key]
+            if not isinstance(value, float) and not _is_float_array(value):
+                raise SensitivityException(
+                    f"{key} must be a float or float64 NumPy array"
+                )
+            if key == "vat_rate":
+                result["vat_rate"] = value
+            else:
+                result["inflation_rate"] = value
+
+    if "year_inflation" in arguments:
+        value = arguments["year_inflation"]
+        if value is not None and not _is_year_array(value):
+            raise SensitivityException(
+                "year_inflation must be an int64 NumPy array or None"
+            )
+        result["year_inflation"] = value
+
+    if "inflation_rate_applied_to" in arguments:
+        value = arguments["inflation_rate_applied_to"]
+        result["inflation_rate_applied_to"] = (
+            None
+            if value is None
+            else _require_enum(value, InflationAppliedTo, "inflation_rate_applied_to")
+        )
+    return result
+
+
+def _validate_summary_arguments(
+    arguments: Mapping[str, object],
+) -> _ValidatedSummaryArguments:
+    allowed = frozenset(_ValidatedSummaryArguments.__annotations__)
+    if any(key not in allowed for key in arguments):
+        raise SensitivityException("summary arguments contain an unsupported keyword")
+
+    result: _ValidatedSummaryArguments = {}
+    if "discount_rate" in arguments:
+        result["discount_rate"] = _require_float(
+            arguments["discount_rate"], "discount_rate"
+        )
+    if "npv_mode" in arguments:
+        result["npv_mode"] = _require_enum(
+            arguments["npv_mode"], NPVSelection, "npv_mode"
+        )
+    if "discounting_mode" in arguments:
+        result["discounting_mode"] = _require_enum(
+            arguments["discounting_mode"], DiscountingMode, "discounting_mode"
+        )
+    if "discount_rate_start_year" in arguments:
+        value = arguments["discount_rate_start_year"]
+        if value is not None and (
+            not isinstance(value, int) or isinstance(value, bool)
+        ):
+            raise SensitivityException(
+                "discount_rate_start_year must be an int or None"
+            )
+        result["discount_rate_start_year"] = value
+    if "inflation_rate" in arguments:
+        result["inflation_rate"] = _require_float(
+            arguments["inflation_rate"], "inflation_rate"
+        )
+    if "profitability_discounted" in arguments:
+        value = arguments["profitability_discounted"]
+        if not isinstance(value, bool):
+            raise SensitivityException("profitability_discounted must be a bool")
+        result["profitability_discounted"] = value
+    return result
+
+
+def _get_summary(
+    contract: _Contract | Transition, summary_arguments: _SummaryArguments
+) -> _Summary:
+    """Summarize a contract after validating the public keyword payload."""
+
+    arguments = _validate_summary_arguments(summary_arguments)
+    if isinstance(contract, Transition):
+        raise SensitivityException(
+            "Transition sensitivity summary is unavailable because Transition "
+            + "does not expose the contract summary API"
+        )
+    summary: Mapping[str, object] = contract.get_summary(**arguments)
+
+    result: dict[str, _SummaryValue] = {}
+    for indicator in _SENSITIVITY_INDICATORS:
+        value = summary.get(indicator)
+        if value is not None and not _is_summary_value(value):
+            raise SensitivityException(
+                f"summary indicator {indicator} must be a numeric scalar or None"
+            )
+        result[indicator] = value
+    return result
+
+
+def _run_contract(contract: _Contract, arguments: _ContractArguments) -> None:
+    """Run a contract after validating its concrete keyword payload."""
+
+    if isinstance(contract, CostRecovery):
+        contract.run(**validate_cost_recovery_run_arguments(arguments))
+    elif isinstance(contract, GrossSplit):
+        contract.run(**validate_gross_split_run_arguments(arguments))
+    else:
+        contract.run(**_validate_base_project_run_arguments(arguments))
+
+
+def _run_adjusted_contract(
+    contract: _Contract | Transition, arguments: _ContractArguments
+) -> None:
+    """Run either a single contract or a transition with its own arguments."""
+
+    if isinstance(contract, Transition):
+        value = arguments.get("unrec_portion", 0.0)
+        if not isinstance(value, (float, int)):
+            raise SensitivityException("unrec_portion must be numeric")
+        contract.run(unrec_portion=value)
+        return
+    _run_contract(contract, arguments)
+
+
+def _multiplier_values(multipliers: FloatArray) -> tuple[np.float64, ...]:
+    """Keep NumPy scalar multiplier keys while avoiding an iterator stub gap."""
+
+    return tuple(multipliers[index] for index in range(multipliers.size))
+
+
+def _sensitivity_dataframe(
+    data: dict[np.float64, dict[str, _SummaryValue]],
+) -> pd.DataFrame:
+    """Create a result frame from the typed sensitivity mapping."""
+
+    return pd.DataFrame(data).T
 
 
 class SensitivityException(Exception):
-    """ Exception to be raised for a misuse of Sensitivity Method """
+    """Exception to be raised for a misuse of Sensitivity Method"""
 
     pass
 
 
-def _get_multipliers(
+def get_sensitivity_multipliers(
     min_deviation: float,
     max_deviation: float,
     base_value: float = 1.0,
     step: int = 10,
     increment: float | None = None,
-) -> np.ndarray:
+) -> FloatArray:
     """
     Generate an array of multipliers symmetrically distributed around a base value.
 
@@ -97,7 +335,9 @@ def _get_multipliers(
         lower_mults = base_value - np.arange(n_low, 0, -1) * increment
         upper_mults = base_value + np.arange(1, n_high + 1) * increment
 
-        return np.concatenate((lower_mults, [base_value], upper_mults))
+        return np.asarray(
+            np.concatenate((lower_mults, [base_value], upper_mults)), dtype=np.float64
+        )
 
     if step <= 0:
         raise SensitivityException("Step must be greater than zero.")
@@ -116,14 +356,14 @@ def _get_multipliers(
     # upper_mults = np.linspace(base_value, max_val, step + 1).round(decimals=2)
 
     # Combine `min_multipliers` with `max_multipliers into a single array`
-    return np.concatenate((lower_mults, upper_mults[1:]))
+    return np.asarray(np.concatenate((lower_mults, upper_mults[1:])), dtype=np.float64)
 
 
 def _prepare_adjusted_parameters_single_contract(
-    contract: BaseProject | CostRecovery | GrossSplit,
-    adjustment_value: float,
+    contract: _Contract,
+    adjustment_value: _Multiplier,
     element: str,
-) -> dict:
+) -> _AdjustedParameters:
     """
     Prepare adjusted economic parameters for a single contract instance.
 
@@ -182,44 +422,53 @@ def _prepare_adjusted_parameters_single_contract(
       related modifications efficiently.
     """
 
-    # Default values
-    capital_adjusted = contract.capital_cost
-    intangible_adjusted = contract.intangible_cost
-    opex_adjusted = contract.opex
-    lifting_adjusted = contract.lifting
+    def _required_tuple(
+        value: tuple[_Item, ...] | None, name: str
+    ) -> tuple[_Item, ...]:
+        if value is None:
+            raise SensitivityException(f"{name} must be initialized before adjustment")
+        return value
+
+    capital_adjusted = _required_tuple(contract.capital_cost, "capital_cost")
+    intangible_adjusted = _required_tuple(contract.intangible_cost, "intangible_cost")
+    opex_adjusted = _required_tuple(contract.opex, "opex")
+    lifting_adjusted = _required_tuple(contract.lifting, "lifting")
 
     # Helper function to assist lifting adjustment
-    def _adjust_lifting(fluid_type: FluidType | None, target_field: str):
+    def _adjust_lifting(
+        fluid_type: FluidType | None, target_field: Literal["lifting_rate", "price"]
+    ) -> tuple[Lifting, ...]:
 
         if target_field not in ["lifting_rate", "price"]:
             raise SensitivityException(
-                f"Unrecognized target_field: {target_field}. Parameter target_field "
-                f"must be 'lifting_rate' or 'price'."
+                f"Unrecognized target_field: {target_field}. "
+                + "Parameter target_field must be 'lifting_rate' or 'price'."
             )
 
         return tuple(
-            [
-                Lifting(
-                    start_year=lft.start_year,
-                    end_year=lft.end_year,
-                    lifting_rate=(
-                        lft.lifting_rate * adjustment_value
-                        if target_field == "lifting_rate" and (fluid_type is None or lft.fluid_type is fluid_type)
-                        else lft.lifting_rate
-                    ),
-                    price=(
-                        lft.price * adjustment_value
-                        if target_field == "price" and fluid_type is not None and lft.fluid_type is fluid_type
-                        else lft.price
-                    ),
-                    prod_year=lft.prod_year,
-                    fluid_type=lft.fluid_type,
-                    ghv=lft.ghv,
-                    # prod_rate=lft.prod_rate,
-                    prod_rate_baseline=lft.prod_rate_baseline,
-                )
-                for lft in contract.lifting
-            ]
+            Lifting(
+                start_year=lft.start_year,
+                end_year=lft.end_year,
+                lifting_rate=(
+                    lft.lifting_rate * adjustment_value
+                    if target_field == "lifting_rate"
+                    and (fluid_type is None or lft.fluid_type is fluid_type)
+                    else lft.lifting_rate
+                ),
+                price=(
+                    lft.price * adjustment_value
+                    if target_field == "price"
+                    and fluid_type is not None
+                    and lft.fluid_type is fluid_type
+                    else lft.price
+                ),
+                prod_year=lft.prod_year,
+                fluid_type=lft.fluid_type,
+                ghv=lft.ghv,
+                # prod_rate=lft.prod_rate,
+                prod_rate_baseline=lft.prod_rate_baseline,
+            )
+            for lft in lifting_adjusted
         )
 
     # Adjustment to CAPEX cost (capital + intangible costs),
@@ -231,7 +480,7 @@ def _prepare_adjusted_parameters_single_contract(
                     start_year=cap.start_year,
                     end_year=cap.end_year,
                     expense_year=cap.expense_year,
-                    cost=cap.cost * adjustment_value,
+                    cost=require_float_array(cap.cost, "cost") * adjustment_value,
                     cost_allocation=cap.cost_allocation,
                     cost_type=cap.cost_type,
                     description=cap.description,
@@ -243,7 +492,7 @@ def _prepare_adjusted_parameters_single_contract(
                     depreciation_factor=cap.depreciation_factor,
                     is_ic_applied=cap.is_ic_applied,
                 )
-                for cap in contract.capital_cost
+                for cap in capital_adjusted
             ]
         )
 
@@ -252,7 +501,7 @@ def _prepare_adjusted_parameters_single_contract(
                 Intangible(
                     start_year=intang.start_year,
                     end_year=intang.end_year,
-                    cost=intang.cost * adjustment_value,
+                    cost=require_float_array(intang.cost, "cost") * adjustment_value,
                     cost_type=intang.cost_type,
                     expense_year=intang.expense_year,
                     cost_allocation=intang.cost_allocation,
@@ -260,7 +509,7 @@ def _prepare_adjusted_parameters_single_contract(
                     tax_portion=intang.tax_portion,
                     tax_discount=intang.tax_discount,
                 )
-                for intang in contract.intangible_cost
+                for intang in intangible_adjusted
             ]
         )
 
@@ -277,21 +526,29 @@ def _prepare_adjusted_parameters_single_contract(
                     description=opx.description,
                     tax_portion=opx.tax_portion,
                     tax_discount=opx.tax_discount,
-                    fixed_cost=opx.fixed_cost * adjustment_value,
+                    fixed_cost=require_float_array(opx.fixed_cost, "fixed_cost")
+                    * adjustment_value,
                     prod_rate=opx.prod_rate,
-                    cost_per_volume=opx.cost_per_volume * adjustment_value,
+                    cost_per_volume=require_float_array(
+                        opx.cost_per_volume, "cost_per_volume"
+                    )
+                    * adjustment_value,
                 )
-                for opx in contract.opex
+                for opx in opex_adjusted
             ]
         )
 
     # Adjustment to oil price; modify the `price` attribute of class Lifting
     elif element == "OILPRICE":
-        lifting_adjusted = _adjust_lifting(fluid_type=FluidType.OIL, target_field="price")
+        lifting_adjusted = _adjust_lifting(
+            fluid_type=FluidType.OIL, target_field="price"
+        )
 
     # Adjustment to gas price; modify the `price` attribute of class Lifting
     elif element == "GASPRICE":
-        lifting_adjusted = _adjust_lifting(fluid_type=FluidType.GAS, target_field="price")
+        lifting_adjusted = _adjust_lifting(
+            fluid_type=FluidType.GAS, target_field="price"
+        )
 
     # Adjustment to all lifting rates; modify every producer type.
     elif element == "LIFTING":
@@ -321,8 +578,8 @@ def _prepare_adjusted_parameters_single_contract(
 
 
 def _prepare_onstream_dates_single_contract(
-    contract: BaseProject | CostRecovery | GrossSplit
-) -> dict:
+    contract: _Contract,
+) -> _OnstreamDates:
     """
     Prepare oil and gas onstream dates for a single contract instance.
 
@@ -349,28 +606,64 @@ def _prepare_onstream_dates_single_contract(
 
     Notes
     -----
-    - The function dynamically accesses contract attributes using :func:`getattr`.
-    - It assumes the contract object exposes attributes:
-      ``_oil_revenue``, ``_gas_revenue``, ``oil_onstream_date``, and ``gas_onstream_date``.
+    The onstream decision uses the contract's public lifting records, so it remains
+    valid before and after a contract run without reaching into private results.
     """
-    def _get_onstream_date(target_str: str, default: str):
-        value = getattr(contract, target_str)
-        total = value.sum() if hasattr(value, "sum") else value
-        return None if total == 0 else getattr(contract, default)
+
+    lifting = contract.lifting
+    if lifting is None:
+        raise SensitivityException("lifting must be initialized before adjustment")
+
+    def _has_revenue(fluid_type: FluidType) -> bool:
+        return any(
+            np.count_nonzero(lft.revenue()) != 0
+            for lft in lifting
+            if lft.fluid_type is fluid_type
+        )
 
     return {
-        "oil": _get_onstream_date(target_str="_oil_revenue", default="oil_onstream_date"),
-        "gas": _get_onstream_date(target_str="_gas_revenue", default="gas_onstream_date"),
+        "oil": contract.oil_onstream_date if _has_revenue(FluidType.OIL) else None,
+        "gas": contract.gas_onstream_date if _has_revenue(FluidType.GAS) else None,
     }
 
 
+@overload
 def _adjust_element_single_contract(
-    contract: BaseProject | CostRecovery | GrossSplit,
-    contract_arguments: dict,
+    contract: CostRecovery,
+    contract_arguments: _ContractArguments,
     element: str,
-    adjustment_value: float,
+    adjustment_value: _Multiplier,
     run_contract: bool = False,
-):
+) -> CostRecovery: ...
+
+
+@overload
+def _adjust_element_single_contract(
+    contract: GrossSplit,
+    contract_arguments: _ContractArguments,
+    element: str,
+    adjustment_value: _Multiplier,
+    run_contract: bool = False,
+) -> GrossSplit: ...
+
+
+@overload
+def _adjust_element_single_contract(
+    contract: BaseProject,
+    contract_arguments: _ContractArguments,
+    element: str,
+    adjustment_value: _Multiplier,
+    run_contract: bool = False,
+) -> BaseProject: ...
+
+
+def _adjust_element_single_contract(
+    contract: object,
+    contract_arguments: _ContractArguments,
+    element: str,
+    adjustment_value: _Multiplier,
+    run_contract: bool = False,
+) -> _Contract:
     """
     Adjusts a single parameter of a PSC contract and creates a new adjusted contract instance.
 
@@ -401,6 +694,11 @@ def _adjust_element_single_contract(
         the returned instance will contain post-run results.
     """
 
+    if not isinstance(contract, BaseProject):
+        raise SensitivityException(
+            f"Invalid contract type: {contract.__class__.__qualname__}"
+        )
+
     # Prepare adjusted parameters
     params_adjusted = _prepare_adjusted_parameters_single_contract(
         contract=contract,
@@ -411,131 +709,120 @@ def _adjust_element_single_contract(
     # Prepare onstream dates
     onstream_date = _prepare_onstream_dates_single_contract(contract=contract)
 
-    # Specify base arguments
-    base_kwargs = {
-        # Base parameters
-        "start_date": contract.start_date,
-        "end_date": contract.end_date,
-        "oil_onstream_date": onstream_date["oil"],
-        "gas_onstream_date": onstream_date["gas"],
-        "approval_year": contract.approval_year,
-        "is_pod_1": contract.is_pod_1,
-        "is_strict": contract.is_strict,
-
-        # Lifting and costs
-        "lifting": params_adjusted["lifting"],
-        "capital_cost": params_adjusted["capital"],
-        "intangible_cost": params_adjusted["intangible"],
-        "opex": params_adjusted["opex"],
-        "asr_cost": contract.asr_cost,
-        "lbt_cost": contract.lbt_cost,
-        "cost_of_sales": contract.cost_of_sales,
-    }
-
     # Create a new instance of CostRecovery
     if isinstance(contract, CostRecovery):
-
-        # Specify the required arguments to create an instance of CostRecovery
-        cost_recovery_kwargs = {
-            # Base parameters, lifting, and costs
-            **base_kwargs,
-
-            # FTP
-            "oil_ftp_is_available": contract.oil_ftp_is_available,
-            "oil_ftp_is_shared": contract.oil_ftp_is_shared,
-            "oil_ftp_portion": contract.oil_ftp_portion,
-            "gas_ftp_is_available": contract.gas_ftp_is_available,
-            "gas_ftp_is_shared": contract.gas_ftp_is_shared,
-            "gas_ftp_portion": contract.gas_ftp_portion,
-
-            # Split
-            "tax_split_type": contract.tax_split_type,
-            "condition_dict": contract.condition_dict,
-            "indicator_rc_icp_sliding": contract.indicator_rc_icp_sliding,
-            "oil_ctr_pretax_share": contract.oil_ctr_pretax_share,
-            "gas_ctr_pretax_share": contract.gas_ctr_pretax_share,
-
-            # Investment credit and cap rate
-            "oil_ic_rate": contract.oil_ic_rate,
-            "gas_ic_rate": contract.gas_ic_rate,
-            "ic_is_available": contract.ic_is_available,
-            "oil_cr_cap_rate": contract.oil_cr_cap_rate,
-            "gas_cr_cap_rate": contract.gas_cr_cap_rate,
-
-            # DMO
-            "oil_dmo_volume_portion": contract.oil_dmo_volume_portion,
-            "oil_dmo_fee_portion": contract.oil_dmo_fee_portion,
-            "oil_dmo_holiday_duration": contract.oil_dmo_holiday_duration,
-            "gas_dmo_volume_portion": contract.gas_dmo_volume_portion,
-            "gas_dmo_fee_portion": contract.gas_dmo_fee_portion,
-            "gas_dmo_holiday_duration": contract.gas_dmo_holiday_duration,
-
-            # Carry forward depreciation
-            "oil_carry_forward_depreciation": contract.oil_carry_forward_depreciation,
-            "gas_carry_forward_depreciation": contract.gas_carry_forward_depreciation,
-        }
-
-        contract_adjusted = CostRecovery(**cost_recovery_kwargs)
+        contract_adjusted = CostRecovery(
+            start_date=contract.start_date,
+            end_date=contract.end_date,
+            oil_onstream_date=onstream_date["oil"],
+            gas_onstream_date=onstream_date["gas"],
+            approval_year=contract.approval_year,
+            is_pod_1=contract.is_pod_1,
+            is_strict=contract.is_strict,
+            lifting=params_adjusted["lifting"],
+            capital_cost=params_adjusted["capital"],
+            intangible_cost=params_adjusted["intangible"],
+            opex=params_adjusted["opex"],
+            asr_cost=contract.asr_cost,
+            lbt_cost=contract.lbt_cost,
+            cost_of_sales=contract.cost_of_sales,
+            oil_ftp_is_available=contract.oil_ftp_is_available,
+            oil_ftp_is_shared=contract.oil_ftp_is_shared,
+            oil_ftp_portion=contract.oil_ftp_portion,
+            gas_ftp_is_available=contract.gas_ftp_is_available,
+            gas_ftp_is_shared=contract.gas_ftp_is_shared,
+            gas_ftp_portion=contract.gas_ftp_portion,
+            tax_split_type=contract.tax_split_type,
+            condition_dict=contract.condition_dict,
+            indicator_rc_icp_sliding=contract.indicator_rc_icp_sliding,
+            oil_ctr_pretax_share=contract.oil_ctr_pretax_share,
+            gas_ctr_pretax_share=contract.gas_ctr_pretax_share,
+            oil_ic_rate=contract.oil_ic_rate,
+            gas_ic_rate=contract.gas_ic_rate,
+            ic_is_available=contract.ic_is_available,
+            oil_cr_cap_rate=contract.oil_cr_cap_rate,
+            gas_cr_cap_rate=contract.gas_cr_cap_rate,
+            oil_dmo_volume_portion=contract.oil_dmo_volume_portion,
+            oil_dmo_fee_portion=contract.oil_dmo_fee_portion,
+            oil_dmo_holiday_duration=contract.oil_dmo_holiday_duration,
+            gas_dmo_volume_portion=contract.gas_dmo_volume_portion,
+            gas_dmo_fee_portion=contract.gas_dmo_fee_portion,
+            gas_dmo_holiday_duration=contract.gas_dmo_holiday_duration,
+            oil_carry_forward_depreciation=contract.oil_carry_forward_depreciation,
+            gas_carry_forward_depreciation=contract.gas_carry_forward_depreciation,
+        )
 
     # Create a new instance of GrossSplit
     elif isinstance(contract, GrossSplit):
-
-        # Specify the required arguments to create an instance of GrossSplit
-        gross_split_kwargs = {
-            # Base parameters, lifting, and costs
-            **base_kwargs,
-
-            # Field and reservoir properties
-            "field_status": contract.field_status,
-            "field_loc": contract.field_loc,
-            "res_depth": contract.res_depth,
-            "infra_avail": contract.infra_avail,
-            "res_type": contract.res_type,
-            "api_oil": contract.api_oil,
-            "domestic_use": contract.domestic_use,
-            "prod_stage": contract.prod_stage,
-            "co2_content": contract.co2_content,
-            "h2s_content": contract.h2s_content,
-            "field_reserves_2024": contract.field_reserves_2024,
-            "infra_avail_2024": contract.infra_avail_2024,
-            "field_loc_2024": contract.field_loc_2024,
-            "split_ministry_disc": contract.split_ministry_disc,
-
-            # DMO parameters
-            "oil_dmo_volume_portion": contract.oil_dmo_volume_portion,
-            "oil_dmo_fee_portion": contract.oil_dmo_fee_portion,
-            "oil_dmo_holiday_duration": contract.oil_dmo_holiday_duration,
-            "gas_dmo_volume_portion": contract.gas_dmo_volume_portion,
-            "gas_dmo_fee_portion": contract.gas_dmo_fee_portion,
-            "gas_dmo_holiday_duration": contract.gas_dmo_holiday_duration,
-
-            # Carry forward depreciation
-            "oil_carry_forward_depreciation": contract.oil_carry_forward_depreciation,
-            "gas_carry_forward_depreciation": contract.gas_carry_forward_depreciation,
-        }
-
-        contract_adjusted = GrossSplit(**gross_split_kwargs)
+        contract_adjusted = GrossSplit(
+            start_date=contract.start_date,
+            end_date=contract.end_date,
+            oil_onstream_date=onstream_date["oil"],
+            gas_onstream_date=onstream_date["gas"],
+            approval_year=contract.approval_year,
+            is_pod_1=contract.is_pod_1,
+            is_strict=contract.is_strict,
+            lifting=params_adjusted["lifting"],
+            capital_cost=params_adjusted["capital"],
+            intangible_cost=params_adjusted["intangible"],
+            opex=params_adjusted["opex"],
+            asr_cost=contract.asr_cost,
+            lbt_cost=contract.lbt_cost,
+            cost_of_sales=contract.cost_of_sales,
+            field_status=contract.field_status,
+            field_loc=contract.field_loc,
+            res_depth=contract.res_depth,
+            infra_avail=contract.infra_avail,
+            res_type=contract.res_type,
+            api_oil=contract.api_oil,
+            domestic_use=contract.domestic_use,
+            prod_stage=contract.prod_stage,
+            co2_content=contract.co2_content,
+            h2s_content=contract.h2s_content,
+            field_reserves_2024=contract.field_reserves_2024,
+            infra_avail_2024=contract.infra_avail_2024,
+            field_loc_2024=contract.field_loc_2024,
+            split_ministry_disc=contract.split_ministry_disc,
+            oil_dmo_volume_portion=contract.oil_dmo_volume_portion,
+            oil_dmo_fee_portion=contract.oil_dmo_fee_portion,
+            oil_dmo_holiday_duration=contract.oil_dmo_holiday_duration,
+            gas_dmo_volume_portion=contract.gas_dmo_volume_portion,
+            gas_dmo_fee_portion=contract.gas_dmo_fee_portion,
+            gas_dmo_holiday_duration=contract.gas_dmo_holiday_duration,
+            oil_carry_forward_depreciation=contract.oil_carry_forward_depreciation,
+            gas_carry_forward_depreciation=contract.gas_carry_forward_depreciation,
+        )
 
     # Create a new instance of BaseProject
-    elif isinstance(contract, BaseProject):
-        contract_adjusted = BaseProject(**base_kwargs)
-
     else:
-        raise SensitivityException(
-            f"Invalid contract type: {contract.__class__.__qualname__}"
+        contract_adjusted = BaseProject(
+            start_date=contract.start_date,
+            end_date=contract.end_date,
+            oil_onstream_date=onstream_date["oil"],
+            gas_onstream_date=onstream_date["gas"],
+            approval_year=contract.approval_year,
+            is_pod_1=contract.is_pod_1,
+            is_strict=contract.is_strict,
+            lifting=params_adjusted["lifting"],
+            capital_cost=params_adjusted["capital"],
+            intangible_cost=params_adjusted["intangible"],
+            opex=params_adjusted["opex"],
+            asr_cost=contract.asr_cost,
+            lbt_cost=contract.lbt_cost,
+            cost_of_sales=contract.cost_of_sales,
         )
 
     if run_contract:
-        contract_adjusted.run(**contract_arguments)
+        _run_adjusted_contract(contract_adjusted, contract_arguments)
 
     return contract_adjusted
 
 
 def _adjust_element_transition_contract(
     contract: Transition,
-    contract_arguments: dict,
+    contract_arguments: _ContractArguments,
     element: str,
-    adjustment_value: float,
+    adjustment_value: _Multiplier,
     run_contract: bool = False,
 ) -> Transition:
     """
@@ -560,47 +847,95 @@ def _adjust_element_transition_contract(
         The contract that has been adjusted.
     """
     # Retrieving the first contract
-    contract_1_adjusted = _adjust_element_single_contract(
-        contract=contract.contract1,
-        contract_arguments=contract.argument_contract1,
-        element=element,
-        adjustment_value=adjustment_value,
-        run_contract=run_contract,
-    )
+    argument_contract1 = contract.argument_contract1
+    if isinstance(contract.contract1, CostRecovery):
+        contract_1_adjusted = _adjust_element_single_contract(
+            contract=contract.contract1,
+            contract_arguments=argument_contract1,
+            element=element,
+            adjustment_value=adjustment_value,
+            run_contract=run_contract,
+        )
+    else:
+        contract_1_adjusted = _adjust_element_single_contract(
+            contract=contract.contract1,
+            contract_arguments=argument_contract1,
+            element=element,
+            adjustment_value=adjustment_value,
+            run_contract=run_contract,
+        )
 
     # Retrieving the second contract
-    contract_2_adjusted = _adjust_element_single_contract(
-        contract=contract.contract2,
-        contract_arguments=contract.argument_contract2,
-        element=element,
-        adjustment_value=adjustment_value,
-        run_contract=run_contract,
-    )
+    argument_contract2 = contract.argument_contract2
+    if isinstance(contract.contract2, CostRecovery):
+        contract_2_adjusted = _adjust_element_single_contract(
+            contract=contract.contract2,
+            contract_arguments=argument_contract2,
+            element=element,
+            adjustment_value=adjustment_value,
+            run_contract=run_contract,
+        )
+    else:
+        contract_2_adjusted = _adjust_element_single_contract(
+            contract=contract.contract2,
+            contract_arguments=argument_contract2,
+            element=element,
+            adjustment_value=adjustment_value,
+            run_contract=run_contract,
+        )
 
     # Reconstructing the transition contract
     contract_adjusted = Transition(
         contract1=contract_1_adjusted,
         contract2=contract_2_adjusted,
-        argument_contract1=contract.argument_contract1,
-        argument_contract2=contract.argument_contract2,
+        argument_contract1=argument_contract1,
+        argument_contract2=argument_contract2,
     )
 
     # Condition when the run_contract is true
     if run_contract is True:
-        contract_adjusted.run(**contract_arguments)
-    else:
-        pass
+        _run_adjusted_contract(contract_adjusted, contract_arguments)
 
     return contract_adjusted
 
 
-def _adjust_contract(
-    contract: BaseProject | CostRecovery | GrossSplit | Transition,
-    contract_arguments: dict,
+@overload
+def adjust_sensitivity_contract(
+    contract: Transition,
+    contract_arguments: _ContractArguments,
     element: str,
-    adjustment_value: float,
+    adjustment_value: _Multiplier,
     run_contract: bool = False,
-):
+) -> Transition: ...
+
+
+@overload
+def adjust_sensitivity_contract(
+    contract: _Contract,
+    contract_arguments: _ContractArguments,
+    element: str,
+    adjustment_value: _Multiplier,
+    run_contract: bool = False,
+) -> _Contract: ...
+
+
+@overload
+def adjust_sensitivity_contract(
+    contract: _Contract | Transition,
+    contract_arguments: _ContractArguments,
+    element: str,
+    adjustment_value: _Multiplier,
+    run_contract: bool = False,
+) -> _Contract | Transition: ...
+
+
+def adjust_sensitivity_contract(
+    contract: _Contract | Transition,
+    contract_arguments: _ContractArguments,
+    element: str,
+    adjustment_value: _Multiplier,
+    run_contract: bool = False,
+) -> _Contract | Transition:
     """
     Function act as the wrapper to get sensitivity of a contract.
 
@@ -645,6 +980,7 @@ def sensitivity_psc(
     max_deviation: float,
     base_value: float = 1.0,
     step: int = 10,
+    increment: float | None = None,
     dataframe_output: Literal[True] = True,
 ) -> _SensitivityFrames: ...
 
@@ -658,6 +994,7 @@ def sensitivity_psc(
     max_deviation: float,
     base_value: float,
     step: int,
+    increment: float | None,
     dataframe_output: Literal[False],
 ) -> _SensitivityValues: ...
 
@@ -671,6 +1008,7 @@ def sensitivity_psc(
     max_deviation: float,
     base_value: float = 1.0,
     step: int = 10,
+    increment: float | None = None,
     *,
     dataframe_output: Literal[False],
 ) -> _SensitivityValues: ...
@@ -685,6 +1023,7 @@ def sensitivity_psc(
     max_deviation: float,
     base_value: float,
     step: int,
+    increment: float | None,
     dataframe_output: bool,
 ) -> _SensitivityResult: ...
 
@@ -698,6 +1037,7 @@ def sensitivity_psc(
     max_deviation: float,
     base_value: float = 1.0,
     step: int = 10,
+    increment: float | None = None,
     *,
     dataframe_output: bool,
 ) -> _SensitivityResult: ...
@@ -705,8 +1045,8 @@ def sensitivity_psc(
 
 def sensitivity_psc(
     contract: BaseProject | CostRecovery | GrossSplit | Transition,
-    contract_arguments: dict,
-    summary_arguments: dict,
+    contract_arguments: _ContractArguments,
+    summary_arguments: _SummaryArguments,
     min_deviation: float,
     max_deviation: float,
     base_value: float = 1.0,
@@ -751,13 +1091,14 @@ def sensitivity_psc(
     """
 
     # Get the multipliers
-    multipliers = _get_multipliers(
+    multipliers = get_sensitivity_multipliers(
         min_deviation=min_deviation,
         max_deviation=max_deviation,
         base_value=base_value,
         step=step,
         increment=increment,
     )
+    multiplier_values = _multiplier_values(multipliers)
 
     elements = [
         "CAPEX",
@@ -768,46 +1109,39 @@ def sensitivity_psc(
         "OILLIFTING",
         "GASLIFTING",
     ]
-    indicators = [
-        "ctr_npv",
-        "ctr_irr",
-        "ctr_pi",
-        "ctr_pot",
-        "gov_take",
-        "ctr_net_share",
-    ]
+    indicators = _SENSITIVITY_INDICATORS
 
     # Adjust the element of the contract and contain it in a list
     psc_adjusted_dict = {
         element: {
-            mul: _adjust_contract(
+            mul: adjust_sensitivity_contract(
                 contract=contract,
                 contract_arguments=contract_arguments,
                 element=element,
                 adjustment_value=mul,
                 run_contract=True,
             )
-            for mul in multipliers
+            for mul in multiplier_values
         }
         for element in elements
     }
 
     # Get the summary of each contract in psc_adjusted_dict and contain it in a dictionary.
     # dict: element -> multiplier = value
-    summary_adjusted_dict = {}
+    summary_adjusted_dict: dict[str, dict[np.float64, _Summary]] = {}
     for element in elements:
         summary_adjusted_dict[element] = {
-            mult: psc_adjusted_dict[element][mult].get_summary(**summary_arguments)
-            for mult in multipliers
+            mult: _get_summary(psc_adjusted_dict[element][mult], summary_arguments)
+            for mult in multiplier_values
         }
 
     # Retrieve NPV, IRR, PI, POT, Gov Take, and Contractor Share.
     # Transform summary_adjusted_dict into the following structure:
     # dict: indicator -> multiplier -> element = value
-    sensitivity_result = {}
+    sensitivity_result: _SensitivityValues = {}
     for indicator in indicators:
         sensitivity_result[indicator] = {}
-        for mult in multipliers:
+        for mult in multiplier_values:
             sensitivity_result[indicator][mult] = {
                 element: summary_adjusted_dict[element][mult].get(indicator, None)
                 for element in elements
@@ -830,13 +1164,14 @@ def sensitivity_psc(
 
     # Transform result dictionary into DataFrames
     if dataframe_output is True:
-        sensitivity_result_df = {
-            indicator: pd.DataFrame.from_dict(data, orient="index")
-            .reset_index()
-            .rename(columns={"index": "Factor"})
-            .set_index("Factor")
-            for indicator, data in sensitivity_result.items()
-        }
+        sensitivity_result_df: _SensitivityFrames = {}
+        for indicator, data in sensitivity_result.items():
+            dataframe = _sensitivity_dataframe(data)
+            sensitivity_result_df[indicator] = (
+                dataframe.reset_index()
+                .rename(columns={"index": "Factor"})
+                .set_index("Factor")
+            )
         return sensitivity_result_df
 
     else:
