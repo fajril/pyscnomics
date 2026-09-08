@@ -499,8 +499,7 @@ def npv_skk_real_terms(
         dcf * cashflow,
         dcf
         * cashflow
-        * np.power((1 + discount_rate), np.max(cashflow_years) - reference_year)
-        + year_factor,
+        * np.power((1 + discount_rate), np.max(cashflow_years) - reference_year),
     )
     return float(np.sum(discounted_cashflow))
 
