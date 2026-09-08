@@ -103,9 +103,9 @@ def _require_enum(value: object, expected: type[_EnumValue], name: str) -> _Enum
 
 
 def _require_float(value: object, name: str) -> float:
-    if not isinstance(value, float):
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise SensitivityException(f"{name} must be a float")
-    return value
+    return float(value)
 
 
 def _is_summary_value(value: object) -> TypeGuard[float | int | np.float64]:

@@ -437,7 +437,8 @@ def _is_parameters(value: object) -> TypeGuard[list[Parameter]]:
         and item.get("fluid") in (FluidType.OIL, FluidType.GAS, None)
         and isinstance(item.get("dist"), UncertaintyDistribution)
         and all(
-            isinstance(item.get(name), float)
+            isinstance(item.get(name), (int, float))
+            and not isinstance(item.get(name), bool)
             for name in ("min", "base", "max", "stddev")
         )
         for item in value
@@ -447,7 +448,16 @@ def _is_parameters(value: object) -> TypeGuard[list[Parameter]]:
 def _require_parameters(value: object) -> list[Parameter]:
     if not _is_parameters(value):
         raise TypeError("uncertainty parameters must have numeric bounds")
-    return value
+    return [
+        {
+            **item,
+            "min": float(item["min"]),
+            "base": float(item["base"]),
+            "max": float(item["max"]),
+            "stddev": float(item["stddev"]),
+        }
+        for item in value
+    ]
 
 
 def get_setup_dict(

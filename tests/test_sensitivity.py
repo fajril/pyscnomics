@@ -39,7 +39,6 @@ from pyscnomics.optimize.adjuster import (
 from pyscnomics.contracts.run_arguments import validate_gross_split_run_arguments
 from pyscnomics.optimize.sensitivity import (
     SensitivityException,
-    _validate_summary_arguments,
     adjust_sensitivity_contract,
     get_sensitivity_multipliers,
     sensitivity_psc,
@@ -48,6 +47,7 @@ from pyscnomics.optimize.uncertainty import (
     get_multipliers_montecarlo,
     get_summary_dict,
     min_mean_max_retriever,
+    uncertainty_psc,
 )
 
 
@@ -767,11 +767,64 @@ def test_api_sensitivity_rejects_fractional_step():
             )
 
 
-def test_sensitivity_summary_accepts_integer_inflation_rate():
-    arguments = _validate_summary_arguments({"inflation_rate": 0})
+def test_sensitivity_psc_accepts_integer_inflation_rate():
+    contract = BaseProject(
+        start_date=date(2023, 1, 1),
+        end_date=date(2024, 12, 31),
+        approval_year=2023,
+    )
+    contract.run()
 
-    assert arguments["inflation_rate"] == 0.0
-    assert type(arguments["inflation_rate"]) is float
+    with patch(
+        "pyscnomics.optimize.sensitivity.adjust_sensitivity_contract",
+        return_value=contract,
+    ):
+        result = sensitivity_psc(
+            contract=contract,
+            contract_arguments={},
+            summary_arguments={"inflation_rate": 0},
+            min_deviation=0.0,
+            max_deviation=0.0,
+            step=1,
+            dataframe_output=False,
+        )
+
+    expected_indicators = {
+        "ctr_npv",
+        "ctr_irr",
+        "ctr_pi",
+        "ctr_pot",
+        "gov_take",
+        "ctr_net_share",
+    }
+    assert set(result) == expected_indicators
+    assert all(1.0 in values for values in result.values())
+
+
+def test_sensitivity_psc_rejects_bool_inflation_rate():
+    contract = BaseProject(
+        start_date=date(2023, 1, 1),
+        end_date=date(2024, 12, 31),
+        approval_year=2023,
+    )
+    contract.run()
+
+    with (
+        patch(
+            "pyscnomics.optimize.sensitivity.adjust_sensitivity_contract",
+            return_value=contract,
+        ),
+        pytest.raises(SensitivityException, match="inflation_rate must be a float"),
+    ):
+        _ = sensitivity_psc(
+            contract=contract,
+            contract_arguments={},
+            summary_arguments={"inflation_rate": True},
+            min_deviation=0.0,
+            max_deviation=0.0,
+            step=1,
+            dataframe_output=False,
+        )
 
 
 def test_uncertainty_summary_defaults_to_zero_inflation():
@@ -783,6 +836,71 @@ def test_uncertainty_summary_defaults_to_zero_inflation():
 def test_uncertainty_summary_rejects_non_scalar_inflation():
     with pytest.raises(TypeError, match="inflation_rate must be a number"):
         _ = get_summary_dict({"summary_arguments": {"inflation_rate": [0.02, 0.03]}})
+
+
+def test_uncertainty_psc_accepts_integer_bounds_for_gross_split():
+    contract = GrossSplit(
+        start_date=date(2023, 1, 1),
+        end_date=date(2024, 12, 31),
+        approval_year=2023,
+    )
+
+    def run_with_bounds(bound: int | float) -> dict[str, object]:
+        return uncertainty_psc(
+            contract=contract,
+            contract_arguments={},
+            summary_arguments={},
+            run_number=1,
+            min_oil_price=bound,
+            mean_oil_price=bound,
+            max_oil_price=bound,
+            min_gas_price=bound,
+            mean_gas_price=bound,
+            max_gas_price=bound,
+            min_opex=bound,
+            mean_opex=bound,
+            max_opex=bound,
+            min_capex=bound,
+            mean_capex=bound,
+            max_capex=bound,
+            min_lifting=bound,
+            mean_lifting=bound,
+            max_lifting=bound,
+            oil_price_stddev=bound,
+            gas_price_stddev=bound,
+            opex_stddev=bound,
+            capex_stddev=bound,
+            lifting_stddev=bound,
+        )
+
+    np.random.seed(1729)
+    integer_result = run_with_bounds(1)
+    np.random.seed(1729)
+    float_result = run_with_bounds(1.0)
+
+    assert integer_result == float_result
+    assert isinstance(integer_result, dict)
+
+
+def test_uncertainty_psc_rejects_bool_bounds():
+    contract = GrossSplit(
+        start_date=date(2023, 1, 1),
+        end_date=date(2024, 12, 31),
+        approval_year=2023,
+    )
+
+    with pytest.raises(
+        TypeError, match="uncertainty parameters must have numeric bounds"
+    ):
+        _ = uncertainty_psc(
+            contract=contract,
+            contract_arguments={},
+            summary_arguments={},
+            run_number=1,
+            min_oil_price=True,
+            mean_oil_price=1.0,
+            max_oil_price=1.0,
+        )
 
 
 def test_uncertainty_lifting_statistics_include_every_producer_type():
