@@ -17,8 +17,8 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 # Windows:
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 
-# Create virtual environment and install dependencies
-uv sync
+# Create virtual environment and install development dependencies
+uv sync --extra dev
 ```
 
 #### Using pip (alternative)
@@ -82,7 +82,24 @@ open _build/index.html  # macOS
 
 ---
 
-## 2. Code Style Guidelines
+## 2. Quality checks
+
+Run the same checks locally that are enforced by GitHub Actions:
+
+```bash
+uv run ruff check .
+uv run basedpyright --warnings .
+uv run pytest -q
+```
+
+Ruff autofix and formatting are separate, optional maintenance commands:
+
+```bash
+uv run ruff check . --fix
+uv run ruff format .
+```
+
+## 3. Code Style Guidelines
 
 ### General Principles
 

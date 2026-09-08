@@ -61,6 +61,9 @@ docs = [
 [tool.setuptools]
 include-package-data = true
 
+[tool.setuptools.packages.find]
+include = ["pyscnomics*"]
+
 [tool.setuptools.package-data]
 "pyscnomics" = ["**/*.json"]
 
@@ -72,3 +75,4 @@ include = ["pyscnomics", "tests"]
 exclude = ["build", "dist", ".venv"]
 pythonVersion = "3.11"
 typeCheckingMode = "recommended"
+stubPath = "typings"
