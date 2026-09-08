@@ -53,9 +53,9 @@ def test_base_project_get_commodity_lifting():
     )
 
     # Generate calculated results
-    calc_oil = pr._get_oil_lifting()
-    calc_gas = pr._get_gas_lifting()
-    calc_sulfur = pr._get_sulfur_lifting()
+    calc_oil = pr.get_lifting_by_fluid(FluidType.OIL)
+    calc_gas = pr.get_lifting_by_fluid(FluidType.GAS)
+    calc_sulfur = pr.get_lifting_by_fluid(FluidType.SULFUR)
 
     calculated = {
         "oil_lifting_rate": calc_oil.lifting_rate,
@@ -77,8 +77,12 @@ def test_base_project_get_commodity_lifting():
     }
 
     # Execute testings
-    np.testing.assert_allclose(calculated["oil_lifting_rate"], expected["oil_lifting_rate"])
-    np.testing.assert_allclose(calculated["gas_lifting_rate"], expected["gas_lifting_rate"])
+    np.testing.assert_allclose(
+        calculated["oil_lifting_rate"], expected["oil_lifting_rate"]
+    )
+    np.testing.assert_allclose(
+        calculated["gas_lifting_rate"], expected["gas_lifting_rate"]
+    )
     np.testing.assert_allclose(
         calculated["sulfur_lifting_rate"], expected["sulfur_lifting_rate"]
     )
@@ -129,9 +133,9 @@ def test_base_project_commodity_revenue():
     )
 
     # Generate calculated results
-    calc_oil = pr._get_oil_lifting()
-    calc_gas = pr._get_gas_lifting()
-    calc_sulfur = pr._get_sulfur_lifting()
+    calc_oil = pr.get_lifting_by_fluid(FluidType.OIL)
+    calc_gas = pr.get_lifting_by_fluid(FluidType.GAS)
+    calc_sulfur = pr.get_lifting_by_fluid(FluidType.SULFUR)
 
     calculated = {
         "oil_revenue": calc_oil.revenue(),
@@ -141,7 +145,9 @@ def test_base_project_commodity_revenue():
 
     # Generate expected results
     expected = {
-        "oil_revenue": np.array([0, 0, 0, 0, 0, 0, 0, 1_000, 1_000, 1_000, 1_000, 1_000]),
+        "oil_revenue": np.array(
+            [0, 0, 0, 0, 0, 0, 0, 1_000, 1_000, 1_000, 1_000, 1_000]
+        ),
         "gas_revenue": np.array([0, 0, 0, 0, 0, 0, 10, 10, 10, 10, 10, 0]),
         "sulfur_revenue": np.array([0, 0, 0, 0, 0, 0, 0.5, 0.5, 0.5, 0.5, 0.5, 0]),
     }

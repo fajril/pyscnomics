@@ -1,0 +1,6 @@
+from typing import Literal
+
+class Locator: ...
+
+class MaxNLocator(Locator):
+    def __init__(self, nbins: int | Literal["auto"] = "auto") -> None: ...

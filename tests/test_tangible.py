@@ -8,11 +8,17 @@ from pyscnomics.econ.selection import DeprMethod, FluidType, InflationAppliedTo
 from pyscnomics.econ.costs import CapitalException, CapitalCost
 
 
+def _require_capital_cost(value: CapitalCost | float) -> CapitalCost:
+    if not isinstance(value, CapitalCost):
+        raise AssertionError("Expected scalar division to return CapitalCost")
+    return value
+
+
 def test_capital_incorrect_year_input():
     """A unit testing for incorrect data input: start year is after end year"""
 
     with pytest.raises(CapitalException):
-        CapitalCost(
+        _ = CapitalCost(
             start_year=2030,
             end_year=2023,
             cost=np.array([200, 200]),
@@ -27,7 +33,7 @@ def test_capital_unequal_length_of_data_input():
     """A unit testing for incorrect data input: unequal length of data input"""
 
     with pytest.raises(CapitalException):
-        CapitalCost(
+        _ = CapitalCost(
             start_year=2023,
             end_year=2032,
             cost=np.array([200, 200]),
@@ -42,7 +48,7 @@ def test_capital_incorrect_expense_year_input():
     """A unit testing for incorrect data input: expense year is after end year of the project"""
 
     with pytest.raises(CapitalException):
-        CapitalCost(
+        _ = CapitalCost(
             start_year=2023,
             end_year=2032,
             cost=np.array([200, 200]),
@@ -53,7 +59,7 @@ def test_capital_incorrect_expense_year_input():
         )
 
     with pytest.raises(CapitalException):
-        CapitalCost(
+        _ = CapitalCost(
             start_year=2023,
             end_year=2032,
             cost=np.array([200, 200]),
@@ -162,15 +168,20 @@ def test_capital_arithmetics():
     calc_add2 = mangga_capital + apel_capital + jeruk_capital
     calc_mul1 = mangga_capital * 2
     calc_mul2 = -0.5 * apel_capital
-    calc_div1 = jeruk_capital / 20
+    calc_div1 = _require_capital_cost(jeruk_capital / 20)
     calc_div2 = apel_capital / mangga_capital
 
     # Execute tests
-    np.testing.assert_allclose(add1, calc_add1.cost)
-    np.testing.assert_allclose(add2, calc_add2.cost)
-    np.testing.assert_allclose(mul1, calc_mul1.cost)
-    np.testing.assert_allclose(mul2, calc_mul2.cost)
-    np.testing.assert_allclose(div1, calc_div1.cost)
+    assert calc_add1.cost is not None
+    assert calc_add2.cost is not None
+    assert calc_mul1.cost is not None
+    assert calc_mul2.cost is not None
+    assert calc_div1.cost is not None
+    assert np.allclose(add1, calc_add1.cost)
+    assert np.allclose(add2, calc_add2.cost)
+    assert np.allclose(mul1, calc_mul1.cost)
+    assert np.allclose(mul2, calc_mul2.cost)
+    assert np.allclose(div1, calc_div1.cost)
     assert div2 == calc_div2
 
 
@@ -194,17 +205,26 @@ def test_capital_arithmetic_scales_salvage_value():
 
     positive_scalar = capital * 2
     negative_scalar = -0.5 * capital
-    quotient = capital / 2  # pyright: ignore[reportUnknownVariableType]
+    quotient = _require_capital_cost(capital / 2)
     difference = capital - other
 
-    np.testing.assert_allclose(positive_scalar.cost, np.array([200, 100]))  # pyright: ignore[reportUnknownArgumentType, reportUnknownMemberType]
-    np.testing.assert_allclose(positive_scalar.salvage_value, np.array([40, 20]))  # pyright: ignore[reportUnknownArgumentType, reportUnknownMemberType]
-    np.testing.assert_allclose(negative_scalar.cost, np.array([-50, -25]))  # pyright: ignore[reportUnknownArgumentType, reportUnknownMemberType]
-    np.testing.assert_allclose(negative_scalar.salvage_value, np.array([-10, -5]))  # pyright: ignore[reportUnknownArgumentType, reportUnknownMemberType]
-    np.testing.assert_allclose(quotient.cost, np.array([50, 25]))  # pyright: ignore[reportUnknownArgumentType, reportUnknownMemberType]
-    np.testing.assert_allclose(quotient.salvage_value, np.array([10, 5]))  # pyright: ignore[reportUnknownArgumentType, reportUnknownMemberType]
-    np.testing.assert_allclose(difference.cost, np.array([100, 50, -30, -20]))  # pyright: ignore[reportUnknownArgumentType, reportUnknownMemberType]
-    np.testing.assert_allclose(difference.salvage_value, np.array([20, 10, -6, -4]))  # pyright: ignore[reportUnknownArgumentType, reportUnknownMemberType]
+    assert positive_scalar.salvage_value is not None
+    assert negative_scalar.salvage_value is not None
+    assert quotient.salvage_value is not None
+    assert difference.salvage_value is not None
+
+    assert positive_scalar.cost is not None
+    assert negative_scalar.cost is not None
+    assert quotient.cost is not None
+    assert difference.cost is not None
+    assert np.allclose(positive_scalar.cost, np.array([200, 100]))
+    assert np.allclose(positive_scalar.salvage_value, np.array([40, 20]))
+    assert np.allclose(negative_scalar.cost, np.array([-50, -25]))
+    assert np.allclose(negative_scalar.salvage_value, np.array([-10, -5]))
+    assert np.allclose(quotient.cost, np.array([50, 25]))
+    assert np.allclose(quotient.salvage_value, np.array([10, 5]))
+    assert np.allclose(difference.cost, np.array([100, 50, -30, -20]))
+    assert np.allclose(difference.salvage_value, np.array([20, 10, -6, -4]))
 
 
 def test_capital_rejects_salvage_value_larger_than_cost_magnitude():
@@ -288,14 +308,16 @@ def test_capital_expenditures_with_tax_and_inflation():
         cost=np.array([50]),
         expense_year=np.array([2027]),
         cost_allocation=[FluidType.OIL],
-        tax_portion=np.array([1,]),
+        tax_portion=np.array(
+            [
+                1,
+            ]
+        ),
     )
 
     capital_add = mangga_capital + jeruk_capital
 
-    case1_calc = capital_add.expenditures_post_tax(
-        inflation_rate=0.02
-    )
+    case1_calc = capital_add.expenditures_post_tax(inflation_rate=0.02)
     case2_calc = capital_add.expenditures_post_tax(
         inflation_rate=np.array([0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08]),
     )
@@ -373,14 +395,14 @@ def test_capital_depreciation():
     np.testing.assert_allclose(depreDDB, calc_depreDDB)
     np.testing.assert_allclose(deprePSC, calc_deprePSC)
 
-    for calculated, expected in (  # pyright: ignore[reportUnknownVariableType]
-        (calc_undepreSL, undepreSL),
-        (calc_undepreDB, undepreDB),
-        (calc_undepreDDB, undepreDDB),
-        (calc_undeprePSC, undeprePSC),
-    ):
-        assert calculated.ndim == 1  # pyright: ignore[reportUnknownMemberType]
-        np.testing.assert_allclose(calculated.sum(), expected)  # pyright: ignore[reportUnknownArgumentType, reportUnknownMemberType]
+    assert calc_undepreSL.ndim == 1
+    np.testing.assert_allclose(np.sum(calc_undepreSL), undepreSL)
+    assert calc_undepreDB.ndim == 1
+    np.testing.assert_allclose(np.sum(calc_undepreDB), undepreDB)
+    assert calc_undepreDDB.ndim == 1
+    np.testing.assert_allclose(np.sum(calc_undepreDDB), undepreDDB)
+    assert calc_undeprePSC.ndim == 1
+    np.testing.assert_allclose(np.sum(calc_undeprePSC), undeprePSC)
 
 
 def test_capital_depreciation_with_tax_and_inflation():
@@ -443,9 +465,9 @@ def test_capital_depreciation_with_tax_and_inflation():
 
     # Execute testing
     np.testing.assert_allclose(depreCase1, depreCase1_calc)
-    np.testing.assert_allclose(undepreCase1, undepreCase1_calc.sum())
+    np.testing.assert_allclose(undepreCase1, np.sum(undepreCase1_calc))
     np.testing.assert_allclose(depreCase2, depreCase2_calc)
-    np.testing.assert_allclose(undepreCase2, undepreCase2_calc.sum())
+    np.testing.assert_allclose(undepreCase2, np.sum(undepreCase2_calc))
 
 
 def test_capital_book_value():

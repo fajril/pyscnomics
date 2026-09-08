@@ -2,10 +2,21 @@
 A collection of unit testings for OPEX class.
 """
 
-import pytest
+from typing import TypedDict
+
 import numpy as np
-from pyscnomics.econ.selection import FluidType, CostType
+import numpy.typing as npt
+import pytest
+
 from pyscnomics.econ.costs import OPEX, OPEXException, Intangible
+from pyscnomics.econ.selection import CostType, FluidType
+
+
+class _OpexExpected(TypedDict):
+    expense_year: npt.NDArray[np.int64]
+    fixed_cost: npt.NDArray[np.int64]
+    cost_allocation: list[FluidType]
+    cost_type: list[CostType | None]
 
 
 # Parameters for example
@@ -13,23 +24,33 @@ expense_year_1 = np.array([2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030])
 cost_1 = np.array([200, 200, 200, 150, 100, 75, 25, 25])
 cost_2 = np.array([200, 200, 200, 150])
 cost_allocation_1 = [
-    FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
-    FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+    FluidType.OIL,
+    FluidType.OIL,
+    FluidType.OIL,
+    FluidType.OIL,
+    FluidType.OIL,
+    FluidType.OIL,
+    FluidType.OIL,
+    FluidType.OIL,
 ]
-cost_type_1 = [
-    np.nan, np.nan, CostType.SUNK_COST, CostType.SUNK_COST,
-    CostType.SUNK_COST, CostType.SUNK_COST, None, None,
+cost_type_1: list[CostType | None] = [
+    None,
+    None,
+    CostType.SUNK_COST,
+    CostType.SUNK_COST,
+    CostType.SUNK_COST,
+    CostType.SUNK_COST,
+    None,
+    None,
 ]
-cost_type_2 = [
-    "CostType.SUNK_COST", CostType.SUNK_COST, CostType.SUNK_COST,
-    CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
-    CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+cost_type_3: list[CostType | None] = [
+    CostType.SUNK_COST,
+    CostType.SUNK_COST,
+    CostType.SUNK_COST,
+    CostType.PRE_ONSTREAM_COST,
+    CostType.PRE_ONSTREAM_COST,
     CostType.POST_ONSTREAM_COST,
-]
-cost_type_3 = [
-    CostType.SUNK_COST, CostType.SUNK_COST, CostType.SUNK_COST,
-    CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
-    CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+    CostType.POST_ONSTREAM_COST,
     CostType.POST_ONSTREAM_COST,
 ]
 tax_portion_1 = np.array([1, 1, 1, 1, 1, 1, 1, 1])
@@ -39,8 +60,7 @@ def test_opex_incorrect_year_input():
     """A unit testing for incorrect data input: start year is after end year"""
 
     with pytest.raises(OPEXException):
-
-        OPEX(
+        _ = OPEX(
             start_year=2033,
             end_year=2030,
             fixed_cost=np.array([100, 50]),
@@ -51,7 +71,7 @@ def test_opex_incorrect_year_input():
 
 def test_opex_unequal_length_input_1():
     with pytest.raises(OPEXException):
-        OPEX(
+        _ = OPEX(
             start_year=2023,
             end_year=2030,
             expense_year=expense_year_1,
@@ -63,7 +83,7 @@ def test_opex_unequal_length_input_1():
 
 def test_opex_unequal_length_input_2():
     with pytest.raises(OPEXException):
-        OPEX(
+        _ = OPEX(
             start_year=2023,
             end_year=2030,
             fixed_cost=np.array([100, 50]),
@@ -78,8 +98,7 @@ def test_opex_incorrect_expense_year_input():
     """A unit testing for incorrect data input: expense year is after the end year of the project"""
 
     with pytest.raises(OPEXException):
-
-        OPEX(
+        _ = OPEX(
             start_year=2023,
             end_year=2030,
             fixed_cost=np.array([100, 50]),
@@ -109,7 +128,7 @@ def test_opex_comparison_error():
         cost_type=cost_type_1,
     )
 
-    check_equality = (opex_mangga == opex_apel)
+    check_equality = opex_mangga == opex_apel
 
     assert check_equality is True
 
@@ -214,42 +233,93 @@ def test_opex_dunder_add():
 
     opex_add = opex_mangga + opex_apel
 
-    expected = {
+    expected: _OpexExpected = {
         "expense_year": np.array(
             [
-                2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030,
-                2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030,
+                2023,
+                2024,
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030,
+                2023,
+                2024,
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030,
             ]
         ),
         "fixed_cost": np.array(
             [
-                200, 200, 200, 150, 100, 75, 25, 25,
-                200, 200, 200, 150, 100, 75, 25, 25,
+                200,
+                200,
+                200,
+                150,
+                100,
+                75,
+                25,
+                25,
+                200,
+                200,
+                200,
+                150,
+                100,
+                75,
+                25,
+                25,
             ]
         ),
         "cost_allocation": (
             [
-                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
-                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
-                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
-                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
             ]
         ),
         "cost_type": (
             [
-                None, None,
-                CostType.SUNK_COST, CostType.SUNK_COST, CostType.SUNK_COST,
-                CostType.SUNK_COST, None, None,
-                CostType.SUNK_COST, CostType.SUNK_COST, CostType.SUNK_COST,
-                CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
-                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                None,
+                None,
+                CostType.SUNK_COST,
+                CostType.SUNK_COST,
+                CostType.SUNK_COST,
+                CostType.SUNK_COST,
+                None,
+                None,
+                CostType.SUNK_COST,
+                CostType.SUNK_COST,
+                CostType.SUNK_COST,
+                CostType.PRE_ONSTREAM_COST,
+                CostType.PRE_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST,
                 CostType.POST_ONSTREAM_COST,
             ]
         ),
     }
 
-    np.testing.assert_allclose(opex_add.expense_year, expected["expense_year"])
-    np.testing.assert_allclose(opex_add.fixed_cost, expected["fixed_cost"])
+    assert opex_add.expense_year is not None
+    assert opex_add.fixed_cost is not None
+    assert np.allclose(opex_add.expense_year, expected["expense_year"])
+    assert np.allclose(opex_add.fixed_cost, expected["fixed_cost"])
     assert opex_add.cost_allocation == expected["cost_allocation"]
     assert opex_add.cost_type == expected["cost_type"]
 
@@ -306,7 +376,9 @@ def test_opex_arithmetics():
     calc_add1 = (mangga_opex + apel_opex).expenditures_post_tax()
     calc_add2 = (nanas_opex + jeruk_opex).expenditures_post_tax()
     calc_mul1 = (nanas_opex * 2).expenditures_post_tax()
-    calc_div1 = (jeruk_opex / 2).expenditures_post_tax()
+    divided_opex = jeruk_opex / 2
+    assert isinstance(divided_opex, OPEX)
+    calc_div1 = divided_opex.expenditures_post_tax()
 
     # Execute testing
     np.testing.assert_allclose(add1, calc_add1)
@@ -350,7 +422,7 @@ def test_opex_expenditures():
 
 
 def test_opex_expenditures_with_tax_and_inflation():
-    """ A unit testing for expenditures method in OPEX class """
+    """A unit testing for expenditures method in OPEX class"""
 
     # Expected results
     case1 = np.array([0, 105, 110.25, 115.7625, 121.550625, 0, 0, 0])

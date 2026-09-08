@@ -2,20 +2,41 @@
 A collection of testing units for ASR class.
 """
 
-import pytest
 import numpy as np
-from pyscnomics.econ.selection import FluidType, CostType
+import numpy.typing as npt
+import pytest
+from typing import TypedDict
+
 from pyscnomics.econ.costs import ASR, ASRException
+from pyscnomics.econ.selection import CostType, FluidType
+
+
+class _ExpectedASR(TypedDict):
+    expense_year: npt.NDArray[np.int64]
+    cost: npt.NDArray[np.int64]
+    cost_allocation: list[FluidType]
+    cost_type: list[CostType | None]
+    future_rate: npt.NDArray[np.float64]
 
 
 # Parameters for example
-expense_year_1 = np.array([2023, 2024, 2025, 2026,])
+expense_year_1 = np.array(
+    [
+        2023,
+        2024,
+        2025,
+        2026,
+    ]
+)
 cost_1 = np.array([200, 150, 100, 50])
 cost_allocation_1 = [FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL]
-cost_type_1 = [
-    CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
-    CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+cost_type_1: list[CostType | None] = [
+    CostType.POST_ONSTREAM_COST,
+    CostType.POST_ONSTREAM_COST,
+    CostType.POST_ONSTREAM_COST,
+    CostType.POST_ONSTREAM_COST,
 ]
+cost_type_2: list[CostType | None] = [CostType.SUNK_COST, CostType.SUNK_COST]
 tax_portion_1 = np.array([1, 1, 1, 1])
 
 
@@ -23,8 +44,7 @@ def test_asr_incorrect_year_input():
     """A unit testing for incorrect data input: start year is after end year"""
 
     with pytest.raises(ASRException):
-
-        ASR(
+        _ = ASR(
             start_year=2033,
             end_year=2030,
             cost=np.array([100, 50]),
@@ -37,8 +57,7 @@ def test_asr_unequal_length_of_data_input():
     """A unit testing for incorrect data input: unequal length of data input"""
 
     with pytest.raises(ASRException):
-
-        ASR(
+        _ = ASR(
             start_year=2023,
             end_year=2030,
             cost=np.array([100, 50]),
@@ -51,7 +70,7 @@ def test_asr_incorrect_expense_year_input():
     """A unit testing for incorrect data input: incorrect expense year"""
 
     with pytest.raises(ASRException):
-        ASR(
+        _ = ASR(
             start_year=2023,
             end_year=2030,
             cost=np.array([100, 50]),
@@ -60,7 +79,7 @@ def test_asr_incorrect_expense_year_input():
         )
 
     with pytest.raises(ASRException):
-        ASR(
+        _ = ASR(
             start_year=2023,
             end_year=2030,
             cost=np.array([100, 50]),
@@ -120,33 +139,43 @@ def test_asr_dunder_add():
         expense_year=np.array([2029, 2029]),
         cost=np.array([500, 500]),
         cost_allocation=[FluidType.GAS, FluidType.GAS],
-        cost_type=[CostType.SUNK_COST, CostType.SUNK_COST],
+        cost_type=cost_type_2,
         future_rate=0.01,
     )
 
     asr_total = asr_mangga + asr_apel
 
-    expected = {
+    expected: _ExpectedASR = {
         "expense_year": np.array([2023, 2024, 2025, 2026, 2029, 2029]),
         "cost": np.array([200, 150, 100, 50, 500, 500]),
         "cost_allocation": [
-            FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
-            FluidType.GAS, FluidType.GAS
+            FluidType.OIL,
+            FluidType.OIL,
+            FluidType.OIL,
+            FluidType.OIL,
+            FluidType.GAS,
+            FluidType.GAS,
         ],
         "cost_type": [
-            CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
-            CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
-            CostType.SUNK_COST, CostType.SUNK_COST,
+            CostType.POST_ONSTREAM_COST,
+            CostType.POST_ONSTREAM_COST,
+            CostType.POST_ONSTREAM_COST,
+            CostType.POST_ONSTREAM_COST,
+            CostType.SUNK_COST,
+            CostType.SUNK_COST,
         ],
         "future_rate": np.array([0.2, 0.2, 0.2, 0.2, 0.01, 0.01]),
     }
 
     # Execute testings
-    np.testing.assert_allclose(asr_total.expense_year, expected["expense_year"])
-    np.testing.assert_allclose(asr_total.cost, expected["cost"])
+    assert asr_total.expense_year is not None
+    assert asr_total.cost is not None
+    assert asr_total.future_rate is not None
+    assert np.allclose(asr_total.expense_year, expected["expense_year"])
+    assert np.allclose(asr_total.cost, expected["cost"])
     assert asr_total.cost_allocation == expected["cost_allocation"]
     assert asr_total.cost_type == expected["cost_type"]
-    np.testing.assert_allclose(asr_total.future_rate, expected["future_rate"])
+    assert np.allclose(asr_total.future_rate, expected["future_rate"])
 
 
 def test_asr_expenditures():

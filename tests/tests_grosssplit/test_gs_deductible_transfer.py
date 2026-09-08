@@ -1,15 +1,85 @@
 """Gross Split deductible summary must include cross-fluid transfer coverage."""
 
+from array import array
 import copy
+import math
+from typing import Literal
 
 import numpy as np
+import numpy.typing as npt
+from pydantic import TypeAdapter, ValidationError
 
 from pyscnomics.api.adapter import get_grosssplit
+from pyscnomics.contracts.gross_split import GrossSplit
 from pyscnomics.econ.indicator import irr, npv_point_forward
 from pyscnomics.econ.selection import DiscountingMode
 
+FloatArray = npt.NDArray[np.float64]
+_STRING_OBJECT_MAP = TypeAdapter(dict[str, object])
+ResultName = Literal[
+    "_oil_deductible_cost",
+    "_gas_deductible_cost",
+    "_transfer_to_oil",
+    "_transfer_to_gas",
+    "_oil_cost_tobe_deducted",
+    "_gas_cost_tobe_deducted",
+    "_consolidated_carward_cost_aftertf",
+    "_oil_ctr_share_before_transfer",
+    "_gas_ctr_share_before_transfer",
+    "_oil_ddmo",
+    "_gas_ddmo",
+    "_consolidated_tax_payment",
+    "_consolidated_cashflow",
+    "_oil_total_indirect_tax",
+    "_gas_total_indirect_tax",
+]
 
-def _payload() -> dict:
+
+class _GrossSplitResults:
+    """Runtime-validated access to arrays populated by ``GrossSplit.run``."""
+
+    _contract: GrossSplit
+
+    def __init__(self, contract: GrossSplit) -> None:
+        self._contract = contract
+
+    def array(self, name: ResultName) -> FloatArray:
+        value = vars(self._contract).get(name)
+        if (
+            not isinstance(value, np.ndarray)
+            or value.ndim != 1
+            or value.dtype != np.dtype(np.float64)
+        ):
+            raise TypeError(f"Expected a float64 array result for {name}")
+        return np.asarray(value, dtype=np.float64)
+
+
+def _section(payload: dict[str, object], name: str) -> dict[str, object]:
+    value = payload.get(name)
+    try:
+        section = _STRING_OBJECT_MAP.validate_python(value, strict=True)
+    except ValidationError as exc:
+        raise TypeError(f"Expected {name} to contain a string-keyed mapping") from exc
+    payload[name] = section
+    return section
+
+
+def _summary_float(summary: dict[str, object], name: str) -> int | float:
+    value = summary.get(name)
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise TypeError(f"Expected {name} to contain a numeric result")
+    return value
+
+
+def _array_sum(values: FloatArray) -> float:
+    return math.fsum(array("d", values))
+
+
+def _float_values(values: FloatArray) -> list[float]:
+    return [float(value) for value in array("d", values)]
+
+
+def _payload() -> dict[str, object]:
     empty_cost = {
         "start_year": 2025,
         "end_year": 2026,
@@ -151,46 +221,60 @@ def test_deductible_summary_includes_transfer_coverage():
     """Gas costs covered by an oil surplus are still recovered deductible costs."""
 
     summary, contract, _, _ = get_grosssplit(data=copy.deepcopy(_payload()))
+    results = _GrossSplitResults(contract)
 
     pre_transfer_deductible = float(
-        np.nansum(contract._oil_deductible_cost + contract._gas_deductible_cost)
+        np.nansum(
+            results.array("_oil_deductible_cost")
+            + results.array("_gas_deductible_cost")
+        )
     )
-    transfers = float(np.nansum(contract._transfer_to_oil + contract._transfer_to_gas))
+    transfers = float(
+        np.nansum(results.array("_transfer_to_oil") + results.array("_transfer_to_gas"))
+    )
     cost_to_be_deducted = float(
-        np.nansum(contract._oil_cost_tobe_deducted + contract._gas_cost_tobe_deducted)
+        np.nansum(
+            results.array("_oil_cost_tobe_deducted")
+            + results.array("_gas_cost_tobe_deducted")
+        )
     )
-    carry_after_transfer = float(contract._consolidated_carward_cost_aftertf[-1])
+    carry_after_transfer = _float_values(
+        results.array("_consolidated_carward_cost_aftertf")
+    )[-1]
+    deductible_cost = _summary_float(summary, "cost_recovery/deductible_cost")
+    unrec_cost = _summary_float(summary, "unrec_cost")
 
     assert transfers > 0
     assert pre_transfer_deductible == 0
-    assert summary["cost_recovery/deductible_cost"] == pre_transfer_deductible + transfers
-    assert summary["cost_recovery/deductible_cost"] == cost_to_be_deducted - carry_after_transfer
-    assert summary["unrec_cost"] == carry_after_transfer
+    assert deductible_cost == pre_transfer_deductible + transfers
+    assert deductible_cost == cost_to_be_deducted - carry_after_transfer
+    assert unrec_cost == carry_after_transfer
 
 
 def test_tax_uses_combined_pre_transfer_income():
     """Tax must not be deferred by the oil/gas transfer."""
 
     payload = _payload()
-    payload["contract_arguments"]["effective_tax_rate"] = 0.376
+    _section(payload, "contract_arguments")["effective_tax_rate"] = 0.376
 
     summary, contract, _, _ = get_grosssplit(data=copy.deepcopy(payload))
+    results = _GrossSplitResults(contract)
 
     combined_taxable = (
-        contract._oil_ctr_share_before_transfer
-        + contract._gas_ctr_share_before_transfer
-        - contract._oil_deductible_cost
-        - contract._gas_deductible_cost
-        - contract._oil_ddmo
-        - contract._gas_ddmo
+        results.array("_oil_ctr_share_before_transfer")
+        + results.array("_gas_ctr_share_before_transfer")
+        - results.array("_oil_deductible_cost")
+        - results.array("_gas_deductible_cost")
+        - results.array("_oil_ddmo")
+        - results.array("_gas_ddmo")
     )
 
     np.testing.assert_allclose(
-        contract._consolidated_tax_payment,
+        results.array("_consolidated_tax_payment"),
         combined_taxable * 0.376,
         atol=1e-6,
     )
-    assert summary["gov_tax_income"] > 0
+    assert _summary_float(summary, "gov_tax_income") > 0
 
 
 def test_point_forward_net_cashflow_remains_full_lifecycle():
@@ -198,16 +282,19 @@ def test_point_forward_net_cashflow_remains_full_lifecycle():
 
     payload = _payload()
     reference_year = 2026
-    payload["summary_arguments"]["discount_rate_start_year"] = reference_year
-    payload["summary_arguments"]["npv_mode"] = "Point Forward"
+    summary_arguments = _section(payload, "summary_arguments")
+    summary_arguments["discount_rate_start_year"] = reference_year
+    summary_arguments["npv_mode"] = "Point Forward"
 
     summary, contract, _, _ = get_grosssplit(data=copy.deepcopy(payload))
+    results = _GrossSplitResults(contract)
 
     point_forward = contract.project_years >= reference_year
-    assert summary["ctr_net_cashflow"] == contract._consolidated_cashflow.sum(dtype=float)
-    assert summary["ctr_irr"] == irr(contract._consolidated_cashflow[point_forward])
-    assert summary["ctr_npv"] == npv_point_forward(
-        cashflow=contract._consolidated_cashflow,
+    cashflow = results.array("_consolidated_cashflow")
+    assert _summary_float(summary, "ctr_net_cashflow") == _array_sum(cashflow)
+    assert _summary_float(summary, "ctr_irr") == irr(cashflow[point_forward])
+    assert _summary_float(summary, "ctr_npv") == npv_point_forward(
+        cashflow=cashflow,
         cashflow_years=contract.project_years,
         discount_rate=0.1,
         reference_year=reference_year,
@@ -240,10 +327,12 @@ def test_total_indirect_taxes_includes_lbt():
     }
 
     summary, contract, _, _ = get_grosssplit(data=copy.deepcopy(payload))
+    results = _GrossSplitResults(contract)
 
-    expected_vat = (
-        contract._oil_total_indirect_tax.sum(dtype=float)
-        + contract._gas_total_indirect_tax.sum(dtype=float)
+    expected_vat = _array_sum(results.array("_oil_total_indirect_tax")) + _array_sum(
+        results.array("_gas_total_indirect_tax")
     )
-    assert summary["total_indirect_taxes"] == expected_vat + summary["lbt"]
-    assert summary["total_indirect_taxes"] > 0
+    total_indirect_taxes = _summary_float(summary, "total_indirect_taxes")
+    lbt = _summary_float(summary, "lbt")
+    assert total_indirect_taxes == expected_vat + lbt
+    assert total_indirect_taxes > 0

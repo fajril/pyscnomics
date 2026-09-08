@@ -2,43 +2,64 @@
 A collection of unit testing for Intangible class.
 """
 
-import pytest
 import numpy as np
-from pyscnomics.econ.selection import FluidType, CostType
+import pytest
+
 from pyscnomics.econ.costs import CapitalCost, Intangible, IntangibleException
+from pyscnomics.econ.selection import CostType, FluidType
 
 
 # Parameters for example
 expense_year_1 = np.array([2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030])
 cost_1 = np.array([200, 200, 200, 150, 100, 75, 25, 25])
 cost_allocation_1 = [
-    FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
-    FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+    FluidType.OIL,
+    FluidType.OIL,
+    FluidType.OIL,
+    FluidType.OIL,
+    FluidType.OIL,
+    FluidType.OIL,
+    FluidType.OIL,
+    FluidType.OIL,
 ]
-cost_type_1 = [
-    np.nan, np.nan, CostType.SUNK_COST, CostType.SUNK_COST,
-    CostType.SUNK_COST, CostType.SUNK_COST, None, None,
+cost_type_1: list[float | CostType | None] = [
+    np.nan,
+    np.nan,
+    CostType.SUNK_COST,
+    CostType.SUNK_COST,
+    CostType.SUNK_COST,
+    CostType.SUNK_COST,
+    None,
+    None,
 ]
-cost_type_2 = [
-    "CostType.SUNK_COST", CostType.SUNK_COST, CostType.SUNK_COST,
-    CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
-    CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+cost_type_2: list[str | CostType] = [
+    "CostType.SUNK_COST",
+    CostType.SUNK_COST,
+    CostType.SUNK_COST,
+    CostType.PRE_ONSTREAM_COST,
+    CostType.PRE_ONSTREAM_COST,
+    CostType.POST_ONSTREAM_COST,
+    CostType.POST_ONSTREAM_COST,
     CostType.POST_ONSTREAM_COST,
 ]
-cost_type_3 = [
-    CostType.SUNK_COST, CostType.SUNK_COST, CostType.SUNK_COST,
-    CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
-    CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+cost_type_3: list[CostType | None] = [
+    CostType.SUNK_COST,
+    CostType.SUNK_COST,
+    CostType.SUNK_COST,
+    CostType.PRE_ONSTREAM_COST,
+    CostType.PRE_ONSTREAM_COST,
+    CostType.POST_ONSTREAM_COST,
+    CostType.POST_ONSTREAM_COST,
     CostType.POST_ONSTREAM_COST,
 ]
 tax_portion_1 = np.array([1, 1, 1, 1, 1, 1, 1, 1])
 
 
 def test_intangible_incorrect_year_input():
-    """ A unit testing for incorrect data input: start year is after end year """
+    """A unit testing for incorrect data input: start year is after end year"""
 
     with pytest.raises(IntangibleException):
-        Intangible(
+        _ = Intangible(
             start_year=2033,
             end_year=2030,
             cost=np.array([100, 50]),
@@ -48,10 +69,10 @@ def test_intangible_incorrect_year_input():
 
 
 def test_intangible_unequal_length_of_data_input():
-    """ A unit testing for incorrect data input: unequal length of data input """
+    """A unit testing for incorrect data input: unequal length of data input"""
 
     with pytest.raises(IntangibleException):
-        Intangible(
+        _ = Intangible(
             start_year=2023,
             end_year=2030,
             cost=np.array([100, 50]),
@@ -61,10 +82,10 @@ def test_intangible_unequal_length_of_data_input():
 
 
 def test_intangible_incorrect_expense_year_input():
-    """ A unit testing for incorrect data input: incorrect expense year """
+    """A unit testing for incorrect data input: incorrect expense year"""
 
     with pytest.raises(IntangibleException):
-        Intangible(
+        _ = Intangible(
             start_year=2023,
             end_year=2030,
             cost=np.array([100, 50]),
@@ -73,7 +94,7 @@ def test_intangible_incorrect_expense_year_input():
         )
 
     with pytest.raises(IntangibleException):
-        Intangible(
+        _ = Intangible(
             start_year=2023,
             end_year=2030,
             cost=np.array([100, 50]),
@@ -87,14 +108,9 @@ def test_intangible_incorrect_cost_type_1():
     A unit testing for incorrect data input: an element of cost_type is given as a string
     """
     with pytest.raises(IntangibleException):
-        Intangible(
-            start_year=2023,
-            end_year=2030,
-            expense_year=expense_year_1,
-            cost=cost_1,
-            cost_allocation=cost_allocation_1,
-            cost_type=cost_type_2,
-            tax_portion=tax_portion_1,
+        _ = Intangible.validate_cost_types(
+            cost_type_2,
+            len(expense_year_1),
         )
 
 
@@ -103,14 +119,9 @@ def test_intangible_incorrect_cost_type_2():
     A unit testing for incorrect data input: cost_type is not given as a list
     """
     with pytest.raises(IntangibleException):
-        Intangible(
-            start_year=2023,
-            end_year=2030,
-            expense_year=expense_year_1,
-            cost=cost_1,
-            cost_allocation=cost_allocation_1,
-            cost_type=CostType.SUNK_COST,
-            tax_portion=tax_portion_1,
+        _ = Intangible.validate_cost_types(
+            CostType.SUNK_COST,
+            len(expense_year_1),
         )
 
 
@@ -139,7 +150,7 @@ def test_intangible_correct_cost_type_2():
         expense_year=expense_year_1,
         cost=cost_1,
         cost_allocation=cost_allocation_1,
-        cost_type=cost_type_1,
+        cost_type=Intangible.validate_cost_types(cost_type_1, len(expense_year_1)),
     )
 
     expected = [
@@ -170,9 +181,13 @@ def test_intangible_correct_cost_type_3():
     )
 
     expected = [
-        CostType.SUNK_COST, CostType.SUNK_COST, CostType.SUNK_COST,
-        CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
-        CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+        CostType.SUNK_COST,
+        CostType.SUNK_COST,
+        CostType.SUNK_COST,
+        CostType.PRE_ONSTREAM_COST,
+        CostType.PRE_ONSTREAM_COST,
+        CostType.POST_ONSTREAM_COST,
+        CostType.POST_ONSTREAM_COST,
         CostType.POST_ONSTREAM_COST,
     ]
 
@@ -221,7 +236,7 @@ def test_intangible_comparison_2():
         expense_year=expense_year_1,
         cost=cost_1,
         cost_allocation=cost_allocation_1,
-        cost_type=cost_type_1,
+        cost_type=Intangible.validate_cost_types(cost_type_1, len(expense_year_1)),
     )
 
     assert intangible_mangga != intangible_apel
@@ -250,46 +265,94 @@ def test_intangible_dunder_add():
     intangible_add = intangible_mangga + intangible_apel
 
     # Expected results
-    expected = {
-        "expense_year": np.array(
-            [
-                2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030,
-                2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030,
-            ]
-        ),
-        "cost": np.array(
-            [
-                200, 200, 200, 150, 100, 75, 25, 25,
-                200, 200, 200, 150, 100, 75, 25, 25,
-            ]
-        ),
-        "cost_allocation": [
-            FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
-            FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
-            FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
-            FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
-        ],
-        "cost_type": [
-            CostType.SUNK_COST, CostType.SUNK_COST, CostType.SUNK_COST,
-            CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
-            CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
-            CostType.POST_ONSTREAM_COST,
-            CostType.SUNK_COST, CostType.SUNK_COST, CostType.SUNK_COST,
-            CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
-            CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
-            CostType.POST_ONSTREAM_COST,
-        ],
-    }
+    expected_expense_year = np.array(
+        [
+            2023,
+            2024,
+            2025,
+            2026,
+            2027,
+            2028,
+            2029,
+            2030,
+            2023,
+            2024,
+            2025,
+            2026,
+            2027,
+            2028,
+            2029,
+            2030,
+        ]
+    )
+    expected_cost = np.array(
+        [
+            200,
+            200,
+            200,
+            150,
+            100,
+            75,
+            25,
+            25,
+            200,
+            200,
+            200,
+            150,
+            100,
+            75,
+            25,
+            25,
+        ]
+    )
+    expected_cost_allocation = [
+        FluidType.OIL,
+        FluidType.OIL,
+        FluidType.OIL,
+        FluidType.OIL,
+        FluidType.OIL,
+        FluidType.OIL,
+        FluidType.OIL,
+        FluidType.OIL,
+        FluidType.OIL,
+        FluidType.OIL,
+        FluidType.OIL,
+        FluidType.OIL,
+        FluidType.OIL,
+        FluidType.OIL,
+        FluidType.OIL,
+        FluidType.OIL,
+    ]
+    expected_cost_type = [
+        CostType.SUNK_COST,
+        CostType.SUNK_COST,
+        CostType.SUNK_COST,
+        CostType.PRE_ONSTREAM_COST,
+        CostType.PRE_ONSTREAM_COST,
+        CostType.POST_ONSTREAM_COST,
+        CostType.POST_ONSTREAM_COST,
+        CostType.POST_ONSTREAM_COST,
+        CostType.SUNK_COST,
+        CostType.SUNK_COST,
+        CostType.SUNK_COST,
+        CostType.PRE_ONSTREAM_COST,
+        CostType.PRE_ONSTREAM_COST,
+        CostType.POST_ONSTREAM_COST,
+        CostType.POST_ONSTREAM_COST,
+        CostType.POST_ONSTREAM_COST,
+    ]
 
     # Perform tests
-    np.testing.assert_allclose(intangible_add.expense_year, expected["expense_year"])
-    np.testing.assert_allclose(intangible_add.cost, expected["cost"])
-    assert intangible_add.cost_allocation == expected["cost_allocation"]
-    assert intangible_add.cost_type == expected["cost_type"]
+    assert intangible_add.expense_year is not None
+    assert intangible_add.cost is not None
+    assert np.allclose(intangible_add.expense_year, expected_expense_year)
+    assert np.allclose(intangible_add.cost, expected_cost)
+    assert intangible_add.cost_allocation == expected_cost_allocation
+    assert intangible_add.cost_type == expected_cost_type
 
 
 def test_intangible_comparison():
-    """ A unit testing for comparison between Intangible instances """
+    """A unit testing for comparison between Intangible instances"""
 
     mangga_tangible = CapitalCost(
         start_year=2023,
@@ -333,7 +396,7 @@ def test_intangible_comparison():
 
 
 def test_intangible_arithmetics_incorrect():
-    """ A unit testing for misuse of arithmetic operations upon an instance of Intangible """
+    """A unit testing for misuse of arithmetic operations upon an instance of Intangible"""
 
     mangga_tangible = CapitalCost(
         start_year=2023,
@@ -369,7 +432,7 @@ def test_intangible_arithmetics_incorrect():
 
 
 def test_intangible_arithmetics():
-    """ A unit testing for arithmetic operations upon an instance of Intangible """
+    """A unit testing for arithmetic operations upon an instance of Intangible"""
 
     # Expected results
     add = [0, 0, 0, 0, 0, 200, 100, 0]
@@ -406,6 +469,7 @@ def test_intangible_arithmetics():
     calc_sub = apel_intangible - jeruk_intangible
     calc_mul = -2 * mangga_intangible
     calc_div = mangga_intangible / 2
+    assert isinstance(calc_div, Intangible)
 
     # Execute testing
     np.testing.assert_allclose(add, calc_add.expenditures_post_tax())
@@ -415,7 +479,7 @@ def test_intangible_arithmetics():
 
 
 def test_intangible_expenditures():
-    """ A unit testing for expenditures method in Intangible class """
+    """A unit testing for expenditures method in Intangible class"""
 
     # Expected result
     expense1 = [0, 0, 0, 0, 0, 100, 50, 0]
@@ -447,20 +511,22 @@ def test_intangible_expenditures():
 
 
 def test_intangible_expenditures_with_tax_and_inflation():
-    """ A unit testing for expenditures method in Intangible class with inflation scheme """
+    """A unit testing for expenditures method in Intangible class with inflation scheme"""
 
     # Expected result
     case1 = np.array([0, 102, 105.06, 109.2624, 114.72552, 0, 0, 0])
-    case2 = np.array([
-        0,
-        102.0,
-        105.06,
-        109.2624,
-        114.72552,
-        0,
-        0,
-        0,
-    ])
+    case2 = np.array(
+        [
+            0,
+            102.0,
+            105.06,
+            109.2624,
+            114.72552,
+            0,
+            0,
+            0,
+        ]
+    )
 
     # Calculated result
     intangible_mangga = Intangible(
@@ -469,8 +535,14 @@ def test_intangible_expenditures_with_tax_and_inflation():
         cost=np.array([0, 100, 100, 100, 100, 0, 0, 0]),
         expense_year=np.array([2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030]),
         cost_allocation=[
-            FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS,
-            FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS
+            FluidType.GAS,
+            FluidType.GAS,
+            FluidType.GAS,
+            FluidType.GAS,
+            FluidType.GAS,
+            FluidType.GAS,
+            FluidType.GAS,
+            FluidType.GAS,
         ],
     )
 
@@ -480,8 +552,14 @@ def test_intangible_expenditures_with_tax_and_inflation():
         cost=np.array([0, 100, 100, 100, 100, 0, 0, 0]),
         expense_year=np.array([2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030]),
         cost_allocation=[
-            FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS,
-            FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS
+            FluidType.GAS,
+            FluidType.GAS,
+            FluidType.GAS,
+            FluidType.GAS,
+            FluidType.GAS,
+            FluidType.GAS,
+            FluidType.GAS,
+            FluidType.GAS,
         ],
     )
 

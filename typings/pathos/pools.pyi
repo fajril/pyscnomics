@@ -1,0 +1,13 @@
+from collections.abc import Callable, Iterable
+from typing import TypeVar
+
+_Input = TypeVar("_Input")
+_Output = TypeVar("_Output")
+
+class ProcessPool:
+    def __init__(self, *, nodes: int) -> None: ...
+    def map(
+        self, function: Callable[[_Input], _Output], items: Iterable[_Input]
+    ) -> list[_Output]: ...
+    def close(self) -> None: ...
+    def join(self) -> None: ...

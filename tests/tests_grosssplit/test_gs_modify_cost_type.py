@@ -6,6 +6,7 @@ cost_type attribute in each cost Classes.
 import numpy as np
 import pytest
 from datetime import date
+from typing import TypedDict
 
 from pyscnomics.econ.selection import FluidType, CostType
 from pyscnomics.econ.revenue import Lifting
@@ -13,7 +14,24 @@ from pyscnomics.econ.costs import CapitalCost
 from pyscnomics.contracts.gross_split import GrossSplit, GrossSplitSummaryException
 
 
-kwargs = {
+class GrossSplitKwargs(TypedDict):
+    start_date: date
+    end_date: date
+    oil_onstream_date: date
+    gas_onstream_date: date
+    approval_year: int
+    split_ministry_disc: float
+    oil_dmo_volume_portion: float
+    oil_dmo_fee_portion: float
+    gas_dmo_volume_portion: float
+    gas_dmo_fee_portion: float
+    oil_dmo_holiday_duration: int
+    gas_dmo_holiday_duration: int
+    oil_carry_forward_depreciation: int
+    gas_carry_forward_depreciation: int
+
+
+kwargs: GrossSplitKwargs = {
     "start_date": date(year=2023, month=1, day=1),
     "end_date": date(year=2034, month=12, day=31),
     "oil_onstream_date": date(year=2030, month=1, day=1),
@@ -31,11 +49,18 @@ kwargs = {
 }
 
 
+def _get_capital_cost(gross_split: GrossSplit, name: str) -> CapitalCost:
+    value = vars(gross_split).get(name)
+    if not isinstance(value, CapitalCost):
+        raise AssertionError(f"Expected {name} to contain a CapitalCost")
+    return value
+
+
 def test_gross_split_summary_requires_successful_run() -> None:
     gross_split = GrossSplit(**kwargs)
 
     with pytest.raises(GrossSplitSummaryException, match=r"run\(\)"):
-        gross_split.get_summary()
+        _ = gross_split.get_summary()
 
 
 def test_classifies_capital_cost_types_by_project_period():
@@ -66,37 +91,82 @@ def test_classifies_capital_cost_types_by_project_period():
         end_year=2034,
         expense_year=np.array(
             [
-                2023, 2024, 2025, 2026, 2027, 2028,
-                2029, 2030, 2031, 2032, 2033, 2034,
+                2023,
+                2024,
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030,
+                2031,
+                2032,
+                2033,
+                2034,
             ]
         ),
         cost=np.array(
             [
-                200, 200, 200, 200, 150, 100,
-                100, 75, 50, 50, 50, 50,
+                200,
+                200,
+                200,
+                200,
+                150,
+                100,
+                100,
+                75,
+                50,
+                50,
+                50,
+                50,
             ]
         ),
         cost_allocation=(
             [
-                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
-                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
-                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
             ]
         ),
         cost_type=(
             [
-                CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
-                CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
-                CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
-                CostType.PRE_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
-                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
-                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.PRE_ONSTREAM_COST,
+                CostType.PRE_ONSTREAM_COST,
+                CostType.PRE_ONSTREAM_COST,
+                CostType.PRE_ONSTREAM_COST,
+                CostType.PRE_ONSTREAM_COST,
+                CostType.PRE_ONSTREAM_COST,
+                CostType.PRE_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST,
             ]
         ),
         tax_portion=np.array(
             [
-                1, 1, 1, 1, 1, 1,
-                1, 1, 1, 1, 1, 1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
             ]
         ),
     )
@@ -107,37 +177,82 @@ def test_classifies_capital_cost_types_by_project_period():
         end_year=2034,
         expense_year=np.array(
             [
-                2023, 2024, 2025, 2026, 2027, 2028,
-                2029, 2030, 2031, 2032, 2033, 2034,
+                2023,
+                2024,
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030,
+                2031,
+                2032,
+                2033,
+                2034,
             ]
         ),
         cost=np.array(
             [
-                20, 20, 20, 20, 15, 10,
-                10, 7.5, 5, 5, 5, 5,
+                20,
+                20,
+                20,
+                20,
+                15,
+                10,
+                10,
+                7.5,
+                5,
+                5,
+                5,
+                5,
             ]
         ),
         cost_allocation=(
             [
-                FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS,
-                FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS,
-                FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS,
+                FluidType.GAS,
+                FluidType.GAS,
+                FluidType.GAS,
+                FluidType.GAS,
+                FluidType.GAS,
+                FluidType.GAS,
+                FluidType.GAS,
+                FluidType.GAS,
+                FluidType.GAS,
+                FluidType.GAS,
+                FluidType.GAS,
+                FluidType.GAS,
             ]
         ),
         cost_type=(
             [
-                CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
-                CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
-                CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
-                CostType.PRE_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
-                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
-                CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+                CostType.PRE_ONSTREAM_COST,
+                CostType.PRE_ONSTREAM_COST,
+                CostType.PRE_ONSTREAM_COST,
+                CostType.PRE_ONSTREAM_COST,
+                CostType.PRE_ONSTREAM_COST,
+                CostType.PRE_ONSTREAM_COST,
+                CostType.PRE_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST,
+                CostType.POST_ONSTREAM_COST,
             ]
         ),
         tax_portion=np.array(
             [
-                1, 1, 1, 1, 1, 1,
-                1, 1, 1, 1, 1, 1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
             ]
         ),
     )
@@ -146,19 +261,21 @@ def test_classifies_capital_cost_types_by_project_period():
     capital_total = tuple([capital_mangga, capital_apel])
 
     gs = GrossSplit(**kwargs, lifting=lifting_total, capital_cost=capital_total)
-    for preonstream, postonstream, sunk in (
+    capital_cost_groups: tuple[tuple[CapitalCost, CapitalCost, CapitalCost], ...] = (
         (
-            gs._oil_capital_preonstream,  # pyright: ignore[reportPrivateUsage]
-            gs._oil_capital_postonstream,  # pyright: ignore[reportPrivateUsage]
-            gs._oil_capital_sunk_cost,  # pyright: ignore[reportPrivateUsage]
+            _get_capital_cost(gs, "_oil_capital_preonstream"),
+            _get_capital_cost(gs, "_oil_capital_postonstream"),
+            _get_capital_cost(gs, "_oil_capital_sunk_cost"),
         ),
         (
-            gs._gas_capital_preonstream,  # pyright: ignore[reportPrivateUsage]
-            gs._gas_capital_postonstream,  # pyright: ignore[reportPrivateUsage]
-            gs._gas_capital_sunk_cost,  # pyright: ignore[reportPrivateUsage]
+            _get_capital_cost(gs, "_gas_capital_preonstream"),
+            _get_capital_cost(gs, "_gas_capital_postonstream"),
+            _get_capital_cost(gs, "_gas_capital_sunk_cost"),
         ),
-    ):
+    )
+    for preonstream, postonstream, sunk in capital_cost_groups:
         assert preonstream.cost_type == [CostType.PRE_ONSTREAM_COST] * 7
         assert postonstream.cost_type == [CostType.POST_ONSTREAM_COST] * 5
         assert sunk.cost_type == [CostType.SUNK_COST]
-        np.testing.assert_array_equal(sunk.cost, np.array([0]))  # pyright: ignore[reportUnknownArgumentType, reportUnknownMemberType]
+        assert sunk.cost is not None
+        np.testing.assert_array_equal(sunk.cost, np.array([0]))

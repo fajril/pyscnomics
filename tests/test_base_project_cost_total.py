@@ -4,6 +4,8 @@ involving total cost categories
 """
 
 from datetime import date
+from typing import TypedDict
+
 import numpy as np
 
 from pyscnomics.econ.selection import FluidType
@@ -11,7 +13,15 @@ from pyscnomics.econ.costs import CapitalCost, Intangible, LBT
 from pyscnomics.contracts.project import BaseProject
 
 
-kwargs = {
+class _BaseProjectDates(TypedDict):
+    start_date: date
+    end_date: date
+    oil_onstream_date: date
+    gas_onstream_date: date
+    approval_year: int
+
+
+kwargs: _BaseProjectDates = {
     "start_date": date(year=2023, month=1, day=1),
     "end_date": date(year=2034, month=12, day=31),
     "oil_onstream_date": date(year=2030, month=1, day=1),
@@ -28,21 +38,35 @@ def test_capital_cost_total():
         end_year=2034,
         expense_year=np.array(
             [
-                2023, 2024, 2025, 2026, 2027, 2028,
-                2029, 2030, 2031, 2032, 2033, 2034,
+                2023,
+                2024,
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030,
+                2031,
+                2032,
+                2033,
+                2034,
             ]
         ),
-        cost=np.array(
-            [
-                200, 200, 200, 200, 150, 100,
-                100, 75, 50, 50, 50, 50
-            ]
-        ),
+        cost=np.array([200, 200, 200, 200, 150, 100, 100, 75, 50, 50, 50, 50]),
         cost_allocation=(
             [
-                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
-                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
-                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
             ]
         ),
     )
@@ -53,21 +77,35 @@ def test_capital_cost_total():
         end_year=2034,
         expense_year=np.array(
             [
-                2023, 2024, 2025, 2026, 2027, 2028,
-                2029, 2030, 2031, 2032, 2033, 2034,
+                2023,
+                2024,
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030,
+                2031,
+                2032,
+                2033,
+                2034,
             ]
         ),
-        cost=np.array(
-            [
-                200, 200, 200, 200, 150, 100,
-                100, 75, 50, 50, 50, 50
-            ]
-        ),
+        cost=np.array([200, 200, 200, 200, 150, 100, 100, 75, 50, 50, 50, 50]),
         cost_allocation=(
             [
-                FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS,
-                FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS,
-                FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS,
+                FluidType.GAS,
+                FluidType.GAS,
+                FluidType.GAS,
+                FluidType.GAS,
+                FluidType.GAS,
+                FluidType.GAS,
+                FluidType.GAS,
+                FluidType.GAS,
+                FluidType.GAS,
+                FluidType.GAS,
+                FluidType.GAS,
+                FluidType.GAS,
             ]
         ),
     )
@@ -85,21 +123,67 @@ def test_capital_cost_total():
     expected = {
         "expense_year": np.array(
             [
-                2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033, 2034,
-                2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033, 2034,
+                2023,
+                2024,
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030,
+                2031,
+                2032,
+                2033,
+                2034,
+                2023,
+                2024,
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030,
+                2031,
+                2032,
+                2033,
+                2034,
             ]
         ),
         "cost": np.array(
             [
-                200, 200, 200, 200, 150, 100, 100, 75, 50, 50, 50, 50,
-                200, 200, 200, 200, 150, 100, 100, 75, 50, 50, 50, 50,
+                200,
+                200,
+                200,
+                200,
+                150,
+                100,
+                100,
+                75,
+                50,
+                50,
+                50,
+                50,
+                200,
+                200,
+                200,
+                200,
+                150,
+                100,
+                100,
+                75,
+                50,
+                50,
+                50,
+                50,
             ]
         ),
     }
 
     # Execute testings
-    np.testing.assert_allclose(calculated["expense_year"], expected["expense_year"])
-    np.testing.assert_allclose(calculated["cost"], expected["cost"])
+    assert calculated["expense_year"] is not None
+    assert calculated["cost"] is not None
+    assert np.allclose(calculated["expense_year"], expected["expense_year"])
+    assert np.allclose(calculated["cost"], expected["cost"])
 
 
 def test_intangible_cost_total():
@@ -110,21 +194,35 @@ def test_intangible_cost_total():
         end_year=2034,
         expense_year=np.array(
             [
-                2023, 2024, 2025, 2026, 2027, 2028,
-                2029, 2030, 2031, 2032, 2033, 2034,
+                2023,
+                2024,
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030,
+                2031,
+                2032,
+                2033,
+                2034,
             ]
         ),
-        cost=np.array(
-            [
-                200, 200, 200, 200, 150, 100,
-                100, 75, 50, 50, 50, 50
-            ]
-        ),
+        cost=np.array([200, 200, 200, 200, 150, 100, 100, 75, 50, 50, 50, 50]),
         cost_allocation=(
             [
-                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
-                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
-                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
             ]
         ),
     )
@@ -135,21 +233,35 @@ def test_intangible_cost_total():
         end_year=2034,
         expense_year=np.array(
             [
-                2023, 2024, 2025, 2026, 2027, 2028,
-                2029, 2030, 2031, 2032, 2033, 2034,
+                2023,
+                2024,
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030,
+                2031,
+                2032,
+                2033,
+                2034,
             ]
         ),
-        cost=np.array(
-            [
-                200, 200, 200, 200, 150, 100,
-                100, 75, 50, 50, 50, 50
-            ]
-        ),
+        cost=np.array([200, 200, 200, 200, 150, 100, 100, 75, 50, 50, 50, 50]),
         cost_allocation=(
             [
-                FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS,
-                FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS,
-                FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS,
+                FluidType.GAS,
+                FluidType.GAS,
+                FluidType.GAS,
+                FluidType.GAS,
+                FluidType.GAS,
+                FluidType.GAS,
+                FluidType.GAS,
+                FluidType.GAS,
+                FluidType.GAS,
+                FluidType.GAS,
+                FluidType.GAS,
+                FluidType.GAS,
             ]
         ),
     )
@@ -168,21 +280,67 @@ def test_intangible_cost_total():
     expected = {
         "expense_year": np.array(
             [
-                2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033, 2034,
-                2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033, 2034,
+                2023,
+                2024,
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030,
+                2031,
+                2032,
+                2033,
+                2034,
+                2023,
+                2024,
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030,
+                2031,
+                2032,
+                2033,
+                2034,
             ]
         ),
         "cost": np.array(
             [
-                200, 200, 200, 200, 150, 100, 100, 75, 50, 50, 50, 50,
-                200, 200, 200, 200, 150, 100, 100, 75, 50, 50, 50, 50,
+                200,
+                200,
+                200,
+                200,
+                150,
+                100,
+                100,
+                75,
+                50,
+                50,
+                50,
+                50,
+                200,
+                200,
+                200,
+                200,
+                150,
+                100,
+                100,
+                75,
+                50,
+                50,
+                50,
+                50,
             ]
         ),
     }
 
     # Execute testings
-    np.testing.assert_allclose(calculated["expense_year"], expected["expense_year"])
-    np.testing.assert_allclose(calculated["cost"], expected["cost"])
+    assert calculated["expense_year"] is not None
+    assert calculated["cost"] is not None
+    assert np.allclose(calculated["expense_year"], expected["expense_year"])
+    assert np.allclose(calculated["cost"], expected["cost"])
 
 
 def test_lbt_cost_total():
@@ -193,21 +351,35 @@ def test_lbt_cost_total():
         end_year=2034,
         expense_year=np.array(
             [
-                2023, 2024, 2025, 2026, 2027, 2028,
-                2029, 2030, 2031, 2032, 2033, 2034,
+                2023,
+                2024,
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030,
+                2031,
+                2032,
+                2033,
+                2034,
             ]
         ),
-        cost=np.array(
-            [
-                200, 200, 200, 200, 150, 100,
-                100, 75, 50, 50, 50, 50
-            ]
-        ),
+        cost=np.array([200, 200, 200, 200, 150, 100, 100, 75, 50, 50, 50, 50]),
         cost_allocation=(
             [
-                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
-                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
-                FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.GAS,
+                FluidType.GAS,
+                FluidType.GAS,
+                FluidType.GAS,
             ]
         ),
     )
@@ -218,21 +390,35 @@ def test_lbt_cost_total():
         end_year=2034,
         expense_year=np.array(
             [
-                2023, 2024, 2025, 2026, 2027, 2028,
-                2029, 2030, 2031, 2032, 2033, 2034,
+                2023,
+                2024,
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030,
+                2031,
+                2032,
+                2033,
+                2034,
             ]
         ),
-        cost=np.array(
-            [
-                200, 200, 200, 200, 150, 100,
-                100, 75, 50, 50, 50, 50
-            ]
-        ),
+        cost=np.array([200, 200, 200, 200, 150, 100, 100, 75, 50, 50, 50, 50]),
         cost_allocation=(
             [
-                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
-                FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
-                FluidType.GAS, FluidType.GAS, FluidType.GAS, FluidType.GAS,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.GAS,
+                FluidType.GAS,
+                FluidType.GAS,
+                FluidType.GAS,
             ]
         ),
     )
@@ -245,29 +431,72 @@ def test_lbt_cost_total():
     calculated = {
         "expense_year": pr.lbt_cost_total.expense_year,
         "cost": pr.lbt_cost_total.cost,
-        "length": len(pr.lbt_cost_total)
+        "length": len(pr.lbt_cost_total),
     }
 
     expected = {
         "expense_year": np.array(
             [
-                2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033, 2034,
-                2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033, 2034,
+                2023,
+                2024,
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030,
+                2031,
+                2032,
+                2033,
+                2034,
+                2023,
+                2024,
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030,
+                2031,
+                2032,
+                2033,
+                2034,
             ]
         ),
         "cost": np.array(
             [
-                200, 200, 200, 200, 150, 100, 100, 75, 50, 50, 50, 50,
-                200, 200, 200, 200, 150, 100, 100, 75, 50, 50, 50, 50,
+                200,
+                200,
+                200,
+                200,
+                150,
+                100,
+                100,
+                75,
+                50,
+                50,
+                50,
+                50,
+                200,
+                200,
+                200,
+                200,
+                150,
+                100,
+                100,
+                75,
+                50,
+                50,
+                50,
+                50,
             ]
         ),
         "length": 24,
     }
 
     # Execute testings
-    np.testing.assert_allclose(calculated["expense_year"], expected["expense_year"])
-    np.testing.assert_allclose(calculated["cost"], expected["cost"])
+    assert calculated["expense_year"] is not None
+    assert calculated["cost"] is not None
+    assert np.allclose(calculated["expense_year"], expected["expense_year"])
+    assert np.allclose(calculated["cost"], expected["cost"])
     assert calculated["length"] == expected["length"]
-
-
-

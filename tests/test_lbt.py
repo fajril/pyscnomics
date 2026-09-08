@@ -2,29 +2,44 @@
 A collection of testing units for LBT class.
 """
 
-import pytest
 import numpy as np
-from pyscnomics.econ.selection import FluidType, CostType
+import numpy.typing as npt
+import pytest
+from typing import TypedDict
+
 from pyscnomics.econ.costs import LBT, LBTException
+from pyscnomics.econ.selection import CostType, FluidType
+
+
+class _ExpectedLBT(TypedDict):
+    expense_year: npt.NDArray[np.int64]
+    cost: npt.NDArray[np.int64]
+    cost_allocation: list[FluidType]
+    cost_type: list[CostType | None]
 
 
 # Parameters for example
 expense_year_1 = np.array([2023, 2024, 2025, 2026])
 cost_1 = np.array([200, 150, 100, 50])
 cost_allocation_1 = [FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL]
-cost_type_1 = [
-    CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
-    CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+cost_type_1: list[CostType | None] = [
+    CostType.POST_ONSTREAM_COST,
+    CostType.POST_ONSTREAM_COST,
+    CostType.POST_ONSTREAM_COST,
+    CostType.POST_ONSTREAM_COST,
 ]
 cost_type_2 = [
-    CostType.SUNK_COST, CostType.SUNK_COST, CostType.SUNK_COST, CostType.SUNK_COST
+    CostType.SUNK_COST,
+    CostType.SUNK_COST,
+    CostType.SUNK_COST,
+    CostType.SUNK_COST,
 ]
 tax_portion_1 = np.array([1, 1, 1, 1])
 
 
 def test_lbt_incorrect_start_year():
     with pytest.raises(LBTException):
-        LBT(
+        _ = LBT(
             start_year=2033,
             end_year=2030,
             expense_year=np.array([2026, 2027]),
@@ -36,7 +51,7 @@ def test_lbt_incorrect_start_year():
 
 def test_lbt_incorrect_unequal_arrays():
     with pytest.raises(LBTException):
-        LBT(
+        _ = LBT(
             start_year=2033,
             end_year=2030,
             expense_year=np.array([2026, 2027]),
@@ -48,7 +63,7 @@ def test_lbt_incorrect_unequal_arrays():
 
 def test_lbt_incorrect_expense_year():
     with pytest.raises(LBTException):
-        LBT(
+        _ = LBT(
             start_year=2033,
             end_year=2030,
             expense_year=np.array([2026, 2033]),
@@ -58,7 +73,7 @@ def test_lbt_incorrect_expense_year():
         )
 
     with pytest.raises(LBTException):
-        LBT(
+        _ = LBT(
             start_year=2033,
             end_year=2030,
             expense_year=np.array([2018, 2027]),
@@ -134,22 +149,31 @@ def test_lbt_dunder_add():
 
     lbt_total = lbt_mangga + lbt_apel
 
-    expected = {
+    expected: _ExpectedLBT = {
         "expense_year": np.array([2023, 2024, 2025, 2026, 2029, 2029]),
         "cost": np.array([200, 150, 100, 50, 400, 400]),
         "cost_allocation": [
-            FluidType.OIL, FluidType.OIL, FluidType.OIL,
-            FluidType.OIL, FluidType.GAS, FluidType.GAS,
+            FluidType.OIL,
+            FluidType.OIL,
+            FluidType.OIL,
+            FluidType.OIL,
+            FluidType.GAS,
+            FluidType.GAS,
         ],
         "cost_type": [
-            CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
-            CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
-            CostType.PRE_ONSTREAM_COST, CostType.PRE_ONSTREAM_COST,
+            CostType.POST_ONSTREAM_COST,
+            CostType.POST_ONSTREAM_COST,
+            CostType.POST_ONSTREAM_COST,
+            CostType.POST_ONSTREAM_COST,
+            CostType.PRE_ONSTREAM_COST,
+            CostType.PRE_ONSTREAM_COST,
         ],
     }
 
     # Execute testings
-    np.testing.assert_allclose(lbt_total.expense_year, expected["expense_year"])
-    np.testing.assert_allclose(lbt_total.cost, expected["cost"])
+    assert lbt_total.expense_year is not None
+    assert lbt_total.cost is not None
+    assert np.allclose(lbt_total.expense_year, expected["expense_year"])
+    assert np.allclose(lbt_total.cost, expected["cost"])
     assert lbt_total.cost_allocation == expected["cost_allocation"]
     assert lbt_total.cost_type == expected["cost_type"]

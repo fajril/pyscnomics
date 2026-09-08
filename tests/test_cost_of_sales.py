@@ -2,28 +2,41 @@
 A collection of unit testing for CostOfSales class.
 """
 
-import pytest
+from typing import TypedDict
+
 import numpy as np
-from pyscnomics.econ.selection import FluidType, CostType
+import numpy.typing as npt
+import pytest
+
 from pyscnomics.econ.costs import CostOfSales, CostOfSalesException
+from pyscnomics.econ.selection import CostType, FluidType
+
+
+class _CostOfSalesExpected(TypedDict):
+    expense_year: npt.NDArray[np.int64]
+    cost: npt.NDArray[np.int64]
+    cost_allocation: list[FluidType]
+    cost_type: list[CostType | None]
 
 
 # Parameters for example
 expense_year_1 = np.array([2023, 2024, 2025, 2026])
 cost_1 = np.array([200, 150, 100, 50])
 cost_allocation_1 = [FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL]
-cost_type_1 = [
-    CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
-    CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
+cost_type_1: list[CostType | None] = [
+    CostType.POST_ONSTREAM_COST,
+    CostType.POST_ONSTREAM_COST,
+    CostType.POST_ONSTREAM_COST,
+    CostType.POST_ONSTREAM_COST,
 ]
 tax_portion_1 = np.array([1, 1, 1, 1])
 
 
 def test_cos_incorrect_start_year_end_year():
-    """ A unit testing for incorrect data input: start year is after end year """
+    """A unit testing for incorrect data input: start year is after end year"""
 
     with pytest.raises(CostOfSalesException):
-        CostOfSales(
+        _ = CostOfSales(
             start_year=2031,
             end_year=2030,
         )
@@ -35,10 +48,9 @@ def test_cos_incorrect_expense_year():
     expense_year data is not given as a numpy.ndarray datatype.
     """
     with pytest.raises(CostOfSalesException):
-        CostOfSales(
-            start_year=2023,
-            end_year=2030,
-            expense_year=[2023, 2024, 2029],
+        _ = CostOfSales.normalize_expense_year(
+            [2023, 2024, 2029],
+            np.arange(2023, 2031),
         )
 
 
@@ -48,11 +60,9 @@ def test_cos_incorrect_cost():
     cost data is not given as a numpy.ndarray datatype.
     """
     with pytest.raises(CostOfSalesException):
-        CostOfSales(
-            start_year=2023,
-            end_year=2030,
-            expense_year=np.array([2023, 2024, 2025, 2026]),
-            cost=[50, 50, 50, 50],
+        _ = CostOfSales.normalize_cost(
+            [50, 50, 50, 50],
+            np.array([2023, 2024, 2025, 2026]),
         )
 
 
@@ -62,20 +72,17 @@ def test_cos_incorrect_cost_allocation():
     cost_allocation is not given as a list datatype.
     """
     with pytest.raises(CostOfSalesException):
-        CostOfSales(
-            start_year=2023,
-            end_year=2030,
-            expense_year=np.array([2023, 2024, 2029]),
-            cost=np.array([150, 150, 100]),
-            cost_allocation=FluidType.GAS,
+        _ = CostOfSales.normalize_cost_allocation(
+            FluidType.GAS,
+            3,
         )
 
 
 def test_cos_incorrect_unequal_length_array():
-    """ A unit testing for unequal length of arrays """
+    """A unit testing for unequal length of arrays"""
 
     with pytest.raises(CostOfSalesException):
-        CostOfSales(
+        _ = CostOfSales(
             start_year=2023,
             end_year=2030,
             expense_year=np.array([2023, 2024, 2029]),
@@ -91,14 +98,14 @@ def test_cos_incorrect_year_input():
     (2) Expense year is after the end year of the project
     """
     with pytest.raises(CostOfSalesException):
-        CostOfSales(
+        _ = CostOfSales(
             start_year=2023,
             end_year=2030,
             expense_year=np.array([2019, 2024, 2025]),
         )
 
     with pytest.raises(CostOfSalesException):
-        CostOfSales(
+        _ = CostOfSales(
             start_year=2023,
             end_year=2030,
             expense_year=np.array([2024, 2025, 2032]),
@@ -164,8 +171,10 @@ def test_cos_prepare_expense_year():
     expense_year_calc2 = cos2.expense_year
 
     # Check whether expected == calculated
-    np.testing.assert_allclose(expense_year_exp1, expense_year_calc1)
-    np.testing.assert_allclose(expense_year_exp2, expense_year_calc2)
+    assert expense_year_calc1 is not None
+    assert expense_year_calc2 is not None
+    assert np.allclose(expense_year_exp1, expense_year_calc1)
+    assert np.allclose(expense_year_exp2, expense_year_calc2)
 
 
 def test_cos_prepare_cost():
@@ -206,7 +215,7 @@ def test_cos_prepare_cost():
     """
 
     # Expected results
-    cost_exp1 = np.array([0., 0., 0., 0., 0., 0., 0., 0.])
+    cost_exp1 = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
     cost_exp2 = np.array([150, 150, 100])
 
     # Calculated results
@@ -227,8 +236,10 @@ def test_cos_prepare_cost():
     cost_calc2 = cos2.cost
 
     # Check whether expected == calculated
-    np.testing.assert_allclose(cost_exp1, cost_calc1)
-    np.testing.assert_allclose(cost_exp2, cost_calc2)
+    assert cost_calc1 is not None
+    assert cost_calc2 is not None
+    assert np.allclose(cost_exp1, cost_calc1)
+    assert np.allclose(cost_exp2, cost_calc2)
 
 
 def test_cos_prepare_cost_allocation():
@@ -269,12 +280,21 @@ def test_cos_prepare_cost_allocation():
     """
     # Expected results
     cost_allocation_exp1 = [
-        FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
-        FluidType.OIL, FluidType.OIL, FluidType.OIL, FluidType.OIL,
+        FluidType.OIL,
+        FluidType.OIL,
+        FluidType.OIL,
+        FluidType.OIL,
+        FluidType.OIL,
+        FluidType.OIL,
+        FluidType.OIL,
+        FluidType.OIL,
     ]
 
     cost_allocation_exp2 = [
-        FluidType.OIL, FluidType.OIL, FluidType.GAS, FluidType.GAS,
+        FluidType.OIL,
+        FluidType.OIL,
+        FluidType.GAS,
+        FluidType.GAS,
     ]
 
     # Calculated results
@@ -288,7 +308,7 @@ def test_cos_prepare_cost_allocation():
         end_year=2030,
         expense_year=np.array([2023, 2024, 2025, 2026]),
         cost=np.array([50, 50, 50, 50]),
-        cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.GAS, FluidType.GAS]
+        cost_allocation=[FluidType.OIL, FluidType.OIL, FluidType.GAS, FluidType.GAS],
     )
 
     cost_allocation_calc1 = cos1.cost_allocation
@@ -353,22 +373,31 @@ def test_cos_dunder_add():
 
     cos_total = cos_mangga + cos_apel
 
-    expected = {
+    expected: _CostOfSalesExpected = {
         "expense_year": np.array([2023, 2024, 2025, 2026, 2029, 2029]),
         "cost": np.array([200, 150, 100, 50, 500, 500]),
         "cost_allocation": [
-            FluidType.OIL, FluidType.OIL, FluidType.OIL,
-            FluidType.OIL, FluidType.GAS, FluidType.GAS,
+            FluidType.OIL,
+            FluidType.OIL,
+            FluidType.OIL,
+            FluidType.OIL,
+            FluidType.GAS,
+            FluidType.GAS,
         ],
         "cost_type": [
-            CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
-            CostType.POST_ONSTREAM_COST, CostType.POST_ONSTREAM_COST,
-            CostType.SUNK_COST, CostType.SUNK_COST,
+            CostType.POST_ONSTREAM_COST,
+            CostType.POST_ONSTREAM_COST,
+            CostType.POST_ONSTREAM_COST,
+            CostType.POST_ONSTREAM_COST,
+            CostType.SUNK_COST,
+            CostType.SUNK_COST,
         ],
     }
 
     # Execute testings
-    np.testing.assert_allclose(cos_total.expense_year, expected["expense_year"])
-    np.testing.assert_allclose(cos_total.cost, expected["cost"])
+    assert cos_total.expense_year is not None
+    assert cos_total.cost is not None
+    assert np.allclose(cos_total.expense_year, expected["expense_year"])
+    assert np.allclose(cos_total.cost, expected["cost"])
     assert cos_total.cost_allocation == expected["cost_allocation"]
     assert cos_total.cost_type == expected["cost_type"]
