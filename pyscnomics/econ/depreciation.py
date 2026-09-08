@@ -5,6 +5,7 @@ Calculate depreciation.
 import numpy as np
 import numpy.typing as npt
 
+
 class DepreciationException(Exception):
     """Raise an exception error for a misuse of depreciation method"""
 
@@ -17,9 +18,7 @@ class UnitOfProductionException(Exception):
     pass
 
 
-def _as_float_array(
-    value: object, parameter_name: str
-) -> npt.NDArray[np.float64]:
+def _as_float_array(value: object, parameter_name: str) -> npt.NDArray[np.float64]:
     """Validate an ndarray input and return a float64 working array."""
 
     if not isinstance(value, np.ndarray):
@@ -188,9 +187,7 @@ def declining_balance_depreciation_rate(
         remaining_depreciation_modified = np.where(
             remaining_depreciation < 0, 0, remaining_depreciation
         )
-        is_fully_paid_mask = np.equal(
-            remaining_depreciation_modified, 0
-        )
+        is_fully_paid_mask = np.equal(remaining_depreciation_modified, 0)
         is_fully_paid = np.all(is_fully_paid_mask)
 
         # Depreciation charge is paid off since the first year
@@ -205,7 +202,7 @@ def declining_balance_depreciation_rate(
         elif np.any(remaining_depreciation_modified > 0):
             idx = np.argmin(remaining_depreciation_modified)
             depreciation_charge[idx] = remaining_depreciation[idx - 1]
-            depreciation_charge[idx + 1:] = 0
+            depreciation_charge[idx + 1 :] = 0
 
         else:
             raise DepreciationException(
@@ -558,9 +555,7 @@ def unit_of_production_rate(
     remaining_amortization_modified = np.where(
         remaining_amortization < 0, 0, remaining_amortization
     )
-    is_fully_paid_mask = np.equal(
-        remaining_amortization_modified, 0
-    )
+    is_fully_paid_mask = np.equal(remaining_amortization_modified, 0)
     is_fully_paid = np.all(is_fully_paid_mask)
 
     # Amortization charge is paid off since the first year
@@ -577,7 +572,7 @@ def unit_of_production_rate(
             raise UnitOfProductionException("Invalid amortization termination index.")
 
         amortization_charge[idx] = remaining_amortization[idx - 1]
-        amortization_charge[idx + 1:] = 0
+        amortization_charge[idx + 1 :] = 0
 
     return amortization_charge
 

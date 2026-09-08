@@ -3,8 +3,6 @@ Collection of functions to carry out some operations related to module costs.py
 """
 
 from collections.abc import Sized
-from typing import cast
-
 import numpy as np
 import numpy.typing as npt
 
@@ -13,6 +11,38 @@ class TaxInflationException(Exception):
     """Exception to be raised for an incorrect tax and inflation configurations"""
 
     pass
+
+
+def _require_float_array(value: object, *, name: str) -> npt.NDArray[np.float64]:
+    """Validate and normalize a floating-point array argument."""
+    if not isinstance(value, np.ndarray):
+        raise TaxInflationException(
+            f"Argument {name} must be given as a numpy.ndarray, "
+            + f"not as a/an {value.__class__.__qualname__}"
+        )
+    return value.astype(np.float64)
+
+
+def _require_int_array(value: object, *, name: str) -> npt.NDArray[np.int64]:
+    """Validate and normalize an integer array argument."""
+    if not isinstance(value, np.ndarray):
+        raise TaxInflationException(
+            f"Argument {name} must be given as a numpy.ndarray, "
+            + f"not as a/an {value.__class__.__qualname__}"
+        )
+    return value.astype(np.int64)
+
+
+def _require_tax_rate(value: object) -> npt.NDArray[np.float64] | float:
+    """Validate the scalar-or-array tax-rate input."""
+    if not isinstance(value, (np.ndarray, float)):
+        raise TaxInflationException(
+            "Attribute tax rate must be given as a float or as a numpy.ndarray, "
+            + f"not as a/an {value.__class__.__qualname__}"
+        )
+    if isinstance(value, np.ndarray):
+        return value.astype(np.float64)
+    return value
 
 
 def check_input(
@@ -184,11 +214,7 @@ def get_cost_adjustment_by_inflation(
         year_inflation = np.repeat(start_year, len(cost))
 
     else:
-        if not isinstance(cast(object, year_inflation), np.ndarray):
-            raise TaxInflationException(
-                "Attribute year_inflation must be given as a numpy.ndarray, "
-                + f"not as a/an {year_inflation.__class__.__qualname__}"
-            )
+        year_inflation = _require_int_array(year_inflation, name="year_inflation")
 
         if len(year_inflation) != len(cost):
             raise TaxInflationException(
@@ -233,7 +259,7 @@ def get_cost_adjustment_by_inflation(
     # Multipliers to adjust cost by inflation
     mult = np.array(
         [
-            np.prod(1.0 + inflation_rate_arr[id_start[i]:id_end[i]])
+            np.prod(1.0 + inflation_rate_arr[id_start[i] : id_end[i]])
             for i in range(len(id_start))
         ],
         dtype=np.float64,
@@ -331,7 +357,7 @@ def apply_cost_adjustment(
     # Multipliers to adjust cost by inflation
     mult = np.array(
         [
-            np.prod(1.0 + inflation_rate_arr[id_start[i]:id_end[i]])
+            np.prod(1.0 + inflation_rate_arr[id_start[i] : id_end[i]])
             for i in range(len(id_start))
         ],
         dtype=np.float64,
@@ -390,14 +416,8 @@ def calc_indirect_tax(
     """
 
     # Prepare attribute tax rate
-    if not isinstance(cast(object, tax_rate), (np.ndarray, float)):
-        raise TaxInflationException(
-            "Attribute tax rate must be given as a float or as a numpy.ndarray, "
-            + f"not as a/an {tax_rate.__class__.__qualname__}"
-        )
-
-    else:
-        tax_rate_arr = check_input(target_func=project_years, param=tax_rate)
+    tax_rate = _require_tax_rate(tax_rate)
+    tax_rate_arr = check_input(target_func=project_years, param=tax_rate)
 
     # Specify tax rate id
     tax_rate_ids = (expense_year - start_year).astype(np.int64)
@@ -450,18 +470,10 @@ def calc_distributed_cost(
     """
 
     # Prepare attribute cost
-    if not isinstance(cast(object, cost), np.ndarray):
-        raise TaxInflationException(
-            "Argument cost must be given as a numpy.ndarray, "
-            + f"not as a/an {cost.__class__.__qualname__}"
-        )
+    cost = _require_float_array(cost, name="cost")
 
     # Prepare attribute expense_year
-    if not isinstance(cast(object, expense_year), np.ndarray):
-        raise TaxInflationException(
-            "Argument expense_year must be given as a numpy.ndarray, "
-            + f"not as a/an {expense_year.__class__.__qualname__}"
-        )
+    expense_year = _require_int_array(expense_year, name="expense_year")
 
     # Unequal length of arrays
     if len(cost) != len(expense_year):
@@ -492,6 +504,6 @@ def calc_distributed_cost(
     distributed_cost = np.zeros([project_duration, len(expense_year)], dtype=np.float64)
 
     for i in range(len(expense_year)):
-        distributed_cost[id_start[i]:id_end[i], i] = cost_split[i]
+        distributed_cost[id_start[i] : id_end[i], i] = cost_split[i]
 
     return distributed_cost

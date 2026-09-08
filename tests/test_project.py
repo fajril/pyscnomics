@@ -66,7 +66,7 @@ def test_get_summary_requires_successful_run() -> None:
     )
 
     with pytest.raises(BaseProjectSummaryException, match=r"run\(\)"):
-        base_case.get_summary()
+        _ = base_case.get_summary()
 
 
 def test_warnings_to_dataframe_returns_frame_without_mutating_messages() -> None:
@@ -92,15 +92,34 @@ def test_incorrect_data_input():
 
     # Incorrect start date
     with pytest.raises(BaseProjectException):
-        BaseProject(
+        _ = BaseProject(
             start_date=date(2032, 1, 1),
             end_date=date(2030, 12, 31),
             approval_year=2032,
         )
 
+
+@pytest.mark.parametrize("field", ["is_pod_1", "is_strict"])
+def test_non_boolean_flags_are_rejected(field: str) -> None:
+    project = BaseProject(
+        start_date=date(2023, 1, 1), end_date=date(2030, 12, 31), approval_year=2023
+    )
+    project.__dict__[field] = 1
+    with pytest.raises(BaseProjectException, match=field):
+        project.__post_init__()
+
+
+def test_non_tuple_lifting_is_rejected() -> None:
+    project = BaseProject(
+        start_date=date(2023, 1, 1), end_date=date(2030, 12, 31), approval_year=2023
+    )
+    project.__dict__["lifting"] = [lifting_mangga]
+    with pytest.raises(BaseProjectException, match="lifting"):
+        project.__post_init__()
+
     # Oil onstream year is after the end project year
     with pytest.raises(BaseProjectException):
-        BaseProject(
+        _ = BaseProject(
             start_date=date(2023, 1, 1),
             end_date=date(2030, 12, 31),
             approval_year=2023,
@@ -110,7 +129,7 @@ def test_incorrect_data_input():
 
     # Oil onstream year is before the start year of the project
     with pytest.raises(BaseProjectException):
-        BaseProject(
+        _ = BaseProject(
             start_date=date(2023, 1, 1),
             end_date=date(2030, 12, 31),
             approval_year=2023,
@@ -120,7 +139,7 @@ def test_incorrect_data_input():
 
     # Oil onstream year is inconsistent with prod_year
     with pytest.raises(BaseProjectException):
-        BaseProject(
+        _ = BaseProject(
             start_date=date(2023, 1, 1),
             end_date=date(2030, 1, 1),
             approval_year=2023,
@@ -130,7 +149,7 @@ def test_incorrect_data_input():
 
 
 def test_base_project_lifting():
-    """A unit testing for base project methods: _get_oil_lifting() and _get_gas_lifting() """
+    """A unit testing for base project methods: _get_oil_lifting() and _get_gas_lifting()"""
 
     # Expected results
     oil_lifting_rate = np.array([100, 100, 100, 50, 50, 50])
@@ -148,15 +167,15 @@ def test_base_project_lifting():
             lifting_apel,
             lifting_jeruk,
             lifting_nanas,
-        )
+        ),
     )
 
-    results = vars(base_case)
-
-    oil_lifting_rate_calc = results["_oil_lifting"].lifting_rate
-    oil_revenue_calc = results["_oil_revenue"]
-    gas_lifting_rate_calc = results["_gas_lifting"].lifting_rate
-    gas_revenue_calc = results["_gas_revenue"]
+    oil_lifting = base_case.get_lifting_by_fluid(FluidType.OIL)
+    gas_lifting = base_case.get_lifting_by_fluid(FluidType.GAS)
+    oil_lifting_rate_calc = oil_lifting.lifting_rate
+    oil_revenue_calc = oil_lifting.revenue()
+    gas_lifting_rate_calc = gas_lifting.lifting_rate
+    gas_revenue_calc = gas_lifting.revenue()
 
     # Execute testing (expected == calculated)
     np.testing.assert_allclose(oil_lifting_rate, oil_lifting_rate_calc)
@@ -166,7 +185,7 @@ def test_base_project_lifting():
 
 
 def test_base_project_tangible_expenditures():
-    """ A unit testing to calculate tangible expenditures in BaseProject class """
+    """A unit testing to calculate tangible expenditures in BaseProject class"""
 
     # Expected results
     oil_tangible_expenditures = np.array([25, 25, 50, 50, 25, 0, 0, 0])
@@ -216,33 +235,33 @@ def test_base_project_tangible_expenditures():
             oil_mangga_tangible,
             oil_apel_tangible,
             gas_mangga_tangible,
-            gas_apel_tangible
-        )
+            gas_apel_tangible,
+        ),
     )
 
-    base_case._get_expenditures_pre_tax()  # pyright: ignore[reportPrivateUsage, reportUnknownMemberType]
-    base_case._get_indirect_taxes()  # pyright: ignore[reportPrivateUsage, reportUnknownMemberType]
-    base_case._get_expenditures_post_tax()
-    results = vars(base_case)
-
-    oil_tangible_expenditures_calc = results["_oil_capital_expenditures_post_tax"]
-    gas_tangible_expenditures_calc = results["_gas_capital_expenditures_post_tax"]
+    base_case.run()
+    oil_table = base_case.get_oil_table_columns()
+    gas_table = base_case.get_gas_table_columns()
+    oil_tangible_expenditures_calc = oil_table["capital_postonstream"]
+    gas_tangible_expenditures_calc = gas_table["capital_postonstream"]
 
     # Execute testing (expected == calculated)
-    np.testing.assert_allclose(oil_tangible_expenditures, oil_tangible_expenditures_calc)
-    np.testing.assert_allclose(gas_tangible_expenditures, gas_tangible_expenditures_calc)
+    np.testing.assert_allclose(
+        oil_tangible_expenditures, oil_tangible_expenditures_calc
+    )
+    np.testing.assert_allclose(
+        gas_tangible_expenditures, gas_tangible_expenditures_calc
+    )
 
 
 def test_base_project_intangible_expenditures():
-    """ A unit testing to calculate intangible expenditures in BaseProject class """
+    """A unit testing to calculate intangible expenditures in BaseProject class"""
 
     # Expected results
     oil_case1 = np.array([100, 0, 100, 0, 100, 0, 100, 0])
     gas_case1 = np.array([0, 50, 0, 50, 0, 50, 0, 50])
     oil_case2 = np.array([101, 0, 113.25, 0, 126.550625, 0, 141.009564, 0])
-    gas_case2 = np.array(
-        [0, 53.5, 0, 59.88125, 0, 66.814078125, 0, 74.355020547]
-    )
+    gas_case2 = np.array([0, 53.5, 0, 59.88125, 0, 66.814078125, 0, 74.355020547])
 
     # Calculated results
     intangible_mangga = Intangible(
@@ -283,25 +302,20 @@ def test_base_project_intangible_expenditures():
         intangible_cost=(intangible_mangga, intangible_apel),
     )
 
-    case1._get_expenditures_pre_tax()  # pyright: ignore[reportPrivateUsage, reportUnknownMemberType]
-    case1._get_indirect_taxes()  # pyright: ignore[reportPrivateUsage, reportUnknownMemberType]
-    case1._get_expenditures_post_tax()
-    case2._get_expenditures_pre_tax(  # pyright: ignore[reportPrivateUsage, reportUnknownMemberType]
+    case1.run()
+    case2.run(
         inflation_rate=0.05,
         inflation_rate_applied_to=InflationAppliedTo.CAPEX,
+        vat_rate=np.array([0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08]),
     )
-    case2._get_indirect_taxes(  # pyright: ignore[reportPrivateUsage, reportUnknownMemberType]
-        tax_rate=np.array([0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08])
-    )
-    case2._get_expenditures_post_tax()
-
-    results1 = vars(case1)
-    results2 = vars(case2)
-
-    oil_case1_calc = results1["_oil_intangible_expenditures_post_tax"]
-    gas_case1_calc = results1["_gas_intangible_expenditures_post_tax"]
-    oil_case2_calc = results2["_oil_intangible_expenditures_post_tax"]
-    gas_case2_calc = results2["_gas_intangible_expenditures_post_tax"]
+    case1_oil_table = case1.get_oil_table_columns()
+    case1_gas_table = case1.get_gas_table_columns()
+    case2_oil_table = case2.get_oil_table_columns()
+    case2_gas_table = case2.get_gas_table_columns()
+    oil_case1_calc = case1_oil_table["intangible_postonstream"]
+    gas_case1_calc = case1_gas_table["intangible_postonstream"]
+    oil_case2_calc = case2_oil_table["intangible_postonstream"]
+    gas_case2_calc = case2_gas_table["intangible_postonstream"]
 
     # Testing (expected == calculated)
     np.testing.assert_allclose(oil_case1, oil_case1_calc)
@@ -311,7 +325,7 @@ def test_base_project_intangible_expenditures():
 
 
 def test_base_project_opex_expenditures():
-    """ A unit testing to calculate opex expenditures in BaseProject class """
+    """A unit testing to calculate opex expenditures in BaseProject class"""
 
     # Expected results
     oil_case1 = np.array([100, 100, 100, 100, 0, 0, 0, 0])
@@ -344,14 +358,11 @@ def test_base_project_opex_expenditures():
         opex=(opex_mangga, opex_apel),
     )
 
-    case1._get_expenditures_pre_tax()  # pyright: ignore[reportPrivateUsage, reportUnknownMemberType]
-    case1._get_indirect_taxes()  # pyright: ignore[reportPrivateUsage, reportUnknownMemberType]
-    case1._get_expenditures_post_tax()
-
-    results1 = vars(case1)
-
-    oil_case1_calc = results1["_oil_opex_expenditures_post_tax"]
-    gas_case1_calc = results1["_gas_opex_expenditures_post_tax"]
+    case1.run()
+    case1_oil_table = case1.get_oil_table_columns()
+    case1_gas_table = case1.get_gas_table_columns()
+    oil_case1_calc = case1_oil_table["opex_postonstream"]
+    gas_case1_calc = case1_gas_table["opex_postonstream"]
 
     # Testing (expected == calculated)
     np.testing.assert_allclose(oil_case1, oil_case1_calc)
@@ -359,7 +370,7 @@ def test_base_project_opex_expenditures():
 
 
 def test_base_project_asr_expenditures():
-    """ A unit testing to calculate asr expenditures in BaseProject class """
+    """A unit testing to calculate asr expenditures in BaseProject class"""
 
     oil_case1 = np.array([100.0, 100.0, 100.0, 100.0, 0, 0, 0, 0])
     gas_case1 = np.array([0, 0, 0, 0, 50, 50, 50, 50])
@@ -425,25 +436,20 @@ def test_base_project_asr_expenditures():
         asr_cost=(asr_jeruk, asr_nanas),
     )
 
-    case1._get_expenditures_pre_tax()  # pyright: ignore[reportPrivateUsage, reportUnknownMemberType]
-    case1._get_indirect_taxes()  # pyright: ignore[reportPrivateUsage, reportUnknownMemberType]
-    case1._get_expenditures_post_tax()
-    case2._get_expenditures_pre_tax(  # pyright: ignore[reportPrivateUsage, reportUnknownMemberType]
+    case1.run()
+    case2.run(
         inflation_rate=0.03,
         inflation_rate_applied_to=InflationAppliedTo.CAPEX,
+        vat_rate=np.array([0.08, 0.07, 0.06, 0.05, 0.04, 0.03, 0.02, 0.01]),
     )
-    case2._get_indirect_taxes(  # pyright: ignore[reportPrivateUsage, reportUnknownMemberType]
-        tax_rate=np.array([0.08, 0.07, 0.06, 0.05, 0.04, 0.03, 0.02, 0.01])
-    )
-    case2._get_expenditures_post_tax()
-
-    results1 = vars(case1)
-    results2 = vars(case2)
-
-    oil_case1_calc = results1["_oil_asr_expenditures_post_tax"]
-    gas_case1_calc = results1["_gas_asr_expenditures_post_tax"]
-    oil_case2_calc = results2["_oil_asr_expenditures_post_tax"]
-    gas_case2_calc = results2["_gas_asr_expenditures_post_tax"]
+    case1_oil_table = case1.get_oil_table_columns()
+    case1_gas_table = case1.get_gas_table_columns()
+    case2_oil_table = case2.get_oil_table_columns()
+    case2_gas_table = case2.get_gas_table_columns()
+    oil_case1_calc = case1_oil_table["asr_postonstream"]
+    gas_case1_calc = case1_gas_table["asr_postonstream"]
+    oil_case2_calc = case2_oil_table["asr_postonstream"]
+    gas_case2_calc = case2_gas_table["asr_postonstream"]
 
     # Testing (expected == calculated)
     np.testing.assert_allclose(oil_case1, oil_case1_calc)

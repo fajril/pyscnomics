@@ -3,7 +3,7 @@ Prepares lifting data and calculate the associated revenue.
 """
 
 from dataclasses import dataclass, field
-from typing import cast, overload
+from typing import overload
 
 import numpy as np
 import numpy.typing as npt
@@ -31,7 +31,16 @@ def _missing_indices(values: object) -> npt.NDArray[np.intp]:
     return np.flatnonzero(np.isnan(numeric_values))
 
 
-@dataclass
+def _require_float_array(value: object, name: str) -> npt.NDArray[np.float64]:
+    if not isinstance(value, np.ndarray):
+        raise LiftingException(
+            f"Attribute {name} must be provided as a numpy ndarray, "
+            + f"not as a/an {value.__class__.__qualname__}."
+        )
+    return value.astype(np.float64, copy=False)
+
+
+@dataclass(init=False)
 class Lifting:
     """
     Create an object that represents lifting.
@@ -84,18 +93,49 @@ class Lifting:
 
     start_year: int
     end_year: int
-    lifting_rate: npt.NDArray[np.float64]
-    price: npt.NDArray[np.float64]
-    prod_year: npt.NDArray[np.int64]
-    fluid_type: FluidType | None = field(default=FluidType.OIL)
-    ghv: npt.NDArray[np.float64] | None = field(default=None)
-    prod_rate: npt.NDArray[np.float64] | None = field(default=None)
-    prod_rate_baseline: npt.NDArray[np.float64] | None = field(default=None)
+    lifting_rate: npt.NDArray[np.float64] = field(init=False)
+    price: npt.NDArray[np.float64] = field(init=False)
+    prod_year: npt.NDArray[np.int64] = field(init=False)
+    fluid_type: FluidType | None = field(init=False)
+    ghv: npt.NDArray[np.float64] | None = field(init=False)
+    prod_rate: npt.NDArray[np.float64] | None = field(init=False)
+    prod_rate_baseline: npt.NDArray[np.float64] | None = field(init=False)
+
+    _lifting_rate_input: object = field(init=False, repr=False, compare=False)
+    _price_input: object = field(init=False, repr=False, compare=False)
+    _prod_year_input: object = field(init=False, repr=False, compare=False)
+    _fluid_type_input: object = field(init=False, repr=False, compare=False)
+    _ghv_input: object = field(init=False, repr=False, compare=False)
+    _prod_rate_input: object = field(init=False, repr=False, compare=False)
+    _prod_rate_baseline_input: object = field(init=False, repr=False, compare=False)
 
     # Attributes to be defined later
     project_duration: int = field(init=False)
     project_years: npt.NDArray[np.int64] = field(init=False)
     prod_rate_total: npt.NDArray[np.float64] = field(init=False)
+
+    def __init__(
+        self,
+        start_year: int,
+        end_year: int,
+        lifting_rate: object,
+        price: object,
+        prod_year: object,
+        fluid_type: object = FluidType.OIL,
+        ghv: object = None,
+        prod_rate: object = None,
+        prod_rate_baseline: object = None,
+    ) -> None:
+        self.start_year = start_year
+        self.end_year = end_year
+        self._lifting_rate_input = lifting_rate
+        self._price_input = price
+        self._prod_year_input = prod_year
+        self._fluid_type_input = fluid_type
+        self._ghv_input = ghv
+        self._prod_rate_input = prod_rate
+        self._prod_rate_baseline_input = prod_rate_baseline
+        self.__post_init__()
 
     def __post_init__(self) -> None:
         """
@@ -127,164 +167,181 @@ class Lifting:
             )
 
         # Prepare attribute prod_year
-        if not isinstance(cast(object, self.prod_year), np.ndarray):
+        prod_year = self._prod_year_input
+        if not isinstance(prod_year, np.ndarray):
             raise LiftingException(
                 "Attribute prod_year must be provided as a numpy ndarray, "
-                + f"not as a/an {self.prod_year.__class__.__qualname__}."
+                + f"not as a/an {prod_year.__class__.__qualname__}."
             )
 
         else:
-            prod_year_nan_id = _missing_indices(self.prod_year)
+            prod_year_nan_id = _missing_indices(prod_year.astype(np.float64))
             if len(prod_year_nan_id) > 0:
                 raise LiftingException(
-                    f"Missing values in array prod_year: {self.prod_year}"
+                    f"Missing values in array prod_year: {prod_year}"
                 )
 
-        self.prod_year = self.prod_year.astype(np.int64)
+        prod_year_array: npt.NDArray[np.int64] = prod_year.astype(np.int64)
+        self.prod_year = prod_year_array
 
         # Prepare attribute lifting rate
-        if not isinstance(cast(object, self.lifting_rate), np.ndarray):
+        lifting_rate = self._lifting_rate_input
+        if not isinstance(lifting_rate, np.ndarray):
             raise LiftingException(
                 "Attribute lifting rate must be provided as a numpy ndarray, "
-                + f"not as an/a {self.lifting_rate.__class__.__qualname__}."
+                + f"not as an/a {lifting_rate.__class__.__qualname__}."
             )
 
         else:
-            lifting_rate_nan_id = _missing_indices(self.lifting_rate)
+            lifting_rate_nan_id = _missing_indices(lifting_rate.astype(np.float64))
             if len(lifting_rate_nan_id) > 0:
-                self.lifting_rate[lifting_rate_nan_id] = np.zeros(len(lifting_rate_nan_id))
+                lifting_rate[lifting_rate_nan_id] = np.zeros(len(lifting_rate_nan_id))
 
-        self.lifting_rate = self.lifting_rate.astype(np.float64)
+        lifting_rate_array: npt.NDArray[np.float64] = lifting_rate.astype(np.float64)
+        self.lifting_rate = lifting_rate_array
 
         # Prepare attribute price
-        if not isinstance(cast(object, self.price), np.ndarray):
+        price = self._price_input
+        if not isinstance(price, np.ndarray):
             raise LiftingException(
                 "Attribute price must be provided as a numpy ndarray, "
-                + f"not as a/an {self.price.__class__.__qualname__}."
+                + f"not as a/an {price.__class__.__qualname__}."
             )
 
         else:
-            price_nan_id = _missing_indices(self.price)
+            price_nan_id = _missing_indices(price.astype(np.float64))
             if len(price_nan_id) > 0:
-                self.price[price_nan_id] = np.zeros(len(price_nan_id))
+                price[price_nan_id] = np.zeros(len(price_nan_id))
 
-        self.price = self.price.astype(np.float64)
+        price_array: npt.NDArray[np.float64] = price.astype(np.float64)
+        self.price = price_array
 
         # Prepare attribute fluid_type
-        if self.fluid_type is None:
+        fluid_type = self._fluid_type_input
+        if fluid_type is None:
             self.fluid_type = FluidType.OIL
-        elif not isinstance(cast(object, self.fluid_type), FluidType):
+        elif not isinstance(fluid_type, FluidType):
             raise LiftingException(
                 "Attribute fluid_type must be provided as an instance of FluidType, "
-                + f"not as an/a {self.fluid_type.__class__.__qualname__}"
+                + f"not as an/a {fluid_type.__class__.__qualname__}"
             )
+        else:
+            self.fluid_type = fluid_type
 
         # Prepare attribute ghv
-        ghv = self.ghv
+        ghv = self._ghv_input
         if ghv is None:
-            ghv = np.ones_like(self.prod_year, dtype=np.float64)
+            ghv = np.ones_like(prod_year_array, dtype=np.float64)
 
         else:
-            if not isinstance(cast(object, ghv), np.ndarray):
+            if not isinstance(ghv, np.ndarray):
                 raise LiftingException(
                     "Attribute ghv must be provided as a numpy ndarray, "
                     + f"not as a/an {ghv.__class__.__qualname__}."
                 )
 
-            ghv_nan_id = _missing_indices(ghv)
+            ghv_nan_id = _missing_indices(ghv.astype(np.float64))
             if len(ghv_nan_id) > 0:
                 ghv[ghv_nan_id] = np.ones(len(ghv_nan_id))
 
-        self.ghv = ghv.astype(np.float64)
+        ghv_array: npt.NDArray[np.float64] = ghv.astype(np.float64)
+        self.ghv = ghv_array
 
         # Prepare attribute prod_rate
-        prod_rate = self.prod_rate
+        prod_rate = self._prod_rate_input
         if prod_rate is None:
-            prod_rate = self.lifting_rate.copy()
+            prod_rate = lifting_rate_array.copy()
 
         else:
-            if not isinstance(cast(object, prod_rate), np.ndarray):
+            if not isinstance(prod_rate, np.ndarray):
                 raise LiftingException(
                     "Attribute prod_rate must be provided as a numpy ndarray, "
                     + f"not as a/an {prod_rate.__class__.__qualname__}."
                 )
 
-            prod_rate_nan_id = _missing_indices(prod_rate)
+            prod_rate_nan_id = _missing_indices(prod_rate.astype(np.float64))
             if len(prod_rate_nan_id) > 0:
-                prod_rate[prod_rate_nan_id] = self.lifting_rate[
+                prod_rate[prod_rate_nan_id] = lifting_rate_array[
                     prod_rate_nan_id
                 ].copy()
 
             # Raise an exception: prod_rate is smaller than lifting_rate
-            prod_rate_small_sum = np.sum(prod_rate < self.lifting_rate)
+            prod_rate_small_sum = np.sum(prod_rate < lifting_rate_array)
             if prod_rate_small_sum > 0:
                 raise LiftingException(
-                    f"Lifting rate ({self.lifting_rate}) is larger than "
+                    f"Lifting rate ({lifting_rate_array}) is larger than "
                     + f"the production rate ({prod_rate})"
                 )
 
-        self.prod_rate = prod_rate.astype(np.float64)
+        prod_rate_array: npt.NDArray[np.float64] = prod_rate.astype(np.float64)
+        self.prod_rate = prod_rate_array
 
         # Prepare attribute prod_rate_baseline
-        prod_rate_baseline = self.prod_rate_baseline
+        prod_rate_baseline = self._prod_rate_baseline_input
         if prod_rate_baseline is None:
-            prod_rate_baseline = np.zeros_like(self.prod_year, dtype=np.float64)
+            prod_rate_baseline = np.zeros_like(prod_year_array, dtype=np.float64)
 
         else:
-            if not isinstance(cast(object, prod_rate_baseline), np.ndarray):
+            if not isinstance(prod_rate_baseline, np.ndarray):
                 raise LiftingException(
                     "Attribute prod_rate_baseline must be provided as a numpy ndarray, "
                     + f"not as a/an {prod_rate_baseline.__class__.__qualname__}."
                 )
 
-            prod_rate_baseline_nan_id = _missing_indices(prod_rate_baseline)
+            prod_rate_baseline_nan_id = _missing_indices(
+                prod_rate_baseline.astype(np.float64)
+            )
             if len(prod_rate_baseline_nan_id) > 0:
                 prod_rate_baseline[prod_rate_baseline_nan_id] = np.zeros(
                     len(prod_rate_baseline_nan_id)
                 )
 
-        self.prod_rate_baseline = prod_rate_baseline.astype(np.float64)
+        prod_rate_baseline_array: npt.NDArray[np.float64] = prod_rate_baseline.astype(
+            np.float64
+        )
+        self.prod_rate_baseline = prod_rate_baseline_array
 
         # Check for unequal length of arrays data
-        arr_reference = len(self.prod_year)
+        arr_reference = len(prod_year_array)
 
         if not all(
             len(arr) == arr_reference
             for arr in [
-                self.lifting_rate,
-                self.price,
-                ghv,
-                prod_rate,
-                prod_rate_baseline,
+                lifting_rate_array,
+                price_array,
+                ghv_array,
+                prod_rate_array,
+                prod_rate_baseline_array,
             ]
         ):
             raise LiftingException(
                 "Unequal length of arrays: "
-                + f"prod_year: {len(self.prod_year)}, "
-                + f"lifting_rate: {len(self.lifting_rate)}, "
-                + f"price: {len(self.price)}, "
-                + f"ghv: {len(ghv)}, "
-                + f"prod_rate: {len(prod_rate)}, "
-                + f"prod_rate_baseline: {len(prod_rate_baseline)}."
+                + f"prod_year: {len(prod_year_array)}, "
+                + f"lifting_rate: {len(lifting_rate_array)}, "
+                + f"price: {len(price_array)}, "
+                + f"ghv: {len(ghv_array)}, "
+                + f"prod_rate: {len(prod_rate_array)}, "
+                + f"prod_rate_baseline: {len(prod_rate_baseline_array)}."
             )
 
         # Prepare attribute prod_rate_total
-        self.prod_rate_total = np.asarray(
-            prod_rate + prod_rate_baseline,
+        prod_rate_total = np.asarray(
+            prod_rate_array + prod_rate_baseline_array,
             dtype=np.float64,
         )
+        self.prod_rate_total = prod_rate_total
 
         # Raise an exception: prod_year is before the start year of the project
-        if np.min(self.prod_year) < self.start_year:
+        if np.min(prod_year_array) < self.start_year:
             raise LiftingException(
-                f"The production year ({np.min(self.prod_year)}) "
+                f"The production year ({np.min(prod_year_array)}) "
                 + f"is before the start year of the project ({self.start_year})."
             )
 
         # Raise an exception: prod_year is after the end year of the project
-        if np.max(self.prod_year) > self.end_year:
+        if np.max(prod_year_array) > self.end_year:
             raise LiftingException(
-                f"The production year ({np.max(self.prod_year)}) "
+                f"The production year ({np.max(prod_year_array)}) "
                 + f"is after the end year of the project ({self.end_year})."
             )
 
@@ -319,7 +376,8 @@ class Lifting:
           with zeros to ensure alignment.
         """
 
-        param_arr = np.bincount(self.prod_year - self.start_year, weights=target_param)
+        prod_year = self.prod_year
+        param_arr = np.bincount(prod_year - self.start_year, weights=target_param)
         zeros = np.zeros(self.project_duration - len(param_arr), dtype=np.float64)
 
         return np.asarray(np.concatenate((param_arr, zeros)), dtype=np.float64)
@@ -347,8 +405,9 @@ class Lifting:
         - Internally uses `_get_array()` with `target_param = lifting_rate * ghv`.
         - Ensures alignment with production years and fills missing years with zeros.
         """
-        ghv = cast(npt.NDArray[np.float64], self.ghv)
-        return self._get_array(target_param=self.lifting_rate * ghv)
+        lifting_rate = _require_float_array(self.lifting_rate, "lifting_rate")
+        ghv = _require_float_array(self.ghv, "ghv")
+        return self._get_array(target_param=lifting_rate * ghv)
 
     def get_lifting_rate_arr(self) -> npt.NDArray[np.float64]:
         """
@@ -365,7 +424,8 @@ class Lifting:
         Array of lifting_rate is generated using method _get_array() with
         target_param = lifting_rate.
         """
-        return self._get_array(target_param=self.lifting_rate)
+        lifting_rate = _require_float_array(self.lifting_rate, "lifting_rate")
+        return self._get_array(target_param=lifting_rate)
 
     def get_ghv_arr(self) -> npt.NDArray[np.float64]:
         """
@@ -380,7 +440,8 @@ class Lifting:
         -----
         Array of GHV is generated using method _get_array() with target_param = ghv.
         """
-        return self._get_array(target_param=cast(npt.NDArray[np.float64], self.ghv))
+        ghv = _require_float_array(self.ghv, "ghv")
+        return self._get_array(target_param=ghv)
 
     def get_prod_rate_arr(self) -> npt.NDArray[np.float64]:
         """
@@ -397,9 +458,8 @@ class Lifting:
         Array of production rate is generated using method _get_array() with
         target_param = prod_rate.
         """
-        return self._get_array(
-            target_param=cast(npt.NDArray[np.float64], self.prod_rate)
-        )
+        prod_rate = _require_float_array(self.prod_rate, "prod_rate")
+        return self._get_array(target_param=prod_rate)
 
     def get_prod_rate_baseline_arr(self) -> npt.NDArray[np.float64]:
         """
@@ -416,9 +476,10 @@ class Lifting:
         Array of production rate baseline is generated using method _get_array() with
         target_param = prod_rate_baseline.
         """
-        return self._get_array(
-            target_param=cast(npt.NDArray[np.float64], self.prod_rate_baseline)
+        prod_rate_baseline = _require_float_array(
+            self.prod_rate_baseline, "prod_rate_baseline"
         )
+        return self._get_array(target_param=prod_rate_baseline)
 
     def get_prod_rate_total_arr(self) -> npt.NDArray[np.float64]:
         """
@@ -458,18 +519,21 @@ class Lifting:
         If `lifting_rate` or `ghv` is zero, a small value (1E-33) is used to avoid
         division by zero.
         """
-        ghv = cast(npt.NDArray[np.float64], self.ghv)
+        lifting_rate = _require_float_array(self.lifting_rate, "lifting_rate")
+        ghv = _require_float_array(self.ghv, "ghv")
+        price = _require_float_array(self.price, "price")
+        prod_year = self.prod_year
         # Identify unique year in prod_year array
-        unique_year, indices = np.unique(self.prod_year, return_inverse=True)
+        unique_year, indices = np.unique(prod_year, return_inverse=True)
 
         # Calculate weight
-        weight = (self.lifting_rate * ghv).copy()
+        weight = (lifting_rate * ghv).copy()
         weight[weight == 0] = 1e-33
 
         # Calculate WAP (Weighted Average Price)
         wap = np.asarray(
             [
-                float(np.average(self.price[indices == i], weights=weight[indices == i]))
+                float(np.average(price[indices == i], weights=weight[indices == i]))
                 for i in range(len(unique_year))
             ],
             dtype=np.float64,
@@ -501,12 +565,14 @@ class Lifting:
         If `lifting_rate` is zero, a small value (1E-33) is used to avoid division by zero
         in the weighting calculation.
         """
-        ghv = cast(npt.NDArray[np.float64], self.ghv)
+        lifting_rate = _require_float_array(self.lifting_rate, "lifting_rate")
+        ghv = _require_float_array(self.ghv, "ghv")
+        prod_year = self.prod_year
         # Identify unique year in prod_year array
-        unique_year, indices = np.unique(self.prod_year, return_inverse=True)
+        unique_year, indices = np.unique(prod_year, return_inverse=True)
 
         # Determine weight values
-        weight = self.lifting_rate.copy()
+        weight = lifting_rate.copy()
         weight[weight == 0] = 1e-33
 
         # Calculate the Weighted Average Gross Heating Value (WAGHV)
@@ -541,10 +607,12 @@ class Lifting:
         correponding year.
         """
 
-        rev = self.lifting_rate * self.price * cast(
-            npt.NDArray[np.float64], self.ghv
-        )
-        rev_update = np.bincount(self.prod_year - self.start_year, weights=rev)
+        lifting_rate = _require_float_array(self.lifting_rate, "lifting_rate")
+        price = _require_float_array(self.price, "price")
+        ghv = _require_float_array(self.ghv, "ghv")
+        prod_year = self.prod_year
+        rev = lifting_rate * price * ghv
+        rev_update = np.bincount(prod_year - self.start_year, weights=rev)
 
         # Modify revenue, accounting for project duration
         zeros = np.zeros(self.project_duration - len(rev_update), dtype=np.float64)
@@ -552,30 +620,39 @@ class Lifting:
         return np.asarray(np.concatenate((rev_update, zeros)), dtype=np.float64)
 
     def __len__(self) -> int:
-        return len(self.prod_year)
+        prod_year = self.prod_year
+        return len(prod_year)
 
     @override
     def __eq__(self, other: object) -> bool:
         # Between two instances of lifting
         if isinstance(other, Lifting):
-            self_ghv = cast(npt.NDArray[np.float64], self.ghv)
-            self_prod_rate = cast(npt.NDArray[np.float64], self.prod_rate)
-            self_prod_rate_baseline = cast(
-                npt.NDArray[np.float64], self.prod_rate_baseline
+            self_lifting_rate = _require_float_array(self.lifting_rate, "lifting_rate")
+            self_price = _require_float_array(self.price, "price")
+            self_prod_year = self.prod_year
+            self_ghv = _require_float_array(self.ghv, "ghv")
+            self_prod_rate = _require_float_array(self.prod_rate, "prod_rate")
+            self_prod_rate_baseline = _require_float_array(
+                self.prod_rate_baseline, "prod_rate_baseline"
             )
-            other_ghv = cast(npt.NDArray[np.float64], other.ghv)
-            other_prod_rate = cast(npt.NDArray[np.float64], other.prod_rate)
-            other_prod_rate_baseline = cast(
-                npt.NDArray[np.float64], other.prod_rate_baseline
+            other_lifting_rate = _require_float_array(
+                other.lifting_rate, "lifting_rate"
+            )
+            other_price = _require_float_array(other.price, "price")
+            other_prod_year = other.prod_year
+            other_ghv = _require_float_array(other.ghv, "ghv")
+            other_prod_rate = _require_float_array(other.prod_rate, "prod_rate")
+            other_prod_rate_baseline = _require_float_array(
+                other.prod_rate_baseline, "prod_rate_baseline"
             )
             return all(
                 (
                     self.start_year == other.start_year,
                     self.end_year == other.end_year,
                     self.fluid_type == other.fluid_type,
-                    np.allclose(self.lifting_rate, other.lifting_rate),
-                    np.allclose(self.price, other.price),
-                    np.allclose(self.prod_year, other.prod_year),
+                    np.allclose(self_lifting_rate, other_lifting_rate),
+                    np.allclose(self_price, other_price),
+                    np.allclose(self_prod_year, other_prod_year),
                     np.allclose(self_ghv, other_ghv),
                     np.allclose(self_prod_rate, other_prod_rate),
                     np.allclose(self_prod_rate_baseline, other_prod_rate_baseline),
@@ -658,15 +735,23 @@ class Lifting:
     def __add__(self, other: object) -> "Lifting | npt.NDArray[np.float64]":
         # Between an instance of Lifting with another instance of Lifting
         if isinstance(other, Lifting):
-            self_ghv = cast(npt.NDArray[np.float64], self.ghv)
-            self_prod_rate = cast(npt.NDArray[np.float64], self.prod_rate)
-            self_prod_rate_baseline = cast(
-                npt.NDArray[np.float64], self.prod_rate_baseline
+            self_lifting_rate = _require_float_array(self.lifting_rate, "lifting_rate")
+            self_price = _require_float_array(self.price, "price")
+            self_prod_year = self.prod_year
+            self_ghv = _require_float_array(self.ghv, "ghv")
+            self_prod_rate = _require_float_array(self.prod_rate, "prod_rate")
+            self_prod_rate_baseline = _require_float_array(
+                self.prod_rate_baseline, "prod_rate_baseline"
             )
-            other_ghv = cast(npt.NDArray[np.float64], other.ghv)
-            other_prod_rate = cast(npt.NDArray[np.float64], other.prod_rate)
-            other_prod_rate_baseline = cast(
-                npt.NDArray[np.float64], other.prod_rate_baseline
+            other_lifting_rate = _require_float_array(
+                other.lifting_rate, "lifting_rate"
+            )
+            other_price = _require_float_array(other.price, "price")
+            other_prod_year = other.prod_year
+            other_ghv = _require_float_array(other.ghv, "ghv")
+            other_prod_rate = _require_float_array(other.prod_rate, "prod_rate")
+            other_prod_rate_baseline = _require_float_array(
+                other.prod_rate_baseline, "prod_rate_baseline"
             )
             # Raise exception error if self.fluid_type is not equal to other.fluid_type
             if self.fluid_type != other.fluid_type:
@@ -679,9 +764,9 @@ class Lifting:
             else:
                 start_year = min(self.start_year, other.start_year)
                 end_year = max(self.end_year, other.end_year)
-                lifting_rate = np.concatenate((self.lifting_rate, other.lifting_rate))
-                price = np.concatenate((self.price, other.price))
-                prod_year = np.concatenate((self.prod_year, other.prod_year))
+                lifting_rate = np.concatenate((self_lifting_rate, other_lifting_rate))
+                price = np.concatenate((self_price, other_price))
+                prod_year = np.concatenate((self_prod_year, other_prod_year))
                 ghv = np.concatenate((self_ghv, other_ghv))
                 prod_rate = np.concatenate((self_prod_rate, other_prod_rate))
                 prod_rate_baseline = np.concatenate(
@@ -777,16 +862,19 @@ class Lifting:
     def __mul__(self, other: object) -> "Lifting":
         # Multiplication is allowed only with an integer or a float
         if isinstance(other, (int, float)):
+            lifting_rate = _require_float_array(self.lifting_rate, "lifting_rate")
             return Lifting(
                 start_year=self.start_year,
                 end_year=self.end_year,
-                lifting_rate=self.lifting_rate * other,
-                price=self.price,
+                lifting_rate=lifting_rate * other,
+                price=_require_float_array(self.price, "price"),
                 prod_year=self.prod_year,
                 fluid_type=self.fluid_type,
-                ghv=self.ghv,
-                prod_rate=self.prod_rate,
-                prod_rate_baseline=self.prod_rate_baseline,
+                ghv=_require_float_array(self.ghv, "ghv"),
+                prod_rate=_require_float_array(self.prod_rate, "prod_rate"),
+                prod_rate_baseline=_require_float_array(
+                    self.prod_rate_baseline, "prod_rate_baseline"
+                ),
             )
 
         else:
@@ -834,20 +922,24 @@ class Lifting:
                 return Lifting(
                     start_year=self.start_year,
                     end_year=self.end_year,
-                    lifting_rate=self.lifting_rate / other,
-                    price=self.price,
+                    lifting_rate=_require_float_array(self.lifting_rate, "lifting_rate")
+                    / other,
+                    price=_require_float_array(self.price, "price"),
                     prod_year=self.prod_year,
                     fluid_type=self.fluid_type,
-                    ghv=self.ghv,
-                    prod_rate=self.prod_rate,
-                    prod_rate_baseline=self.prod_rate_baseline,
+                    ghv=_require_float_array(self.ghv, "ghv"),
+                    prod_rate=_require_float_array(self.prod_rate, "prod_rate"),
+                    prod_rate_baseline=_require_float_array(
+                        self.prod_rate_baseline, "prod_rate_baseline"
+                    ),
                 )
 
         # Between an instance of Lifting with a NumPy ndarray
         elif isinstance(other, np.ndarray):
-            other_array = cast(
-                npt.NDArray[np.float64 | np.complex128], other
-            )
+            if np.issubdtype(other.dtype, np.complexfloating):
+                other_array = other.astype(np.complex128, copy=False)
+            else:
+                other_array = other.astype(np.float64, copy=False)
             return np.sum(self.revenue()) / np.sum(other_array)
 
         else:

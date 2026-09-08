@@ -4,8 +4,9 @@ related to PSC contract
 """
 
 from datetime import date
+import operator
 
-import dateutils
+from dateutil.relativedelta import relativedelta
 import numpy as np
 from numpy.typing import NDArray
 
@@ -60,93 +61,118 @@ def get_unrec_cost_2b_recovered_costrec(
     cost_recovery = np.zeros_like(project_years, dtype=float)
 
     # Looping through the project years
-    for index, _ in enumerate(project_years):
+    for index in range(project_years.size):
+        current = slice(index, index + 1)
         if index == 0:
             # Yearly Unrecovered Cost
-            yearly_unrecovered_cost[index] = np.where(
-                depreciation[index] + non_capital[index] > (
-                    revenue[index] - ftp_ctr[index] - ftp_gov[index] - ic[index]
+            yearly_unrecovered_cost[current] = np.where(
+                depreciation[current] + non_capital[current]
+                > (
+                    revenue[current] - ftp_ctr[current] - ftp_gov[current] - ic[current]
                 ),
-                depreciation[index] + non_capital[index] - (
-                    revenue[index] - ftp_ctr[index] - ftp_gov[index] - ic[index]
+                depreciation[current]
+                + non_capital[current]
+                - (
+                    revenue[current] - ftp_ctr[current] - ftp_gov[current] - ic[current]
                 ),
-                0
+                0,
             )
 
             # Revenue - Cost Yearly
-            revenue_minus_cost[index] = np.where(
-                yearly_unrecovered_cost[index] > 0,
+            revenue_minus_cost[current] = np.where(
+                yearly_unrecovered_cost[current] > 0,
                 0,
-                revenue[index] - ftp_ctr[index] - ftp_gov[index] - ic[index]
+                revenue[current] - ftp_ctr[current] - ftp_gov[current] - ic[current],
             )
 
             # Unrecovered Cost
-            unrecovered_cost[index] = np.where(
-                yearly_unrecovered_cost[index] - revenue_minus_cost[index] < 0,
+            unrecovered_cost[current] = np.where(
+                yearly_unrecovered_cost[current] - revenue_minus_cost[current] < 0,
                 0,
-                yearly_unrecovered_cost[index] - revenue_minus_cost[index]
+                yearly_unrecovered_cost[current] - revenue_minus_cost[current],
             )
 
             # Cost to be Recovered
-            cost_to_be_recovered[index] = np.where(
-                (0 - unrecovered_cost[index]) < 0,
+            cost_to_be_recovered[current] = np.where(
+                (0 - unrecovered_cost[current]) < 0,
                 0,
-                0 - unrecovered_cost[index]
+                0 - unrecovered_cost[current],
             )
 
             # Cost Recovery
-            cost_recovery[index] = np.minimum(
-                revenue[index] - ftp_ctr[index] - ftp_gov[index],
-                depreciation[index] + non_capital[index] + cost_to_be_recovered[index]
-            ) * cr_cap_rate
+            cost_recovery[current] = (
+                np.minimum(
+                    revenue[current] - ftp_ctr[current] - ftp_gov[current],
+                    depreciation[current]
+                    + non_capital[current]
+                    + cost_to_be_recovered[current],
+                )
+                * cr_cap_rate
+            )
 
         else:
             # Yearly Unrecovered Cost
-            yearly_unrecovered_cost[index] = np.where(
-                depreciation[index] + non_capital[index] > (
-                    revenue[index] - ftp_ctr[index] - ftp_gov[index] - ic[index]
+            previous = slice(index - 1, index)
+            yearly_unrecovered_cost[current] = np.where(
+                depreciation[current] + non_capital[current]
+                > (
+                    revenue[current] - ftp_ctr[current] - ftp_gov[current] - ic[current]
                 ),
-                depreciation[index] + non_capital[index] - (
-                    revenue[index] - ftp_ctr[index] - ftp_gov[index] - ic[index]
+                depreciation[current]
+                + non_capital[current]
+                - (
+                    revenue[current] - ftp_ctr[current] - ftp_gov[current] - ic[current]
                 ),
                 0,
             )
 
             # Revenue - Cost Yearly
-            revenue_minus_cost[index] = np.where(
-                yearly_unrecovered_cost[index] > 0,
+            revenue_minus_cost[current] = np.where(
+                yearly_unrecovered_cost[current] > 0,
                 0,
                 (
-                    revenue[index] - ftp_ctr[index] - ftp_gov[index] - ic[index]
-                    - depreciation[index] - non_capital[index]
-                )
+                    revenue[current]
+                    - ftp_ctr[current]
+                    - ftp_gov[current]
+                    - ic[current]
+                    - depreciation[current]
+                    - non_capital[current]
+                ),
             )
 
             # Unrecovered Cost
-            unrecovered_cost[index] = np.where(
+            unrecovered_cost[current] = np.where(
                 (
-                    yearly_unrecovered_cost[index] + unrecovered_cost[index - 1]
-                    - revenue_minus_cost[index] < 0
+                    yearly_unrecovered_cost[current]
+                    + unrecovered_cost[previous]
+                    - revenue_minus_cost[current]
+                    < 0
                 ),
                 0,
                 (
-                    yearly_unrecovered_cost[index] + unrecovered_cost[index - 1]
-                    - revenue_minus_cost[index]
+                    yearly_unrecovered_cost[current]
+                    + unrecovered_cost[previous]
+                    - revenue_minus_cost[current]
                 ),
             )
 
             # Cost to be Recovered
-            cost_to_be_recovered[index] = np.where(
-                (unrecovered_cost[index - 1] - unrecovered_cost[index]) < 0,
+            cost_to_be_recovered[current] = np.where(
+                (unrecovered_cost[previous] - unrecovered_cost[current]) < 0,
                 0,
-                unrecovered_cost[index - 1] - unrecovered_cost[index]
+                unrecovered_cost[previous] - unrecovered_cost[current],
             )
 
             # Cost Recovery
-            cost_recovery[index] = np.minimum(
-                revenue[index] - ftp_ctr[index] - ftp_gov[index],
-                depreciation[index] + non_capital[index] + cost_to_be_recovered[index]
-            ) * cr_cap_rate
+            cost_recovery[current] = (
+                np.minimum(
+                    revenue[current] - ftp_ctr[current] - ftp_gov[current],
+                    depreciation[current]
+                    + non_capital[current]
+                    + cost_to_be_recovered[current],
+                )
+                * cr_cap_rate
+            )
 
     return unrecovered_cost, cost_to_be_recovered, cost_recovery
 
@@ -203,9 +229,8 @@ def get_unrecovered_cost(
       accumulated and appended to the unrecovered cost array.
     """
 
-    unrecovered_cost: FloatArray = (
-        np.cumsum(depreciation + non_capital)
-        - np.cumsum(revenue - (ftp_ctr + ftp_gov) - ic)
+    unrecovered_cost: FloatArray = np.cumsum(depreciation + non_capital) - np.cumsum(
+        revenue - (ftp_ctr + ftp_gov) - ic
     )
 
     unrecovered_cost = np.where(unrecovered_cost >= 0, unrecovered_cost, 0)
@@ -214,10 +239,10 @@ def get_unrecovered_cost(
     left_cost: FloatArray = np.where(
         np.logical_and(
             (revenue - ftp_ctr - ftp_gov - ic) < depreciation + non_capital,
-            unrecovered_cost == 0
+            np.equal(unrecovered_cost, 0),
         ),
         (depreciation + non_capital) - (revenue - ftp_ctr - ftp_gov - ic),
-        0
+        0,
     )
 
     unrecovered_cost_final: FloatArray = unrecovered_cost + left_cost
@@ -231,7 +256,11 @@ def get_unrecovered_cost(
             pass
 
         else:
-            last_non_zero_indices = max(np.nonzero(revenue)[0])
+            last_non_zero_indices = (
+                revenue.size
+                - 1
+                - operator.index(np.argmax(np.not_equal(revenue[::-1], 0)))
+            )
             trailing_cost = np.cumsum(left_cost[last_non_zero_indices:])
 
             unrecovered_cost_final[last_non_zero_indices:] = trailing_cost
@@ -276,7 +305,9 @@ def get_cost_to_be_recovered_after_tf(
     out: np.ndarray
         The array of cost to be recovered.
     """
-    ctr = np.concatenate((np.zeros(1), -np.diff(unrecovered_cost - np.cumsum(transferred_cost))))
+    ctr = np.concatenate(
+        (np.zeros(1), -np.diff(unrecovered_cost - np.cumsum(transferred_cost)))
+    )
     result = np.where(ctr > 0, ctr, 0)
 
     return result
@@ -398,8 +429,10 @@ def get_unrec_cost_after_tf(
 
     unrecovered_cost = np.where(
         unrecovered_cost >= 0,
-        unrecovered_cost - np.cumsum(transferred_cost_in) + np.cumsum(transferred_cost_out),
-        0
+        unrecovered_cost
+        - np.cumsum(transferred_cost_in)
+        + np.cumsum(transferred_cost_out),
+        0,
     )
     unrecovered_cost = np.where(unrecovered_cost >= 0, unrecovered_cost, 0)
 
@@ -407,10 +440,12 @@ def get_unrec_cost_after_tf(
     left_cost = np.where(
         np.logical_and(
             (revenue - ftp_ctr - ftp_gov - ic) < depreciation + non_capital,
-            unrecovered_cost == 0),
+            np.equal(unrecovered_cost, 0),
+        ),
         (depreciation + non_capital)
         - (revenue - ftp_ctr - ftp_gov - ic)
-        - transferred_cost_in + transferred_cost_out,
+        - transferred_cost_in
+        + transferred_cost_out,
         0,
     )
     left_cost = np.where(left_cost >= 0, left_cost, 0)
@@ -424,7 +459,11 @@ def get_unrec_cost_after_tf(
         if np.sum(left_cost) == 0:
             pass
         else:
-            last_non_zero_indices = max(np.nonzero(revenue)[0])
+            last_non_zero_indices = (
+                revenue.size
+                - 1
+                - operator.index(np.argmax(np.not_equal(revenue[::-1], 0)))
+            )
             trailing_cost = np.cumsum(left_cost[last_non_zero_indices:])
 
             unrecovered_cost_final[last_non_zero_indices:] = trailing_cost
@@ -562,9 +601,7 @@ def get_dmo(
     """
 
     # DMO end date
-    dmo_end_date = onstream_date + dateutils.relativedelta(
-        months=dmo_holiday_duration
-    )
+    dmo_end_date = onstream_date + relativedelta(months=dmo_holiday_duration)
 
     # Identify position of dmo start year in project years array
     dmo_indices = onstream_date.year - start_date.year
@@ -578,23 +615,52 @@ def get_dmo(
             raise ValueError(
                 "Pre-UU DMO requires ets, ctr_ets, and ctr_ftp to be provided."
             )
-        dmo_volume = np.where(ets > 0,
-                           np.minimum((dmo_volume_portion * lifting.get_lifting_rate_ghv_arr() * ctr_pretax_share),
-                                      np.divide(ctr_ets, lifting.get_price_arr(), where=lifting.get_price_arr() != 0) + np.divide(ctr_ftp, lifting.get_price_arr(), where=lifting.get_price_arr() != 0)),
-                           0)
+        lifting_rate_ghv = lifting.get_lifting_rate_ghv_arr()
+        lifting_price = lifting.get_price_arr()
+        ctr_ets_volume = np.divide(
+            ctr_ets,
+            lifting_price,
+            where=np.not_equal(lifting_price, 0),
+        )
+        ctr_ftp_volume = np.divide(
+            ctr_ftp,
+            lifting_price,
+            where=np.not_equal(lifting_price, 0),
+        )
+        dmo_volume = np.where(
+            ets > 0,
+            np.minimum(
+                dmo_volume_portion * lifting_rate_ghv * ctr_pretax_share,
+                ctr_ets_volume + ctr_ftp_volume,
+            ),
+            0,
+        )
     else:
-        dmo_volume = dmo_volume_portion * lifting.get_lifting_rate_ghv_arr() * ctr_pretax_share
+        dmo_volume = (
+            dmo_volume_portion * lifting.get_lifting_rate_ghv_arr() * ctr_pretax_share
+        )
 
-    dmo_fee = np.where(np.logical_and(unrecovered_cost == 0, ~dmo_holiday),
-                       dmo_fee_portion * price * dmo_volume,
-                       dmo_volume * price)
+    dmo_fee = np.where(
+        np.logical_and(np.equal(unrecovered_cost, 0), ~dmo_holiday),
+        dmo_fee_portion * price * dmo_volume,
+        dmo_volume * price,
+    )
 
     # Weighted dmo fee condition if the period of dmo is ended in the middle of the year
-    if unrecovered_cost[dmo_indices] > 0 and is_dmo_end_weighted and not dmo_holiday[dmo_indices]:
-        dmo_fee[dmo_indices] = (
-                    dmo_end_date.month / 12 * price[dmo_indices] * dmo_volume[dmo_indices] +
-                    (1 - dmo_end_date.month / 12) * dmo_volume[dmo_indices] *
-                    dmo_fee_portion * price[dmo_indices])
+    dmo_index = np.asarray([dmo_indices], dtype=np.intp)
+    if (
+        np.any(np.greater(unrecovered_cost[dmo_index], 0))
+        and is_dmo_end_weighted
+        and np.all(np.logical_not(dmo_holiday[dmo_index]))
+    ):
+        weighted_dmo_fee = (
+            dmo_end_date.month / 12 * price[dmo_index] * dmo_volume[dmo_index]
+            + (1 - dmo_end_date.month / 12)
+            * dmo_volume[dmo_index]
+            * dmo_fee_portion
+            * price[dmo_index]
+        )
+        dmo_fee[dmo_index] = weighted_dmo_fee
 
     # Calculate Net DMO
     ddmo = (dmo_volume * price) - dmo_fee
@@ -682,9 +748,7 @@ def get_dmo_gross_split(
     """
 
     # DMO end date
-    dmo_end_date = onstream_date + dateutils.relativedelta(
-        months=dmo_holiday_duration
-    )
+    dmo_end_date = onstream_date + relativedelta(months=dmo_holiday_duration)
 
     # Identify position of dmo start year in project years array
     dmo_indices = onstream_date.year - start_date.year
@@ -696,29 +760,32 @@ def get_dmo_gross_split(
     dmo_volume = np.where(
         net_operating_profit > 0,
         np.minimum(dmo_volume_portion * contractor_share, net_operating_profit),
-        0
+        0,
     )
     dmo_volume = np.divide(
-        dmo_volume, price, out=np.zeros_like(dmo_volume, dtype=float), where=price != 0
+        dmo_volume,
+        price,
+        out=np.zeros_like(dmo_volume, dtype=float),
+        where=np.not_equal(price, 0),
     )
 
     dmo_fee = np.where(
-        np.logical_and(unrecovered_cost == 0, ~dmo_holiday),
+        np.logical_and(np.equal(unrecovered_cost, 0), ~dmo_holiday),
         dmo_fee_portion * price * dmo_volume,
-        dmo_volume * price
+        dmo_volume * price,
     )
 
     # Weighted dmo fee condition if the period of dmo is ended in the middle of the year
+    dmo_index = np.asarray([dmo_indices], dtype=np.intp)
     if (
-        unrecovered_cost[dmo_indices] > 0
+        np.any(np.greater(unrecovered_cost[dmo_index], 0))
         and is_dmo_end_weighted
-        and not dmo_holiday[dmo_indices]
+        and np.all(np.logical_not(dmo_holiday[dmo_index]))
     ):
         month_fraction = dmo_end_date.month / 12
-        base_price = price[dmo_indices]
-        volume = dmo_volume[dmo_indices]
-
-        dmo_fee[dmo_indices] = (
+        base_price = price[dmo_index]
+        volume = dmo_volume[dmo_index]
+        dmo_fee[dmo_index] = (
             month_fraction * base_price * volume
             + (1 - month_fraction) * volume * dmo_fee_portion * base_price
         )
@@ -740,13 +807,13 @@ def transfer_treatment(
     # Get the unrec - cumulative transferred_cost
     difference = unrecovered_prior_to_cost - transfer_cum
 
-    abs_of_diff = np.absolute(np.where(unrecovered_after_to_cost == 0, difference, 0))
+    abs_of_diff = np.absolute(
+        np.where(np.equal(unrecovered_after_to_cost, 0), difference, 0)
+    )
 
     diff_to_prior = np.concatenate((np.zeros(1), np.diff(abs_of_diff)))
 
-    positive_diff_to_prior = np.where(diff_to_prior < 0,
-                                      0,
-                                      diff_to_prior)
+    positive_diff_to_prior = np.where(diff_to_prior < 0, 0, diff_to_prior)
     transfer_adjusted = transfer_prior - positive_diff_to_prior
     transfer_final = np.where(transfer_adjusted < 0, transfer_prior, transfer_adjusted)
     #

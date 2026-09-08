@@ -2,10 +2,7 @@
 A unit testing for revenue module.
 """
 
-from typing import cast
-
 import numpy as np
-import numpy.typing as npt
 import pytest
 
 from pyscnomics.econ.revenue import LiftingException, Lifting
@@ -210,7 +207,7 @@ def test_prepare_lifting_rate():
         _ = Lifting(
             start_year=2023,
             end_year=2030,
-            lifting_rate=cast(npt.NDArray[np.float64], cast(object, 100)),
+            lifting_rate=100,
             price=np.array([10, 10, 10]),
             prod_year=np.array([2024, 2025, 2026]),
             fluid_type=FluidType.OIL,
@@ -220,7 +217,7 @@ def test_prepare_lifting_rate():
         )
 
     # Expected result
-    lifting_rate_mangga = np.array([100., 100., 100.])
+    lifting_rate_mangga = np.array([100.0, 100.0, 100.0])
 
     # Calculated result
     lifting_mangga = Lifting(
@@ -268,7 +265,7 @@ def test_prepare_price():
             start_year=2023,
             end_year=2030,
             lifting_rate=np.array([100, 100, 100]),
-            price=cast(npt.NDArray[np.float64], cast(object, 10)),
+            price=10,
             prod_year=np.array([2024, 2025, 2026]),
             fluid_type=FluidType.GAS,
             ghv=np.array([1, 1, 1]),
@@ -277,7 +274,7 @@ def test_prepare_price():
         )
 
     # Expected result
-    price_apel_expected = np.array([10., 10., 10.])
+    price_apel_expected = np.array([10.0, 10.0, 10.0])
 
     # Calculated result
     lifting_apel = Lifting(
@@ -327,7 +324,7 @@ def test_prepare_prod_year():
             end_year=2030,
             lifting_rate=np.array([100, 100, 100]),
             price=np.array([10, 10, 10]),
-            prod_year=cast(npt.NDArray[np.int64], cast(object, [2024, 2025, 2026])),
+            prod_year=[2024, 2025, 2026],
             fluid_type=FluidType.GAS,
             ghv=np.array([1, 1, 1]),
             prod_rate=np.array([200, 200, 200]),
@@ -384,15 +381,15 @@ def test_prepare_ghv():
             end_year=2030,
             lifting_rate=np.array([100, 100, 100]),
             price=np.array([10, 10, 10]),
-            prod_year=cast(npt.NDArray[np.int64], cast(object, [2024, 2025, 2026])),
+            prod_year=[2024, 2025, 2026],
             fluid_type=FluidType.GAS,
-            ghv=cast(npt.NDArray[np.float64], cast(object, 1)),
+            ghv=1,
             prod_rate=np.array([200, 200, 200]),
             prod_rate_baseline=np.array([50, 50, 50]),
         )
 
     # Expected results
-    ghv_expected1 = np.array([1., 1., 1.])
+    ghv_expected1 = np.array([1.0, 1.0, 1.0])
     ghv_expected2 = np.array([0.5, 0.5, 0.5])
 
     # Calculated results
@@ -460,10 +457,10 @@ def test_prepare_prod_rate():
             end_year=2030,
             lifting_rate=np.array([100, 100, 100]),
             price=np.array([10, 10, 10]),
-            prod_year=cast(npt.NDArray[np.int64], cast(object, [2024, 2025, 2026])),
+            prod_year=[2024, 2025, 2026],
             fluid_type=FluidType.GAS,
             ghv=np.array([1, 1, 1]),
-            prod_rate=cast(npt.NDArray[np.float64], cast(object, 200)),
+            prod_rate=200,
             prod_rate_baseline=np.array([50, 50, 50]),
         )
 
@@ -474,7 +471,7 @@ def test_prepare_prod_rate():
             end_year=2030,
             lifting_rate=np.array([100, 100, 100]),
             price=np.array([10, 10, 10]),
-            prod_year=cast(npt.NDArray[np.int64], cast(object, [2024, 2025, 2026])),
+            prod_year=[2024, 2025, 2026],
             fluid_type=FluidType.GAS,
             ghv=np.array([1, 1, 1]),
             prod_rate=np.array([50, 50, 50]),
@@ -482,8 +479,8 @@ def test_prepare_prod_rate():
         )
 
     # Expected results
-    prod_rate_expected1 = np.array([100., 100., 100.])
-    prod_rate_expected2 = np.array([150., 150., 150.])
+    prod_rate_expected1 = np.array([100.0, 100.0, 100.0])
+    prod_rate_expected2 = np.array([150.0, 150.0, 150.0])
 
     # Calculated results
     lifting_apel1 = Lifting(
@@ -547,15 +544,15 @@ def test_prepare_prod_rate_baseline():
             end_year=2030,
             lifting_rate=np.array([100, 100, 100]),
             price=np.array([10, 10, 10]),
-            prod_year=cast(npt.NDArray[np.int64], cast(object, [2024, 2025, 2026])),
+            prod_year=[2024, 2025, 2026],
             fluid_type=FluidType.GAS,
             ghv=np.array([1, 1, 1]),
             prod_rate=np.array([150, 150, 150]),
-            prod_rate_baseline=cast(npt.NDArray[np.float64], cast(object, 50)),
+            prod_rate_baseline=50,
         )
 
     # Expected results
-    prod_rate_baseline_expected1 = np.array([0., 0., 0.])
+    prod_rate_baseline_expected1 = np.array([0.0, 0.0, 0.0])
     prod_rate_baseline_expected2 = np.array([50, 50, 50])
 
     # Calculated results
@@ -588,8 +585,12 @@ def test_prepare_prod_rate_baseline():
     assert prod_rate_baseline_calculated2 is not None
 
     # Test whether expected == calculated
-    np.testing.assert_allclose(prod_rate_baseline_expected1, prod_rate_baseline_calculated1)
-    np.testing.assert_allclose(prod_rate_baseline_expected2, prod_rate_baseline_calculated2)
+    np.testing.assert_allclose(
+        prod_rate_baseline_expected1, prod_rate_baseline_calculated1
+    )
+    np.testing.assert_allclose(
+        prod_rate_baseline_expected2, prod_rate_baseline_calculated2
+    )
 
 
 def test_prepare_prod_rate_total():
@@ -606,7 +607,7 @@ def test_prepare_prod_rate_total():
     production rate matches the expected total production rate using `np.testing.assert_allclose`.
     """
     # Expected result
-    prod_rate_total_expected = np.array([200., 200., 200.])
+    prod_rate_total_expected = np.array([200.0, 200.0, 200.0])
 
     # Calculated result
     lifting_apel = Lifting(
@@ -641,7 +642,9 @@ def test_prepare_get_prod_rate_total_arr():
     total array matches the expected production rate total array using `np.testing.assert_allclose`.
     """
     # Expected result
-    prod_rate_total_arr_expected = np.array([0., 200., 200., 0., 0., 0., 200., 200.])
+    prod_rate_total_arr_expected = np.array(
+        [0.0, 200.0, 200.0, 0.0, 0.0, 0.0, 200.0, 200.0]
+    )
 
     # Calculated result
     lifting_apel = Lifting(
@@ -659,4 +662,6 @@ def test_prepare_get_prod_rate_total_arr():
     prod_rate_total_arr_calculated = lifting_apel.get_prod_rate_total_arr()
 
     # Test whether expected == calculated
-    np.testing.assert_allclose(prod_rate_total_arr_expected, prod_rate_total_arr_calculated)
+    np.testing.assert_allclose(
+        prod_rate_total_arr_expected, prod_rate_total_arr_calculated
+    )

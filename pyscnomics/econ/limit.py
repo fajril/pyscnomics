@@ -4,6 +4,7 @@ import numpy.typing as npt
 from pyscnomics.econ.indicator import npv
 from pyscnomics.econ.selection import LimitMethod
 
+
 def econ_limit(
     cashflow: npt.NDArray[np.float64],
     method: LimitMethod = LimitMethod.MAX_CUM_CASHFLOW,
@@ -47,7 +48,7 @@ def _max_cum_cashflow(cashflow: npt.NDArray[np.float64]) -> int:
 
 def _negative_cashflow(cashflow: npt.NDArray[np.float64]) -> int:
     # Get indices of positive values
-    positive_indices= np.where(cashflow > 0)[0]
+    positive_indices = np.where(cashflow > 0)[0]
 
     # Get indices of negative values
     negative_indices = np.where(cashflow < 0)[0]
@@ -64,9 +65,7 @@ def _negative_cashflow(cashflow: npt.NDArray[np.float64]) -> int:
     else:
         # neglect_idx is the cashflow that valued negative i the early years due to the nature of the business
         first_positive = positive_indices.item(0)
-        neglect_idx = np.flatnonzero(
-            negative_indices < first_positive
-        )
+        neglect_idx = np.flatnonzero(negative_indices < first_positive)
 
         # Condition when there are negative values in the early rows
         if len(neglect_idx) > 1:
@@ -84,7 +83,5 @@ def _negative_cashflow(cashflow: npt.NDArray[np.float64]) -> int:
 
 
 def _max_npv(cashflow: npt.NDArray[np.float64]) -> int:
-    npv_values= [
-        npv(cashflow[: i + 1]) for i in range(len(cashflow))
-    ]
+    npv_values = [npv(cashflow[: i + 1]) for i in range(len(cashflow))]
     return int(np.argmax(npv_values))

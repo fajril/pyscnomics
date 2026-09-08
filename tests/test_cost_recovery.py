@@ -4,15 +4,13 @@ A collection of unit testing for class CostRecovery
 
 from dataclasses import dataclass, field
 from datetime import date
-from typing import cast
-
 import numpy as np
 
 from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.dataset.sample import load_data
 from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales
 from pyscnomics.econ.revenue import Lifting
-from pyscnomics.econ.selection import FluidType
+from pyscnomics.econ.selection import CostType, FluidType
 
 
 def test_cost_recovery_reuses_normalized_condition_dict():
@@ -55,34 +53,34 @@ def test_cost_recovery_reuses_normalized_condition_dict():
 def test_cost_recovery_unsupported_effective_tax_rate_defaults_to_zero():
     contract = load_data("case1", "cost_recovery")
 
-    contract.run(effective_tax_rate=cast(float, cast(object, "unsupported")))
+    contract.run(effective_tax_rate="unsupported")
 
     assert contract.get_summary()["gov_tax_income"] == 0.0
 
 
 @dataclass
 class CostRecoveryExample:
-    oil_lifting_mangga: Lifting = field(default=None, init=False, repr=False)
-    oil_lifting_apel: Lifting = field(default=None, init=False, repr=False)
-    lifting_nanas: Lifting = field(default=None, init=False, repr=False)
-    capital_mangga: CapitalCost = field(default=None, init=False, repr=False)
-    capital_apel: CapitalCost = field(default=None, init=False, repr=False)
-    intangible_mangga: Intangible = field(default=None, init=False, repr=False)
-    intangible_apel: Intangible = field(default=None, init=False, repr=False)
-    opex_mangga: OPEX = field(default=None, init=False, repr=False)
-    opex_apel: OPEX = field(default=None, init=False, repr=False)
-    asr_mangga: ASR = field(default=None, init=False, repr=False)
-    asr_apel: ASR = field(default=None, init=False, repr=False)
-    lbt_mangga: LBT = field(default=None, init=False, repr=False)
-    lbt_apel: LBT = field(default=None, init=False, repr=False)
-    cos_mangga: CostOfSales = field(default=None, init=False, repr=False)
-    cos_apel: CostOfSales = field(default=None, init=False, repr=False)
+    oil_lifting_mangga: Lifting | None = field(default=None, init=False, repr=False)
+    oil_lifting_apel: Lifting | None = field(default=None, init=False, repr=False)
+    lifting_nanas: Lifting | None = field(default=None, init=False, repr=False)
+    capital_mangga: CapitalCost | None = field(default=None, init=False, repr=False)
+    capital_apel: CapitalCost | None = field(default=None, init=False, repr=False)
+    intangible_mangga: Intangible | None = field(default=None, init=False, repr=False)
+    intangible_apel: Intangible | None = field(default=None, init=False, repr=False)
+    opex_mangga: OPEX | None = field(default=None, init=False, repr=False)
+    opex_apel: OPEX | None = field(default=None, init=False, repr=False)
+    asr_mangga: ASR | None = field(default=None, init=False, repr=False)
+    asr_apel: ASR | None = field(default=None, init=False, repr=False)
+    lbt_mangga: LBT | None = field(default=None, init=False, repr=False)
+    lbt_apel: LBT | None = field(default=None, init=False, repr=False)
+    cos_mangga: CostOfSales | None = field(default=None, init=False, repr=False)
+    cos_apel: CostOfSales | None = field(default=None, init=False, repr=False)
 
     def __post_init__(self):
         self._get_lifting_data()
 
     def _get_lifting_data(self):
-        """ Generate synthetic lifting data """
+        """Generate synthetic lifting data"""
 
         self.oil_lifting_mangga = Lifting(
             start_year=2023,
@@ -118,10 +116,14 @@ class CostRecoveryExample:
             expense_year=np.array([2023, 2024, 2025, 2026, 2027, 2028]),
             cost=np.array([100, 100, 50, 50, 25, 25]),
             cost_allocation=[
-                FluidType.OIL, FluidType.OIL, FluidType.OIL,
-                FluidType.OIL, FluidType.OIL, FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
+                FluidType.OIL,
             ],
-            is_sunkcost=[True, True, True, True, True, True],
+            cost_type=[CostType.SUNK_COST for _ in range(6)],
             tax_portion=np.array([1, 1, 1, 1, 1, 1]),
         )
 

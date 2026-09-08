@@ -1,13 +1,12 @@
-from collections.abc import Iterable
 from dataclasses import dataclass, field
-from datetime import date
-from typing import TypeGuard, cast
+from typing import TypeGuard
 
 import numpy as np
 import numpy.typing as npt
 
-from pyscnomics.contracts.project import BaseProject
-from pyscnomics.contracts.transition import Transition
+from pyscnomics.contracts.project import BaseProject, BaseProjectSummaryException
+from pyscnomics.contracts.summary_profile import PostRunSummaryProfile
+from pyscnomics.contracts.transition import Transition, TransitionException
 from pyscnomics.econ.indicator import (
     irr,
     npv_nominal_terms,
@@ -26,13 +25,101 @@ class CashflowException(Exception):
     pass
 
 
-def _is_contract_tuple(
-    contract: object,
-) -> TypeGuard[tuple[BaseProject | Transition, ...]]:
-    return isinstance(contract, tuple) and all(
-        isinstance(item, (BaseProject, Transition))
-        for item in cast(tuple[object, ...], contract)
-    )
+def _require_integer_value(value: object) -> int:
+    """Validate one integer scalar returned by a NumPy array."""
+    if isinstance(value, int):
+        return value
+    if isinstance(value, np.integer):
+        scalar_value: object = value.item()
+        return _require_integer_value(scalar_value)
+    raise CashflowException("Cashflow project years must contain integer values.")
+
+
+def _require_float_value(value: object) -> float:
+    """Validate one numeric scalar returned by a NumPy array."""
+    if isinstance(value, float):
+        return value
+    if isinstance(value, int):
+        return float(value)
+    if isinstance(value, np.floating):
+        scalar_value: object = value.item()
+        return _require_float_value(scalar_value)
+    if isinstance(value, np.integer):
+        scalar_value = value.item()
+        return _require_float_value(scalar_value)
+    raise CashflowException("Cashflow values must contain numeric values.")
+
+
+def _require_integer_item(values: npt.NDArray[np.int64], index: int) -> int:
+    """Return a validated integer array element."""
+    value: object = values.item(index)
+    return _require_integer_value(value)
+
+
+def _require_float_item(values: npt.NDArray[np.float64], index: int) -> float:
+    """Return a validated floating array element."""
+    value: object = values.item(index)
+    return _require_float_value(value)
+
+
+def _is_contract_tuple(value: object) -> TypeGuard[tuple[object, ...]]:
+    """Identify tuple inputs before validating every public contract element."""
+    return isinstance(value, tuple)
+
+
+def _normalize_contract_input(
+    contract_input: object,
+) -> BaseProject | Transition | tuple[BaseProject | Transition, ...]:
+    """Validate the public contract input before cashflow processing."""
+    if isinstance(contract_input, (BaseProject, Transition)):
+        return contract_input
+    if not _is_contract_tuple(contract_input):
+        raise CashflowException(
+            f"The contract type: {type(contract_input)} , is not recognized."
+        )
+
+    contracts: list[BaseProject | Transition] = []
+    for item in contract_input:
+        contract: object = item
+        if not isinstance(contract, (BaseProject, Transition)):
+            raise CashflowException("Cashflow dataclass only receive psc contract/s.")
+        contracts.append(contract)
+    return tuple(contracts)
+
+
+def _require_post_run_summary_profile(
+    contract: BaseProject | Transition,
+) -> PostRunSummaryProfile:
+    """Return public output from a completed contract run."""
+    try:
+        return contract.get_post_run_summary_profile()
+    except (BaseProjectSummaryException, TransitionException) as error:
+        message = "Cashflow dataclass only receive contract that has been run. Please run the contract before parse it to the Cashflow dataclass."
+        raise CashflowException(message) from error
+
+
+def _require_project_years(
+    contract: BaseProject | Transition,
+) -> npt.NDArray[np.int64]:
+    """Return the completed contract timeline used by its cashflow."""
+    project_years = _require_post_run_summary_profile(contract).project_years
+    if project_years.ndim != 1 or project_years.size == 0:
+        raise CashflowException(
+            "Cashflow requires a completed contract with a non-empty project timeline."
+        )
+    return project_years
+
+
+def _require_consolidated_cashflow(
+    contract: BaseProject | Transition,
+) -> npt.NDArray[np.float64]:
+    """Return the completed consolidated cashflow for one contract."""
+    cashflow = _require_post_run_summary_profile(contract).consolidated_cashflow
+    if cashflow is None:
+        raise CashflowException(
+            "Cashflow dataclass only receive contract that has been run. Please run the contract before parse it to the Cashflow dataclass."
+        )
+    return cashflow
 
 
 @dataclass
@@ -94,22 +181,19 @@ class Cashflow:
     pot: float | None = field(default=None, init=False, repr=False)
 
     def __post_init__(self) -> None:
+        contract_input: object = self.contract
+        self.contract = _normalize_contract_input(contract_input)
+
         # Check if the contract/s has been run
         self.check_run_status()
 
         # Filling the start_year, end_year, and project_years
-        if isinstance(self.contract, (BaseProject, Transition)):
+        if isinstance(self.contract, tuple):
+            self.get_multiple_project_start_end()
+            self.get_multiple_project_years()
+        else:
             self.get_single_project_start_end()
             self.get_single_project_years()
-
-        else:
-            if _is_contract_tuple(self.contract):
-                self.get_multiple_project_start_end()
-                self.get_multiple_project_years()
-            else:
-                raise CashflowException(
-                    f"The contract type: {type(self.contract)} , is not recognized."
-                )
 
         # Check the reference year
         if self.reference_year is None:
@@ -122,39 +206,32 @@ class Cashflow:
         """
         Function to check whether the contract has been run or not.
         """
-        # Condition when the contract is a single-value
-        if isinstance(self.contract, (BaseProject, Transition)):
-            if getattr(self.contract, "_consolidated_cashflow") is None:
-                raise CashflowException(
-                    "Cashflow dataclass only receive contract that has been run. Please run the contract before parse it to the Cashflow dataclass."
-                )
+        contract = self.contract
+        if not isinstance(contract, tuple):
+            _ = _require_consolidated_cashflow(contract)
+            return
 
-        # Condition when the contract is a multi-value
-        else:
-            if _is_contract_tuple(self.contract):
-                for index, cntr in enumerate(self.contract):
-                    if getattr(cntr, "_consolidated_cashflow") is None:
-                        raise CashflowException(
-                            f"Cashflow dataclass only receive contracts that has been run. Contract in index {index} has not been run, please run the contract before parse it to the Cashflow dataclass"
-                        )
-            else:
-                raise CashflowException(
-                    "Cashflow dataclass only receive psc contract/s."
-                )
+        for index, item in enumerate(contract):
+            try:
+                _ = _require_consolidated_cashflow(item)
+            except CashflowException as error:
+                message = f"Cashflow dataclass only receive contracts that has been run. Contract in index {index} has not been run, please run the contract before parse it to the Cashflow dataclass"
+                raise CashflowException(message) from error
 
     def get_single_project_start_end(self) -> None:
         """
         Function to parse the self.start_year and self.end_year
         """
         contract = self.contract
-        if not isinstance(contract, (BaseProject, Transition)):
+        if isinstance(contract, tuple):
             raise CashflowException("Cashflow dataclass only receive psc contract/s.")
-
-        start_date = cast(date, getattr(contract, "start_date"))
-        self.start_year = start_date.year
-
-        end_date = cast(date, getattr(contract, "end_date"))
-        self.end_year = end_date.year
+        if isinstance(contract, BaseProject):
+            self.start_year = contract.start_date.year
+            self.end_year = contract.end_date.year
+        else:
+            project_years = _require_project_years(contract)
+            self.start_year = _require_integer_item(project_years, 0)
+            self.end_year = _require_integer_item(project_years, -1)
 
     def get_multiple_project_start_end(self) -> None:
         """
@@ -163,25 +240,27 @@ class Cashflow:
         contracts = self.contract
         if not isinstance(contracts, tuple):
             raise CashflowException("Cashflow dataclass only receive psc contract/s.")
-
-        self.start_year = min(
-            cast(date, getattr(cntr, "start_date")).year for cntr in contracts
-        )
-        self.end_year = max(
-            cast(date, getattr(cntr, "end_date")).year for cntr in contracts
-        )
+        start_years: list[int] = []
+        end_years: list[int] = []
+        for contract in contracts:
+            if isinstance(contract, BaseProject):
+                start_years.append(contract.start_date.year)
+                end_years.append(contract.end_date.year)
+            else:
+                project_years = _require_project_years(contract)
+                start_years.append(_require_integer_item(project_years, 0))
+                end_years.append(_require_integer_item(project_years, -1))
+        self.start_year = min(start_years)
+        self.end_year = max(end_years)
 
     def get_single_project_years(self) -> None:
         """
         Function to parse the self.start_year and self.end_year from the given contract.
         """
         contract = self.contract
-        if not isinstance(contract, (BaseProject, Transition)):
+        if isinstance(contract, tuple):
             raise CashflowException("Cashflow dataclass only receive psc contract/s.")
-
-        self.project_years = np.asarray(
-            getattr(contract, "project_years"), dtype=np.int64
-        )
+        self.project_years = _require_project_years(contract)
 
     def get_multiple_project_years(self) -> None:
         """
@@ -191,12 +270,8 @@ class Cashflow:
         if not isinstance(contracts, tuple):
             raise CashflowException("Cashflow dataclass only receive psc contract/s.")
 
-        start_year_arr = min(
-            cast(date, getattr(cntr, "start_date")).year for cntr in contracts
-        )
-        end_year_arr = max(
-            cast(date, getattr(cntr, "end_date")).year for cntr in contracts
-        )
+        start_year_arr = self.start_year
+        end_year_arr = self.end_year
         self.project_years = np.arange(
             start=start_year_arr, stop=end_year_arr, step=1, dtype=np.int64
         )
@@ -219,18 +294,10 @@ class Cashflow:
         """
         Function to parse self.cashflow from the input of contract/s.
         """
-        if isinstance(self.contract, (BaseProject, Transition)):
-            self.cashflow = np.asarray(
-                getattr(self.contract, "_consolidated_cashflow"), dtype=np.float64
-            )
-
+        if isinstance(self.contract, tuple):
+            self.parse_multiple_cashflow()
         else:
-            if _is_contract_tuple(self.contract):
-                self.parse_multiple_cashflow()
-            else:
-                raise CashflowException(
-                    f"The contract type: {type(self.contract)} , is not recognized."
-                )
+            self.cashflow = _require_consolidated_cashflow(self.contract)
 
     def parse_multiple_cashflow(self) -> None:
         """
@@ -244,24 +311,25 @@ class Cashflow:
         corresponding_year = self.project_years
 
         # Initiating the cashflow array
-        self.cashflow = np.zeros_like(corresponding_year, dtype=np.float64)
+        total_cashflow = np.zeros_like(corresponding_year, dtype=np.float64)
+        self.cashflow = total_cashflow
 
         # Iterate through each contract
-        for cntr in contracts:
+        for contract in contracts:
             # Iterate through each year and cashflow in the contract
-            contract_years = np.asarray(getattr(cntr, "project_years"), dtype=np.int64)
-            contract_cashflow = np.asarray(
-                getattr(cntr, "_consolidated_cashflow"), dtype=np.float64
-            )
-            years = cast(Iterable[np.int64], contract_years)
-            cashflows = cast(Iterable[np.float64], contract_cashflow)
-            for year, cashflow in zip(years, cashflows):
-                if year in corresponding_year:
-                    matching_year = np.asarray(
-                        corresponding_year == year, dtype=np.bool_
-                    )
-                    index = cast(np.intp, np.flatnonzero(matching_year)[0])
-                    self.cashflow[index] += cashflow
+            contract_years = _require_project_years(contract)
+            contract_cashflow = _require_consolidated_cashflow(contract)
+            for index in range(contract_years.size):
+                year = _require_integer_item(contract_years, index)
+                for cashflow_index in range(corresponding_year.size):
+                    if (
+                        _require_integer_item(corresponding_year, cashflow_index)
+                        == year
+                    ):
+                        total_cashflow[cashflow_index] += _require_float_item(
+                            contract_cashflow, index
+                        )
+                        break
 
     def get_contract_npv(self) -> float:
         """

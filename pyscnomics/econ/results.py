@@ -12,6 +12,7 @@ import numpy.typing as npt
 from pyscnomics.econ.selection import FluidType
 from pyscnomics.econ import indicator
 
+
 class CashFlowException(Exception):
     """Exception to raise for a misuse of CashFlow class"""
 
@@ -58,7 +59,8 @@ class CashFlow:
 
         else:
             raise CashFlowException(
-                f"start date {self.start_date} " + f"is after the end date: {self.end_date}"
+                f"start date {self.start_date} "
+                + f"is after the end date: {self.end_date}"
             )
 
         # Check input data for unequal length of arrays
@@ -308,9 +310,7 @@ class CashFlow:
             np.bincount(self.cashed_year - self.start_date.year, weights=self.cash),
             dtype=np.float64,
         )
-        zeros = np.zeros(
-            self.project_duration - len(cash_allocation), dtype=np.float64
-        )
+        zeros = np.zeros(self.project_duration - len(cash_allocation), dtype=np.float64)
 
         return np.concatenate((cash_allocation, zeros))
 

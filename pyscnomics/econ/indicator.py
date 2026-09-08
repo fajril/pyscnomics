@@ -489,10 +489,7 @@ def npv_skk_real_terms(
     discounted_cashflow: npt.NDArray[np.float64] = np.where(
         cashflow_years > reference_year,
         dcf * cashflow,
-        dcf
-        * cashflow
-        * discount_factor
-        + year_factor,
+        dcf * cashflow * discount_factor + year_factor,
     )
     return float(np.sum(discounted_cashflow))
 
@@ -548,7 +545,9 @@ def npv_point_forward(
         t_arr >= 0, 1 / np.power((1 + discount_rate), t_arr + year_factor), 1
     )
 
-    discounted_cashflow: npt.NDArray[np.float64] = np.where(t_arr < 0, 0, dcf * cashflow)
+    discounted_cashflow: npt.NDArray[np.float64] = np.where(
+        t_arr < 0, 0, dcf * cashflow
+    )
     return float(np.sum(discounted_cashflow))
 
 
@@ -595,8 +594,6 @@ def pot_psc(
     ) / (
         cum_cashflow[positive_change_indices + 1]
         - cum_cashflow[positive_change_indices]
-    ) * (
-        0 - cum_cashflow[positive_change_indices]
-    )
+    ) * (0 - cum_cashflow[positive_change_indices])
 
     return float(np.max(pot))

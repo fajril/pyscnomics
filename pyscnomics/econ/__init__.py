@@ -2,6 +2,8 @@
 Specify callable classes and methods from package 'econ'
 """
 
+import numpy as _numpy
+
 from . import costs as costs
 from . import costs_tools as costs_tools
 from . import depreciation as depreciation
@@ -37,6 +39,7 @@ from .selection import (
     FluidType as FluidType,
     GrossSplitRegime as GrossSplitRegime,
     InflationAppliedTo as InflationAppliedTo,
+    LimitMethod as LimitMethod,
     NPVSelection as NPVSelection,
     OptimizationParameter as OptimizationParameter,
     OptimizationTarget as OptimizationTarget,
@@ -49,9 +52,6 @@ from .selection import (
     VariableSplit522017 as VariableSplit522017,
     YearReference as YearReference,
 )
-
-
-
 from .indicator import (
     irr as irr,
     npv as npv,
@@ -67,8 +67,6 @@ from .indicator import (
 )
 
 from . import limit as limit
-from .limit import (
-    LimitMethod as LimitMethod,
-    econ_limit as econ_limit,
-    np as np,
-)
+from .limit import econ_limit as econ_limit
+
+np = _numpy
