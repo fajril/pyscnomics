@@ -39,6 +39,7 @@ from pyscnomics.optimize.adjuster import (
 from pyscnomics.contracts.run_arguments import validate_gross_split_run_arguments
 from pyscnomics.optimize.sensitivity import (
     SensitivityException,
+    _validate_summary_arguments,
     adjust_sensitivity_contract,
     get_sensitivity_multipliers,
     sensitivity_psc,
@@ -764,6 +765,13 @@ def test_api_sensitivity_rejects_fractional_step():
                 },
                 "Base Project",
             )
+
+
+def test_sensitivity_summary_accepts_integer_inflation_rate():
+    arguments = _validate_summary_arguments({"inflation_rate": 0})
+
+    assert arguments["inflation_rate"] == 0.0
+    assert type(arguments["inflation_rate"]) is float
 
 
 def test_uncertainty_summary_defaults_to_zero_inflation():
