@@ -489,7 +489,7 @@ def npv_skk_real_terms(
     discounted_cashflow: npt.NDArray[np.float64] = np.where(
         cashflow_years > reference_year,
         dcf * cashflow,
-        dcf * cashflow * discount_factor + year_factor,
+        dcf * cashflow * discount_factor,
     )
     return float(np.sum(discounted_cashflow))
 
