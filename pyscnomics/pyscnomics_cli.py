@@ -11,8 +11,7 @@ import uvicorn
     "-api",
     "--api",
     default=1,
-    help="The command for running the API backend. "
-    "0 for not activating the API backend. 1 for activating the API backend",
+    help="The command for running the API backend. 0 for not activating the API backend. 1 for activating the API backend",
 )
 @click.option(
     "-port",
@@ -25,9 +24,9 @@ import uvicorn
     default="127.0.0.1",
     help="The host address for running the API backend. Defaults to 127.0.0.1",
 )
-def entry_point(**kwargs):
+def entry_point(api: int, port: int, host: str) -> None:
     """Manages CLI"""
-    if kwargs["api"] == 1:
+    if api == 1:
         body = """
                 We welcome you to our library, PySCnomics. This package contains tailored functionalities for
                 assessing economic feasibility of oil and gas projects following the state-of-the-art Production
@@ -37,11 +36,10 @@ def entry_point(**kwargs):
                 Institut Teknologi Bandung (ITB)
                 """
         print(body)
-        port_number = kwargs["port"]
         uvicorn.run(
             "pyscnomics.api.main:app",
-            host=kwargs["host"],
-            port=int(port_number),
+            host=host,
+            port=port,
             reload=False,
         )
 

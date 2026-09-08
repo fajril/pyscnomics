@@ -1,14 +1,12 @@
-from typing import cast
-
-import numpy as np
+import pandas as pd
 import pytest
-from numpy.typing import NDArray
 
 from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.gross_split import GrossSplit
 from pyscnomics.dataset.object_sample import generate_contract_sample
 from pyscnomics.dataset.sample import load_testing
 from pyscnomics.econ.selection import ContractSample
+from pyscnomics.tools.table import get_table_grosssplit_oil
 
 
 @pytest.mark.parametrize(
@@ -28,19 +26,10 @@ def test_generate_contract_sample_uses_supported_run_arguments(
 
 def test_case3_sample_uses_expected_progressive_oil_split() -> None:
     contract = generate_contract_sample(ContractSample.CASE_3)
-    expected = np.asarray(
-        cast(
-            list[float],
-            cast(
-                object,
-                load_testing(dataset_type="case3", key="oil_prog_split"),
-            ),
-        ),
-        dtype=float,
-    )
-
     assert isinstance(contract, GrossSplit)
-    np.testing.assert_allclose(
-        cast(NDArray[np.float64], contract._oil_prog_split),
-        expected,
-    )
+    table = get_table_grosssplit_oil(contract)
+    expected_values = load_testing("case3", "oil_prog_split")
+    assert isinstance(expected_values, list)
+    expected = pd.DataFrame({"progressive_split": expected_values})
+    actual = table.loc[:, ["progressive_split"]]
+    pd.testing.assert_frame_equal(actual, expected)

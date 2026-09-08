@@ -2,9 +2,10 @@
 Module to handle API router.
 """
 
-from typing import Literal, Protocol, cast
+from typing import Literal, Protocol, TypeGuard, runtime_checkable
 
 from fastapi import APIRouter
+from pydantic import ConfigDict, TypeAdapter, ValidationError
 
 from pyscnomics import __version__
 from pyscnomics.api.adapter import (
@@ -40,14 +41,17 @@ from pyscnomics.api.converter import LtpBM, RpdBM
 router = APIRouter(prefix="/api")
 
 
-class _WarningEntry(Protocol):
-    def __getitem__(self, index: int) -> object: ...
+@runtime_checkable
+class _WarningSource(Protocol):
+    warning_messages: object
 
 
+@runtime_checkable
 class _RecordsConvertible(Protocol):
-    def to_dict(
-        self, *, orient: Literal["records"]
-    ) -> list[dict[str, object]]: ...
+    def to_dict(self, *, orient: Literal["records"]) -> list[dict[str, object]]: ...
+
+
+_WARNING_RECORD_ADAPTER = TypeAdapter(dict[str, object], config=ConfigDict(strict=True))
 
 
 @router.get("/")
@@ -645,18 +649,45 @@ def _extract_warnings(adapter_result: tuple[object, ...]) -> list[dict[str, obje
     Returns ``[]`` when the contract has no ``warning_messages``.
     """
     contract = adapter_result[1]
-    warning_messages = getattr(contract, "warning_messages", None)
-    if warning_messages is None:
+    if not isinstance(contract, _WarningSource):
         return []
-    if isinstance(warning_messages, list):
-        messages = cast(list[object], warning_messages)
-        return [
-            cast(dict[str, object], item)
-            if isinstance(item, dict)
-            else {"Message": cast(_WarningEntry, item)[1]}
-            for item in messages
-        ]
-    return cast(_RecordsConvertible, warning_messages).to_dict(orient="records")
+
+    warning_messages = contract.warning_messages
+    if _is_object_list(warning_messages):
+        return [_warning_record(item) for item in warning_messages]
+    if isinstance(warning_messages, _RecordsConvertible):
+        return warning_messages.to_dict(orient="records")
+    return []
+
+
+def _is_string_object_dict(value: object) -> TypeGuard[dict[str, object]]:
+    """Return whether a value is a dictionary with string keys."""
+    if not isinstance(value, dict):
+        return False
+    try:
+        _ = _WARNING_RECORD_ADAPTER.validate_python(value)
+    except ValidationError:
+        return False
+    return True
+
+
+def _is_object_list(value: object) -> TypeGuard[list[object]]:
+    """Return whether a value is a list."""
+    return isinstance(value, list)
+
+
+def _warning_record(value: object) -> dict[str, object]:
+    """Normalize one engine warning into the API response shape."""
+    if _is_string_object_dict(value):
+        return value
+    if _is_object_tuple(value) and len(value) >= 2:
+        return {"Message": value[1]}
+    return {}
+
+
+def _is_object_tuple(value: object) -> TypeGuard[tuple[object, ...]]:
+    """Return whether a value is a tuple."""
+    return isinstance(value, tuple)
 
 
 @router.post("/baseproject/warnings")

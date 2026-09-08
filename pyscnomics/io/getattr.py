@@ -1,10 +1,11 @@
 """
 Handles the routine to get the attributes of a contract object.
 """
-from datetime import date
+
 from collections.abc import Mapping
+from datetime import date
 from enum import Enum
-from typing import TypeVar
+from typing import Protocol, TypeGuard, TypeVar, runtime_checkable
 
 import numpy as np
 
@@ -45,6 +46,24 @@ class GetAttrException(Exception):
 
 
 EnumType = TypeVar("EnumType", bound=Enum)
+
+
+@runtime_checkable
+class _ArrayToList(Protocol):
+    """Typed boundary for NumPy's imprecisely annotated ``tolist`` method."""
+
+    def tolist(
+        self,
+    ) -> list[object] | bool | int | float | complex | str | bytes | None: ...
+
+
+def _numpy_python_value(
+    values: object,
+) -> list[object] | bool | int | float | complex | str | bytes | None:
+    """Cross NumPy's untyped ``tolist`` boundary with its documented result shape."""
+    if not isinstance(values, _ArrayToList):
+        raise TypeError("NumPy values must provide tolist()")
+    return values.tolist()
 
 
 def _helper_convert_enum_to_str(
@@ -88,14 +107,15 @@ def _helper_convert_enum_to_str(
     # Filter incorrect input
     if not isinstance(enum_target, enum_type):
         raise GetAttrException(
-            f"Parameter must be a {enum_type.__name__!r} instance, "
-            f"not {enum_target.__class__.__qualname__!r}"
+            f"Parameter must be a {enum_type.__name__!r} instance, not {enum_target.__class__.__qualname__!r}"
         )
 
     try:
         return enum_mapping[enum_target]
     except KeyError:
-        raise GetAttrException(f"Invalid {enum_type.__name__!r} object: {enum_target!r} ")
+        raise GetAttrException(
+            f"Invalid {enum_type.__name__!r} object: {enum_target!r} "
+        )
 
 
 def convert_enum_fluid(objects: FluidType) -> str:
@@ -242,7 +262,7 @@ def convert_enum_taxsplit(objects: TaxSplitTypeCR) -> str:
     mapping = {
         TaxSplitTypeCR.CONVENTIONAL: "Conventional",
         TaxSplitTypeCR.SLIDING_SCALE: "ICP Sliding Scale",
-        TaxSplitTypeCR.R2C: "R/C"
+        TaxSplitTypeCR.R2C: "R/C",
     }
 
     return _helper_convert_enum_to_str(
@@ -767,7 +787,7 @@ def convert_enum_sunk_cost_method(objects: SunkCostMethod) -> str:
 
 
 def convert_enum_initial_amortization_year(
-    objects: InitialYearAmortizationIncurred
+    objects: InitialYearAmortizationIncurred,
 ) -> str:
     """
     Convert InitialYearAmortizationIncurred enum to string representation.
@@ -813,7 +833,7 @@ def convert_enum_var_split_08_2017(
         | VariableSplit082017.APIOil
         | VariableSplit082017.DomesticUse
         | VariableSplit082017.ProductionStage
-    )
+    ),
 ) -> str:
     """
     Convert an enumeration value from VariableSplit082017 into its string representation.
@@ -942,7 +962,7 @@ def convert_enum_var_split_52_2017(
         | VariableSplit522017.APIOil
         | VariableSplit522017.DomesticUse
         | VariableSplit522017.ProductionStage
-    )
+    ),
 ) -> str:
     """
     Convert an enumeration value from VariableSplit522017 into its string representation.
@@ -1066,7 +1086,7 @@ def convert_enum_var_split_13_2024(
         | VariableSplit132024.FieldReservesAmount
         | VariableSplit132024.FieldLocation
         | VariableSplit132024.ReservoirType
-    )
+    ),
 ) -> str:
     """
     Convert a VariableSplit132024 enum instance to its string representation.
@@ -1116,12 +1136,12 @@ def convert_enum_var_split_13_2024(
             loc.ONSHORE: "Onshore",
             loc.SHALLOW_OFFSHORE: "shallow_offshore",
             loc.DEEP_OFFSHORE: "deep_offshore",
-            loc.ULTRADEEP_OFFSHORE: "ultradeep_offshore"
+            loc.ULTRADEEP_OFFSHORE: "ultradeep_offshore",
         },
         rtype: {
             rtype.MK: "conventional",
             rtype.MNK: "unconventional",
-        }
+        },
     }
 
     # Dynamic conversion of enum to string representation based on input object's datatype
@@ -1145,7 +1165,7 @@ def convert_object(objects: object) -> object:
 
     Parameters
     ----------
-    objects : Any
+    objects : object
         The object to convert to a serializable representation.
         Supported types include:
         - date objects
@@ -1166,7 +1186,7 @@ def convert_object(objects: object) -> object:
 
     Returns
     -------
-    Any
+    object
         Serializable representation of the input object:
         - date -> str in 'YYYY-MM-DD' format
         - numpy.ndarray -> list
@@ -1184,6 +1204,8 @@ def convert_object(objects: object) -> object:
     to ensure consistent string representations across the application.
     """
 
+    source_object: object = objects
+
     # Object is date
     if isinstance(objects, date):
         return objects.strftime("%d/%m/%Y")
@@ -1191,7 +1213,7 @@ def convert_object(objects: object) -> object:
 
     # Object is numpy.ndarray
     elif isinstance(objects, np.ndarray):
-        return objects.tolist()
+        return _numpy_python_value(source_object)
 
     # Object is FluidType
     elif isinstance(objects, FluidType):
@@ -1246,42 +1268,51 @@ def convert_object(objects: object) -> object:
         return convert_enum_initial_amortization_year(objects=objects)
 
     # Object is VariableSplit522017
-    elif isinstance(objects, (
-        VariableSplit522017.FieldStatus,
-        VariableSplit522017.FieldLocation,
-        VariableSplit522017.ReservoirDepth,
-        VariableSplit522017.InfrastructureAvailability,
-        VariableSplit522017.ReservoirType,
-        VariableSplit522017.CO2Content,
-        VariableSplit522017.H2SContent,
-        VariableSplit522017.APIOil,
-        VariableSplit522017.DomesticUse,
-        VariableSplit522017.ProductionStage,
-    )):
+    elif isinstance(
+        objects,
+        (
+            VariableSplit522017.FieldStatus,
+            VariableSplit522017.FieldLocation,
+            VariableSplit522017.ReservoirDepth,
+            VariableSplit522017.InfrastructureAvailability,
+            VariableSplit522017.ReservoirType,
+            VariableSplit522017.CO2Content,
+            VariableSplit522017.H2SContent,
+            VariableSplit522017.APIOil,
+            VariableSplit522017.DomesticUse,
+            VariableSplit522017.ProductionStage,
+        ),
+    ):
         return convert_enum_var_split_52_2017(objects=objects)
 
     # Object is VariableSplit082017
-    elif isinstance(objects, (
-        VariableSplit082017.FieldStatus,
-        VariableSplit082017.FieldLocation,
-        VariableSplit082017.ReservoirDepth,
-        VariableSplit082017.InfrastructureAvailability,
-        VariableSplit082017.ReservoirType,
-        VariableSplit082017.CO2Content,
-        VariableSplit082017.H2SContent,
-        VariableSplit082017.APIOil,
-        VariableSplit082017.DomesticUse,
-        VariableSplit082017.ProductionStage,
-    )):
+    elif isinstance(
+        objects,
+        (
+            VariableSplit082017.FieldStatus,
+            VariableSplit082017.FieldLocation,
+            VariableSplit082017.ReservoirDepth,
+            VariableSplit082017.InfrastructureAvailability,
+            VariableSplit082017.ReservoirType,
+            VariableSplit082017.CO2Content,
+            VariableSplit082017.H2SContent,
+            VariableSplit082017.APIOil,
+            VariableSplit082017.DomesticUse,
+            VariableSplit082017.ProductionStage,
+        ),
+    ):
         return convert_enum_var_split_08_2017(objects=objects)
 
     # Object is VariableSplit132024
-    elif isinstance(objects, (
-        VariableSplit132024.InfrastructureAvailability,
-        VariableSplit132024.FieldReservesAmount,
-        VariableSplit132024.FieldLocation,
-        VariableSplit132024.ReservoirType,
-    )):
+    elif isinstance(
+        objects,
+        (
+            VariableSplit132024.InfrastructureAvailability,
+            VariableSplit132024.FieldReservesAmount,
+            VariableSplit132024.FieldLocation,
+            VariableSplit132024.ReservoirType,
+        ),
+    ):
         return convert_enum_var_split_13_2024(objects=objects)
 
     else:
@@ -1289,9 +1320,20 @@ def convert_object(objects: object) -> object:
 
 
 def _prepare_args(
-    target_arg: str, default: object, contract_arguments: dict[str, object]
+    target_arg: str, default: object, contract_arguments: Mapping[str, object]
 ) -> object:
     return contract_arguments.get(target_arg, default)
+
+
+def _object_attributes(value: object) -> dict[str, object]:
+    """Return an object's instance attributes with a concrete value type."""
+    attributes: dict[str, object] = vars(value)
+    return dict(attributes)
+
+
+def _is_object_list(value: object) -> TypeGuard[list[object]]:
+    """Validate the concrete list shape used by cost attributes."""
+    return isinstance(value, list)
 
 
 def construct_lifting_attr(
@@ -1327,14 +1369,13 @@ def construct_lifting_attr(
       attribute with a `.value` property that can be converted to string.
     """
 
-    fluid_types = (
-        [
-            (str(lift.fluid_type.value) + ' ' + str(index)).capitalize()
-            for index, lift in enumerate(lifting)
-        ]
-    )
+    fluid_types: list[str] = []
+    for index, lift in enumerate(lifting):
+        if lift.fluid_type is None:
+            raise AttributeError("'NoneType' object has no attribute 'value'")
+        fluid_types.append((str(lift.fluid_type.value) + " " + str(index)).capitalize())
 
-    liftings = [vars(lift) for lift in lifting]
+    liftings = [_object_attributes(lift) for lift in lifting]
 
     for lift in liftings:
         for key, item in lift.items():
@@ -1389,19 +1430,37 @@ def construct_cost_attr(
     cost_key = ["Cost " + str(index) for index, _ in enumerate(cost)]
 
     # Convert every cost instances into their correponding dictionaries
-    costs = [vars(cst) for cst in cost]
+    costs = [_object_attributes(cst) for cst in cost]
 
     # Modify cost attributes (as dictionaries)
     for cst in costs:
         for key, val in cst.items():
             if key == "cost_allocation":
-                cst[key] = [convert_enum_fluid(objects=fluid) for fluid in cst[key]]
+                if not _is_object_list(val):
+                    raise TypeError(f"'{type(val).__name__}' object is not iterable")
+                allocations: list[str] = []
+                for fluid in val:
+                    if not isinstance(fluid, FluidType):
+                        raise GetAttrException(
+                            f"Parameter must be a 'FluidType' instance, not {type(fluid).__qualname__!r}"
+                        )
+                    allocations.append(convert_enum_fluid(objects=fluid))
+                cst[key] = allocations
 
             elif key == "cost_type":
-                cst[key] = [
-                    convert_enum_cost_type(objects=ct) if ct is not None
-                    else None for ct in cst[key]
-                ]
+                if not _is_object_list(val):
+                    raise TypeError(f"'{type(val).__name__}' object is not iterable")
+                cost_types: list[str | None] = []
+                for cost_type in val:
+                    if cost_type is None:
+                        cost_types.append(None)
+                    elif isinstance(cost_type, CostType):
+                        cost_types.append(convert_enum_cost_type(objects=cost_type))
+                    else:
+                        raise GetAttrException(
+                            f"Parameter must be a 'CostType' instance, not {type(cost_type).__qualname__!r}"
+                        )
+                cst[key] = cost_types
                 # cst[key] = [convert_enum_cost_type(objects=ct) for ct in cst[key]]
 
             else:
@@ -1448,10 +1507,14 @@ def construct_setup_attr(
     - Missing or ``None`` attributes fall back to default values.
     """
 
-    fluid_produced = [lift.fluid_type for lift in contract.lifting]
-    contract_attrs = list(vars(contract).keys())
+    project_contract = _require_base_project(contract)
 
-    def _get_date(fluid_type: FluidType, onstream_date: date):
+    if project_contract.lifting is None:
+        raise TypeError("'NoneType' object is not iterable")
+    fluid_produced = [lift.fluid_type for lift in project_contract.lifting]
+    contract_attrs = list(vars(project_contract).keys())
+
+    def _get_date(fluid_type: FluidType, onstream_date: date | None) -> str | None:
         """
         Get formatted onstream date if fluid type is produced.
 
@@ -1471,12 +1534,13 @@ def construct_setup_attr(
             Formatted date string "DD/MM/YYYY" if fluid type is produced,
             otherwise None
         """
-        return (
-            None if fluid_type not in fluid_produced
-            else onstream_date.strftime("%d/%m/%Y")
-        )
+        if fluid_type not in fluid_produced:
+            return None
+        if onstream_date is None:
+            raise AttributeError("'NoneType' object has no attribute 'strftime'")
+        return onstream_date.strftime("%d/%m/%Y")
 
-    def _prepare_setup_attr(target, source, default):
+    def _prepare_setup_attr(target: str, source: object, default: object) -> object:
         """
         Select appropriate attribute value from source or fallback to default.
 
@@ -1484,38 +1548,32 @@ def construct_setup_attr(
         ----------
         target : str
             Attribute name to check in the contract attribute list.
-        source : Any
+        source : object
             Candidate value to assign if valid (not None).
-        default : Any
+        default : object
             Default value to use if `target` not found or `source` is None.
 
         Returns
         -------
-        Any
+        object
             Selected attribute value, either `source` or `default`.
         """
-        return (
-            default if (target not in contract_attrs) or (source is None)
-            else source
-        )
-
-    # Mapping variables
-    args = {
-        "oil": (FluidType.OIL, contract.oil_onstream_date),
-        "gas": (FluidType.GAS, contract.gas_onstream_date),
-        "approval_year": ("approval_year", contract.approval_year, None),
-        "is_pod_1": ("is_pod_1", contract.is_pod_1, False),
-        "is_strict": ("is_strict", contract.is_strict, True)
-    }
+        return default if (target not in contract_attrs) or (source is None) else source
 
     return {
-        "start_date": contract.start_date.strftime("%d/%m/%Y"),
-        "end_date": contract.end_date.strftime("%d/%m/%Y"),
-        "oil_onstream_date": _get_date(*args["oil"]),
-        "gas_onstream_date": _get_date(*args["gas"]),
-        "approval_year": _prepare_setup_attr(*args["approval_year"]),
-        "is_pod_1": _prepare_setup_attr(*args["is_pod_1"]),
-        "is_strict": _prepare_setup_attr(*args["is_strict"]),
+        "start_date": project_contract.start_date.strftime("%d/%m/%Y"),
+        "end_date": project_contract.end_date.strftime("%d/%m/%Y"),
+        "oil_onstream_date": _get_date(
+            FluidType.OIL, project_contract.oil_onstream_date
+        ),
+        "gas_onstream_date": _get_date(
+            FluidType.GAS, project_contract.gas_onstream_date
+        ),
+        "approval_year": _prepare_setup_attr(
+            "approval_year", project_contract.approval_year, None
+        ),
+        "is_pod_1": _prepare_setup_attr("is_pod_1", project_contract.is_pod_1, False),
+        "is_strict": _prepare_setup_attr("is_strict", project_contract.is_strict, True),
     }
 
 
@@ -1586,21 +1644,18 @@ def construct_costrecovery_attr(contract: CostRecovery) -> dict[str, object]:
         "gas_ftp_is_available": contract.gas_ftp_is_available,
         "gas_ftp_is_shared": contract.gas_ftp_is_shared,
         "gas_ftp_portion": contract.gas_ftp_portion,
-
         # Split
         "tax_split_type": contract.tax_split_type,
         "condition_dict": contract.condition_dict,
         "indicator_rc_icp_sliding": contract.indicator_rc_icp_sliding,
         "oil_ctr_pretax_share": contract.oil_ctr_pretax_share,
         "gas_ctr_pretax_share": contract.gas_ctr_pretax_share,
-
         # Investment credit and cap rate
         "oil_ic_rate": contract.oil_ic_rate,
         "gas_ic_rate": contract.gas_ic_rate,
         "ic_is_available": contract.ic_is_available,
         "oil_cr_cap_rate": contract.oil_cr_cap_rate,
         "gas_cr_cap_rate": contract.gas_cr_cap_rate,
-
         # DMO
         "oil_dmo_volume_portion": contract.oil_dmo_volume_portion,
         "oil_dmo_fee_portion": contract.oil_dmo_fee_portion,
@@ -1608,7 +1663,6 @@ def construct_costrecovery_attr(contract: CostRecovery) -> dict[str, object]:
         "gas_dmo_volume_portion": contract.gas_dmo_volume_portion,
         "gas_dmo_fee_portion": contract.gas_dmo_fee_portion,
         "gas_dmo_holiday_duration": contract.gas_dmo_holiday_duration,
-
         # Carry forward depreciation
         "oil_carry_forward_depreciation": contract.oil_carry_forward_depreciation,
         "gas_carry_forward_depreciation": contract.gas_carry_forward_depreciation,
@@ -1621,7 +1675,7 @@ def construct_costrecovery_attr(contract: CostRecovery) -> dict[str, object]:
 
 
 def construct_costrecovery_arguments_attr(
-    contract_arguments: dict[str, object],
+    contract_arguments: Mapping[str, object],
 ) -> dict[str, object]:
     """
     Construct processed Cost Recovery contract arguments with default values applied.
@@ -1663,7 +1717,8 @@ def construct_costrecovery_arguments_attr(
     }
 
     cr_arguments = {
-        key: _prepare_args(*val, contract_arguments) for key, val in mapping_args.items()
+        key: _prepare_args(*val, contract_arguments)
+        for key, val in mapping_args.items()
     }
 
     for key, value in cr_arguments.items():
@@ -1710,10 +1765,8 @@ def construct_grosssplit_attr(contract: GrossSplit) -> dict[str, object]:
         "field_reserves_2024": contract.field_reserves_2024,
         "infra_avail_2024": contract.infra_avail_2024,
         "field_loc_2024": contract.field_loc_2024,
-
         # Ministry discretion
         "split_ministry_disc": contract.split_ministry_disc,
-
         # DMO parameters
         "oil_dmo_volume_portion": contract.oil_dmo_volume_portion,
         "oil_dmo_fee_portion": contract.oil_dmo_fee_portion,
@@ -1721,7 +1774,6 @@ def construct_grosssplit_attr(contract: GrossSplit) -> dict[str, object]:
         "gas_dmo_volume_portion": contract.gas_dmo_volume_portion,
         "gas_dmo_fee_portion": contract.gas_dmo_fee_portion,
         "gas_dmo_holiday_duration": contract.gas_dmo_holiday_duration,
-
         # Carry forward depreciation
         "oil_carry_forward_depreciation": contract.oil_carry_forward_depreciation,
         "gas_carry_forward_depreciation": contract.gas_carry_forward_depreciation,
@@ -1734,7 +1786,7 @@ def construct_grosssplit_attr(contract: GrossSplit) -> dict[str, object]:
 
 
 def construct_grosssplit_arguments_attr(
-    contract_arguments: dict[str, object],
+    contract_arguments: Mapping[str, object],
 ) -> dict[str, object]:
     """
     Construct processed Gross Split contract arguments with default values applied.
@@ -1776,7 +1828,8 @@ def construct_grosssplit_arguments_attr(
     }
 
     gs_arguments = {
-        key: _prepare_args(*val, contract_arguments) for key, val in mapping_args.items()
+        key: _prepare_args(*val, contract_arguments)
+        for key, val in mapping_args.items()
     }
 
     for key, value in gs_arguments.items():
@@ -1786,7 +1839,7 @@ def construct_grosssplit_arguments_attr(
 
 
 def construct_baseproject_arguments_attr(
-    contract_arguments: dict[str, object],
+    contract_arguments: Mapping[str, object],
 ) -> dict[str, object]:
     """
     Process BaseProject contract arguments with mapping and conversion.
@@ -1818,7 +1871,8 @@ def construct_baseproject_arguments_attr(
     }
 
     bp_arguments = {
-        key: _prepare_args(*val, contract_arguments) for key, val in mapping_args.items()
+        key: _prepare_args(*val, contract_arguments)
+        for key, val in mapping_args.items()
     }
 
     for key, value in bp_arguments.items():
@@ -1827,38 +1881,45 @@ def construct_baseproject_arguments_attr(
     return bp_arguments
 
 
-def construct_transition_attr(contract: Transition):
+def _require_base_project(
+    contract: BaseProject | CostRecovery | GrossSplit | Transition,
+) -> BaseProject:
+    """Keep setup extraction's historical Transition failure boundary."""
+    if isinstance(contract, Transition):
+        raise AttributeError(
+            f"'{type(contract).__name__}' object has no attribute 'lifting'"
+        )
+    return contract
+
+
+def construct_transition_attr(
+    contract: Transition,
+) -> tuple[dict[str, object], dict[str, object]]:
     """
     Construct a dictionary of processed Transition contract attributes
     """
 
     if isinstance(contract.contract1, CostRecovery):
         contract_1 = construct_costrecovery_attr(contract=contract.contract1)
-
-    elif isinstance(contract.contract1, GrossSplit):
+        if isinstance(contract.contract2, CostRecovery):
+            contract_2 = construct_costrecovery_attr(contract=contract.contract2)
+        else:
+            attribute_name = "oil_ftp_is_available"
+            message = f"'{type(contract.contract2).__name__}' object has no attribute {attribute_name!r}"
+            raise AttributeError(message)
+    else:
         contract_1 = construct_grosssplit_attr(contract=contract.contract1)
-
-    else:
-        raise GetAttrException(
-            f"The contract: {type(contract.contract1)} type is not recognized"
-        )
-
-    if isinstance(contract.contract1, CostRecovery):
-        contract_2 = construct_costrecovery_attr(contract=contract.contract2)
-
-    elif isinstance(contract.contract1, GrossSplit):
+        if isinstance(contract.contract2, CostRecovery):
+            attribute_name = "field_status"
+            message = f"'{type(contract.contract2).__name__}' object has no attribute {attribute_name!r}"
+            raise AttributeError(message)
         contract_2 = construct_grosssplit_attr(contract=contract.contract2)
-
-    else:
-        raise GetAttrException(
-            f"The contract: {type(contract.contract2)} type is not recognized"
-        )
 
     return contract_1, contract_2
 
 
 def construct_transition_arguments(
-    contract_arguments: dict[str, object],
+    contract_arguments: Mapping[str, object],
 ) -> dict[str, object]:
     """
     Construct processed Transition contract arguments with default values applied
@@ -1911,9 +1972,11 @@ def get_contract_attributes(
       for JSON compatibility.
     """
 
+    project_contract = _require_base_project(contract)
+
     # Constructing the setup and summary arguments key
     attr: dict[str, object] = {
-        "setup": construct_setup_attr(contract=contract),
+        "setup": construct_setup_attr(contract=project_contract),
         "summary_arguments": construct_summary_arguments_attr(
             summary_arguments=summary_arguments
         ),
@@ -1933,23 +1996,34 @@ def get_contract_attributes(
         )
 
     elif isinstance(contract, Transition):
-        attr["contract_1"], attr["contract_2"] = construct_transition_attr(contract=contract)
+        attr["contract_1"], attr["contract_2"] = construct_transition_attr(
+            contract=contract
+        )
         attr["contract_arguments"] = construct_transition_arguments(
             contract_arguments=contract_arguments
         )
 
-    elif isinstance(contract, BaseProject):
+    else:
         attr["contract_arguments"] = construct_baseproject_arguments_attr(
             contract_arguments=contract_arguments
         )
 
     # Add `attr` members for lifting and costs
-    attr["lifting"] = construct_lifting_attr(contract.lifting)
-    attr["capital"] = construct_cost_attr(contract.capital_cost)
-    attr["intangible"] = construct_cost_attr(contract.intangible_cost)
-    attr["opex"] = construct_cost_attr(contract.opex)
-    attr["asr"] = construct_cost_attr(contract.asr_cost)
-    attr["lbt"] = construct_cost_attr(contract.lbt_cost)
-    attr["cost_of_sales"] = construct_cost_attr(contract.cost_of_sales)
+    if project_contract.lifting is None:
+        raise TypeError("'NoneType' object is not iterable")
+    attr["lifting"] = construct_lifting_attr(project_contract.lifting)
+
+    cost_sections = {
+        "capital": project_contract.capital_cost,
+        "intangible": project_contract.intangible_cost,
+        "opex": project_contract.opex,
+        "asr": project_contract.asr_cost,
+        "lbt": project_contract.lbt_cost,
+        "cost_of_sales": project_contract.cost_of_sales,
+    }
+    for key, costs in cost_sections.items():
+        if costs is None:
+            raise TypeError("'NoneType' object is not iterable")
+        attr[key] = construct_cost_attr(costs)
 
     return attr

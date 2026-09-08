@@ -1,9 +1,7 @@
 from datetime import date
-from typing import cast
 
 import numpy as np
 import pytest
-from numpy.typing import NDArray
 
 from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.contracts.gross_split import GrossSplit
@@ -14,6 +12,7 @@ from pyscnomics.dataset.sample import (
     assign_onstream_date,
     load_data,
     load_testing,
+    read_json_file,
     read_cost_type,
     read_fluid_type,
 )
@@ -81,7 +80,26 @@ def test_assign_lifting_missing_prod_rate_preserves_key_error() -> None:
         }
     }
 
-    with pytest.raises(KeyError):
+    with pytest.raises(KeyError, match="'prod_rate'"):
+        _ = assign_lifting(data)
+
+
+def test_assign_lifting_missing_prod_rate_baseline_preserves_key_error() -> None:
+    data = {
+        "lifting": {
+            "Oil": {
+                "start_year": 2020,
+                "end_year": 2020,
+                "lifting_rate": [1.0],
+                "price": [1.0],
+                "prod_year": [2020],
+                "fluid_type": "Oil",
+                "prod_rate": [1.0],
+            }
+        }
+    }
+
+    with pytest.raises(KeyError, match="'prod_rate_baseline'"):
         _ = assign_lifting(data)
 
 
@@ -160,7 +178,28 @@ def test_assign_cost_reads_lbt_and_cost_of_sales_sections() -> None:
     assert cos_list is not None
     assert isinstance(lbt_list[0], LBT)
     assert isinstance(cos_list[0], CostOfSales)
-    lbt_cost = cast(NDArray[np.float64], lbt_list[0].cost)
-    cos_cost = cast(NDArray[np.float64], cos_list[0].cost)
+    lbt_cost = lbt_list[0].cost
+    cos_cost = cos_list[0].cost
+    assert lbt_cost is not None
+    assert cos_cost is not None
     np.testing.assert_array_equal(lbt_cost, [2.0])
     np.testing.assert_array_equal(cos_cost, [3.0])
+
+
+def test_loaded_arrays_preserve_numpy_dtype_inference() -> None:
+    data = read_json_file("case1")
+
+    lifting = assign_lifting(data)
+    assert lifting is not None
+    lifting_rate = lifting[0].lifting_rate
+    prod_year = lifting[0].prod_year
+    assert lifting_rate is not None
+    assert prod_year is not None
+    assert lifting_rate.dtype == np.dtype("float64")
+    assert prod_year.dtype == np.dtype("int64")
+
+    capital, _, _, _, _, _ = assign_cost(data)
+    assert capital is not None
+    useful_life = capital[0].useful_life
+    assert useful_life is not None
+    assert useful_life.dtype == np.dtype("float64")
