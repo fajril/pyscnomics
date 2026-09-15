@@ -36,7 +36,7 @@ print(tables)
 ## API Service
 
 ```bash
-pyscnomics --api 1 --port 9999
+pyscnomics serve --host 127.0.0.1 --port 9999
 ```
 
 Interactive docs available at `http://localhost:9999/docs` once the server is running.
