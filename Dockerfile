@@ -23,7 +23,6 @@ FROM python:3.11-alpine
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PORT=9999 \
     PATH="/opt/venv/bin:$PATH"
 
 WORKDIR /app
@@ -31,9 +30,9 @@ WORKDIR /app
 # Copy only the virtual env from builder
 COPY --from=builder /opt/venv /opt/venv
 
-EXPOSE ${PORT}
+EXPOSE 9999
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:${PORT}/api/')" || exit 1
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:9999/api/health')" || exit 1
 
-CMD ["sh", "-c", "pyscnomics --api 1 --port ${PORT}"]
+CMD ["pyscnomics", "serve", "--host", "0.0.0.0", "--port", "9999"]
