@@ -221,8 +221,10 @@ def _capital_pis_year(
 ) -> npt.NDArray[np.int64] | None:
     if value is None:
         return None
+    # A PIS year of 0 means "unset" (like None) and defaults to the entry's
+    # expense year, mirroring the existing None handling.
+    missing = np.array([item is None or item == 0 for item in value], dtype=bool)
     pis_year = np.array([0 if item is None else item for item in value], dtype=np.int64)
-    missing = np.array([item is None for item in value], dtype=bool)
     pis_year[missing] = expense_year[missing]
     return pis_year
 

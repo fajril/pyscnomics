@@ -5473,8 +5473,10 @@ class BaseProject:
         costs = _require_float_array(obj_capital.cost, "cost")
         pis_yrs = _require_int_array(obj_capital.pis_year, "pis_year")
 
-        # Identify PIS years occurring before the onstream year
-        mask = pis_yrs < onstream_year
+        # Identify PIS years occurring before the onstream year. Only entries
+        # carrying cost are considered: a zero-cost entry is never depreciated
+        # or amortized, so it must not fail validation.
+        mask = (pis_yrs < onstream_year) & (np.abs(costs) > 0.0)
 
         # Exit early if all PIS years are NOT before onstream year
         if not np.any(mask):
