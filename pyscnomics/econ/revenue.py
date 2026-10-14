@@ -3,7 +3,8 @@ Prepares lifting data and calculate the associated revenue.
 """
 
 from dataclasses import dataclass, field
-from typing import overload
+from functools import reduce
+from typing import cast, overload
 
 import numpy as np
 import numpy.typing as npt
@@ -18,12 +19,34 @@ from pyscnomics.econ.costs import (
     LBT,
     CostOfSales,
 )
+from pyscnomics.validation_rules import (
+    lifting_exceeds_production,
+    missing_value_indices,
+    period_is_reversed,
+    unequal_lengths,
+    year_above,
+    year_below,
+)
+from pyscnomics.input_validation import InputValidationError, engine_input_issue
 
 
 class LiftingException(Exception):
     """Exception to be raised when class Lifting is misused"""
 
     pass
+
+
+class LiftingInputError(  # pyright: ignore[reportUnsafeMultipleInheritance]
+    LiftingException, InputValidationError
+):
+    """Verified user-input lifting error retaining ``LiftingException``."""
+
+    _input_code: str = "LIFTING_INPUT_INVALID"
+
+    def __init__(self, message: str) -> None:
+        InputValidationError.__init__(
+            self, (engine_input_issue(code=self._input_code, message=message),)
+        )
 
 
 def _missing_indices(values: object) -> npt.NDArray[np.intp]:
@@ -155,14 +178,14 @@ class Lifting:
         """
 
         # Prepare attribute project_years and project_duration
-        if self.end_year >= self.start_year:
+        if not period_is_reversed(self.start_year, self.end_year):
             self.project_duration = self.end_year - self.start_year + 1
             self.project_years = np.arange(
                 self.start_year, self.end_year + 1, dtype=np.int64
             )
 
         else:
-            raise LiftingException(
+            raise LiftingInputError(
                 f"start_year ({self.start_year}) is after the end year ({self.end_year})."
             )
 
@@ -175,9 +198,11 @@ class Lifting:
             )
 
         else:
-            prod_year_nan_id = _missing_indices(prod_year.astype(np.float64))
+            prod_year_nan_id = missing_value_indices(
+                cast("npt.NDArray[np.generic]", prod_year)
+            )
             if len(prod_year_nan_id) > 0:
-                raise LiftingException(
+                raise LiftingInputError(
                     f"Missing values in array prod_year: {prod_year}"
                 )
 
@@ -266,9 +291,10 @@ class Lifting:
                 ].copy()
 
             # Raise an exception: prod_rate is smaller than lifting_rate
-            prod_rate_small_sum = np.sum(prod_rate < lifting_rate_array)
-            if prod_rate_small_sum > 0:
-                raise LiftingException(
+            if lifting_exceeds_production(
+                lifting_rate_array, cast("npt.NDArray[np.float64]", prod_rate)
+            ):
+                raise LiftingInputError(
                     f"Lifting rate ({lifting_rate_array}) is larger than "
                     + f"the production rate ({prod_rate})"
                 )
@@ -302,19 +328,16 @@ class Lifting:
         self.prod_rate_baseline = prod_rate_baseline_array
 
         # Check for unequal length of arrays data
-        arr_reference = len(prod_year_array)
-
-        if not all(
-            len(arr) == arr_reference
-            for arr in [
-                lifting_rate_array,
-                price_array,
-                ghv_array,
-                prod_rate_array,
-                prod_rate_baseline_array,
-            ]
-        ):
-            raise LiftingException(
+        length_map = {
+            "prod_year": len(prod_year_array),
+            "lifting_rate": len(lifting_rate_array),
+            "price": len(price_array),
+            "ghv": len(ghv_array),
+            "prod_rate": len(prod_rate_array),
+            "prod_rate_baseline": len(prod_rate_baseline_array),
+        }
+        if unequal_lengths(length_map) is not None:
+            raise LiftingInputError(
                 "Unequal length of arrays: "
                 + f"prod_year: {len(prod_year_array)}, "
                 + f"lifting_rate: {len(lifting_rate_array)}, "
@@ -332,16 +355,18 @@ class Lifting:
         self.prod_rate_total = prod_rate_total
 
         # Raise an exception: prod_year is before the start year of the project
-        if np.min(prod_year_array) < self.start_year:
-            raise LiftingException(
-                f"The production year ({np.min(prod_year_array)}) "
+        below = year_below(prod_year_array, self.start_year)
+        if below is not None:
+            raise LiftingInputError(
+                f"The production year ({below}) "
                 + f"is before the start year of the project ({self.start_year})."
             )
 
         # Raise an exception: prod_year is after the end year of the project
-        if np.max(prod_year_array) > self.end_year:
-            raise LiftingException(
-                f"The production year ({np.max(prod_year_array)}) "
+        above = year_above(prod_year_array, self.end_year)
+        if above is not None:
+            raise LiftingInputError(
+                f"The production year ({above}) "
                 + f"is after the end year of the project ({self.end_year})."
             )
 
@@ -947,3 +972,35 @@ class Lifting:
                 "Does not allow division operation between an instance of Lifting "
                 + f"with a/an {other.__class__.__qualname__}."
             )
+
+
+def aggregate_lifting_for_fluid(
+    lifting: tuple[Lifting, ...] | list[Lifting],
+    *,
+    fluid_type: FluidType,
+    start_year: int,
+    end_year: int,
+) -> Lifting:
+    """Aggregate every lifting stream of one fluid, or a zero-filled stream.
+
+    This is the shared aggregation used by ``BaseProject`` and the API input
+    preparer so preflight and execution resolve onstream from identical revenue.
+    A project without a stream of the requested fluid receives the existing
+    zero-filled behavior (never an error and never an approximate value).
+    """
+    project_years = np.arange(start_year, end_year + 1, 1, dtype=np.int64)
+    project_duration = end_year - start_year + 1
+    streams = [lft for lft in lifting if lft.fluid_type == fluid_type]
+    if not streams:
+        return Lifting(
+            start_year=start_year,
+            end_year=end_year,
+            prod_year=project_years,
+            lifting_rate=np.zeros(project_duration),
+            price=np.zeros(project_duration),
+            fluid_type=fluid_type,
+            prod_rate=np.zeros(project_duration),
+            prod_rate_baseline=np.zeros(project_duration),
+        )
+
+    return reduce(lambda x, y: x + y, streams)

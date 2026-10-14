@@ -4,15 +4,16 @@ This file containing the tools which utilized by API adapter.
 
 from datetime import date, datetime
 from collections.abc import Mapping, Sequence
-from typing import Protocol, Required, TypeGuard, runtime_checkable
+from typing import ClassVar, Protocol, Required, TypeGuard, runtime_checkable
 
 import numpy as np
 import numpy.typing as npt
-from pydantic import BaseModel, Field, TypeAdapter
+from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 from typing_extensions import TypedDict
 
 from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR, CostOfSales, LBT
 from pyscnomics.dataset.sample import assign_lifting, read_fluid_type, read_cost_type
+from pyscnomics.validation_rules import parse_engine_date
 from pyscnomics.econ.selection import (
     CostType,
     TaxRegime,
@@ -45,6 +46,39 @@ from pyscnomics.tools.helper import (
     get_optimization_target_converter,
     get_optimization_parameter_converter,
 )
+from pyscnomics.input_validation import InputValidationError, engine_input_issue
+
+
+class ConverterInputError(  # pyright: ignore[reportUnsafeMultipleInheritance]
+    ValueError, InputValidationError
+):
+    """Verified user-input converter error retaining ``ValueError``.
+
+    The converter raised ``ValueError`` for an unrecognized enum/label, so this
+    class keeps that documented superclass catchable for library callers.
+    """
+
+    _input_code: str = "CONVERTER_INPUT_INVALID"
+
+    def __init__(self, message: str, *, code: str | None = None) -> None:
+        InputValidationError.__init__(
+            self,
+            (engine_input_issue(code=code or self._input_code, message=message),),
+        )
+
+
+class ConverterTypeError(  # pyright: ignore[reportUnsafeMultipleInheritance]
+    TypeError, InputValidationError
+):
+    """Verified user-input converter type error retaining ``TypeError``."""
+
+    _input_code: str = "CONVERTER_TYPE_INVALID"
+
+    def __init__(self, message: str, *, code: str | None = None) -> None:
+        InputValidationError.__init__(
+            self,
+            (engine_input_issue(code=code or self._input_code, message=message),),
+        )
 
 
 class _CostInput(TypedDict, total=False):
@@ -82,6 +116,19 @@ _STRING_OBJECT_ADAPTER: TypeAdapter[dict[str, object] | None] = TypeAdapter(
 _COST_INPUT_ADAPTER: TypeAdapter[dict[str, _CostInput] | None] = TypeAdapter(
     dict[str, _CostInput] | None
 )
+
+
+class _FiniteRequestModel(BaseModel):
+    """Base for request models that must reject non-finite JSON numbers.
+
+    ``allow_inf_nan=False`` rejects ``NaN``/``Infinity`` and their coercible
+    string forms (``"nan"``, ``"inf"``, ``"Infinity"``) at the request boundary,
+    before any engine work. Ordinary numeric strings, zero, and nullable
+    defaults keep their existing coercion semantics.
+    """
+
+    model_config: ClassVar[ConfigDict] = ConfigDict(allow_inf_nan=False)
+
 
 
 @runtime_checkable
@@ -412,7 +459,7 @@ def _lbt_arguments(item: _CostInput) -> _LBTArguments:
     return arguments
 
 
-class SetupBM(BaseModel):
+class SetupBM(_FiniteRequestModel):
     """
     The BaseModel to validate the API setup input data.
 
@@ -443,7 +490,7 @@ class SetupBM(BaseModel):
     is_strict: bool | None = None
 
 
-class SummaryArgumentsBM(BaseModel):
+class SummaryArgumentsBM(_FiniteRequestModel):
     """
     BaseModel to validate the API summary arguments input data.
 
@@ -473,7 +520,7 @@ class SummaryArgumentsBM(BaseModel):
     profitability_discounted: bool = False
 
 
-class CostRecoveryBM(BaseModel):
+class CostRecoveryBM(_FiniteRequestModel):
     """
     The BaseModel to validate the API Cost Recovery input data.
 
@@ -556,7 +603,7 @@ class CostRecoveryBM(BaseModel):
     gas_carry_forward_depreciation: float | int | list[float] = 0.0
 
 
-class GrossSplitBM(BaseModel):
+class GrossSplitBM(_FiniteRequestModel):
     """
     The BaseModel to validate the API Gross Split input data.
 
@@ -645,7 +692,7 @@ class GrossSplitBM(BaseModel):
     gas_carry_forward_depreciation: float | int | list[float] = 0.0
 
 
-class ContractArgumentsBM(BaseModel):
+class ContractArgumentsBM(_FiniteRequestModel):
     """
     The BaseModel to validate the Contract Arguments input data.
 
@@ -713,7 +760,7 @@ class ContractArgumentsBM(BaseModel):
     sum_undepreciated_cost: bool = False
 
 
-class ContractArgumentsTransitionBM(BaseModel):
+class ContractArgumentsTransitionBM(_FiniteRequestModel):
     """
     The BaseModel to validate the Contract Arguments of Transition input data.
 
@@ -726,7 +773,7 @@ class ContractArgumentsTransitionBM(BaseModel):
     unrec_portion: float | int
 
 
-class LiftingBM(BaseModel):
+class LiftingBM(_FiniteRequestModel):
     """
     The BaseModel to validate the Lifting input data.
 
@@ -763,7 +810,7 @@ class LiftingBM(BaseModel):
     prod_rate_baseline: list[float] | list[int] | None = None
 
 
-class GeneralCostBM(BaseModel):
+class GeneralCostBM(_FiniteRequestModel):
     start_year: int
     end_year: int
     expense_year: list[int]
@@ -879,7 +926,7 @@ class LbtBM(GeneralCostBM):
     gross_revenue: list[float] | list[int] | None = Field(default=None)
 
 
-class OptimizationDictBM(BaseModel):
+class OptimizationDictBM(_FiniteRequestModel):
     """
     The BaseModel to validate the Optimization Dictionary input data.
 
@@ -899,7 +946,7 @@ class OptimizationDictBM(BaseModel):
     max: list[float] | list[int] = Field(min_length=1)
 
 
-class OptimizationBM(BaseModel):
+class OptimizationBM(_FiniteRequestModel):
     """
     The BaseModel to validate the Optimization input data.
 
@@ -918,7 +965,7 @@ class OptimizationBM(BaseModel):
     target_parameter: str
 
 
-class SensitivityBM(BaseModel):
+class SensitivityBM(_FiniteRequestModel):
     """
     The BaseModel to validate the Sensitivity input data.
 
@@ -945,7 +992,7 @@ class SensitivityBM(BaseModel):
     increment: float | int | None = None
 
 
-class UncertaintyBM(BaseModel):
+class UncertaintyBM(_FiniteRequestModel):
     """
     The BaseModel to validate the uncertainty input data.
 
@@ -983,7 +1030,7 @@ class UncertaintyBM(BaseModel):
     lifting_stddev: float | int = Field(default=1.25)
 
 
-class LtpBM(BaseModel):
+class LtpBM(_FiniteRequestModel):
     """
     The BaseModel to validate the LTP data input .
 
@@ -1006,7 +1053,7 @@ class LtpBM(BaseModel):
     fluid_type: str
 
 
-class RpdBM(BaseModel):
+class RpdBM(_FiniteRequestModel):
     """
     The BaseModel to validate the RPD data input .
 
@@ -1037,7 +1084,7 @@ class RpdBM(BaseModel):
     end_year: int
 
 
-class Data(BaseModel):
+class Data(_FiniteRequestModel):
     """
     The BaseModel to validate the Data input.
 
@@ -1095,7 +1142,7 @@ class Data(BaseModel):
     result: dict[str, object] | None = Field(default=None)
 
 
-class TransitionBM(BaseModel):
+class TransitionBM(_FiniteRequestModel):
     """
     The BaseModel to validate the contract in the Transition input data.
 
@@ -1134,7 +1181,7 @@ class TransitionBM(BaseModel):
     grosssplit: GrossSplitBM | None = None
 
 
-class DataTransition(BaseModel):
+class DataTransition(_FiniteRequestModel):
     """
     The BaseModel to validate the Transition Data input.
 
@@ -1164,7 +1211,7 @@ class DataTransition(BaseModel):
     uncertainty_arguments: UncertaintyBM | None = None
 
 
-class EconLimit(BaseModel):
+class EconLimit(_FiniteRequestModel):
     """
     The BaseModel to validate the Economic Limit.
 
@@ -1177,7 +1224,7 @@ class EconLimit(BaseModel):
     method: str
 
 
-class ASRExpendituresBM(BaseModel):
+class ASRExpendituresBM(_FiniteRequestModel):
     """
     The BaseModel to validate the ASR Expenditures Data.
 
@@ -1196,7 +1243,7 @@ class ASRExpendituresBM(BaseModel):
     asr: AsrBM
 
 
-class LBTExpendituresBM(BaseModel):
+class LBTExpendituresBM(_FiniteRequestModel):
     """
     The BaseModel to validate the LBT Expenditures Data.
 
@@ -1233,7 +1280,14 @@ def convert_str_to_date(str_object: object) -> date | None:
     if str_object is None:
         return None
     if isinstance(str_object, str):
-        return datetime.strptime(str_object, "%d/%m/%Y").date()
+        # Reuse the shared engine date rule so preflight and the adapter parse
+        # exactly the same format; a malformed date raises here as before.
+        parsed = parse_engine_date(str_object)
+        if parsed is None:
+            raise ValueError(
+                f"time data '{str_object}' does not match format '%d/%m/%Y'"
+            )
+        return parsed
 
     if isinstance(str_object, int):
         value = datetime.fromtimestamp(str_object)
@@ -1268,7 +1322,10 @@ def convert_str_to_int(str_object: object) -> int | None:
 
     if isinstance(str_object, str | int):
         return int(str_object)
-    raise TypeError(f"Expected str or int, got {type(str_object).__name__}")
+    raise ConverterTypeError(
+        f"Expected str or int, got {type(str_object).__name__}",
+        code="CONVERTER_INT_TYPE",
+    )
 
 
 def convert_list_to_array_float(
@@ -2013,14 +2070,20 @@ def converter_sunk_cost_method(str_obj: object) -> SunkCostMethod:
 
     try:
         if not isinstance(str_obj, str):
-            raise ValueError(f"Invalid sunk cost method: {str_obj!r}")
+            raise ConverterInputError(
+                f"Invalid sunk cost method: {str_obj!r}",
+                code="CONVERTER_SUNK_COST_METHOD",
+            )
         return {
             "depreciated_tangible": SunkCostMethod.DEPRECIATED_TANGIBLE,
             "pooled_first_year": SunkCostMethod.POOLED_1ST_YEAR,
         }[str_obj]
 
     except KeyError:
-        raise ValueError(f"Invalid sunk cost method: {str_obj!r}")
+        raise ConverterInputError(
+            f"Invalid sunk cost method: {str_obj!r}",
+            code="CONVERTER_SUNK_COST_METHOD",
+        )
 
 
 def converter_reservoir_type_permen_2024(
@@ -2053,8 +2116,9 @@ def converter_reservoir_type_permen_2024(
 
     try:
         if not isinstance(target_str, str):
-            raise ValueError(
-                f"Invalid reservoir type permen 2024 method: {target_str!r}"
+            raise ConverterInputError(
+                f"Invalid reservoir type permen 2024 method: {target_str!r}",
+                code="CONVERTER_RESERVOIR_TYPE_2024",
             )
         return {
             "conventional": VariableSplit132024.ReservoirType.MK,
@@ -2062,7 +2126,10 @@ def converter_reservoir_type_permen_2024(
         }[target_str]
 
     except KeyError:
-        raise ValueError(f"Invalid reservoir type permen 2024 method: {target_str!r}")
+        raise ConverterInputError(
+            f"Invalid reservoir type permen 2024 method: {target_str!r}",
+            code="CONVERTER_RESERVOIR_TYPE_2024",
+        )
 
 
 def converter_initial_amortization_year(
@@ -2095,8 +2162,9 @@ def converter_initial_amortization_year(
 
     try:
         if not isinstance(target_str, str):
-            raise ValueError(
-                f"Invalid initial amortization year option: {target_str!r}"
+            raise ConverterInputError(
+                f"Invalid initial amortization year option: {target_str!r}",
+                code="CONVERTER_INITIAL_AMORTIZATION_YEAR",
             )
         return {
             "onstream_year": InitialYearAmortizationIncurred.ONSTREAM_YEAR,
@@ -2104,7 +2172,10 @@ def converter_initial_amortization_year(
         }[target_str]
 
     except KeyError:
-        raise ValueError(f"Invalid initial amortization year option: {target_str!r}")
+        raise ConverterInputError(
+            f"Invalid initial amortization year option: {target_str!r}",
+            code="CONVERTER_INITIAL_AMORTIZATION_YEAR",
+        )
 
 
 def convert_str_to_taxregime(str_object: object) -> TaxRegime | None:
@@ -2502,7 +2573,10 @@ def convert_to_float(
     """
     if _is_float_convertible(target):
         return float(target)
-    raise TypeError(f"Expected int, float, or str, got {type(target).__name__}")
+    raise ConverterTypeError(
+        f"Expected int, float, or str, got {type(target).__name__}",
+        code="CONVERTER_FLOAT_TYPE",
+    )
 
 
 def convert_to_method_limit(target: object) -> LimitMethod | ValueError:
@@ -2561,8 +2635,9 @@ def convert_to_uncertainty_distribution(target: object) -> UncertaintyDistributi
     }
 
     if not isinstance(target, str) or target not in mapping:
-        raise ValueError(
-            f"Invalid distribution: {target!r}. Expected one of {list(mapping.keys())}."
+        raise ConverterInputError(
+            f"Invalid distribution: {target!r}. Expected one of {list(mapping.keys())}.",
+            code="CONVERTER_UNCERTAINTY_DISTRIBUTION",
         )
     return mapping[target]
 
@@ -2577,11 +2652,16 @@ class CombineCaseBM(BaseModel):
     """
 
     cId: int
-    ctr: int = Field(ge=0, le=3)
+    # ``ctr`` carries the case contract type. The backend convention is
+    # 0=Base Project, 1=Cost Recovery, 2=Gross Split and any transition index
+    # (3..6) as Transition; the real frontend ``Case`` enum uses 1..6, where
+    # 3..6 are the four CR/GS transition combinations. All transition values
+    # select the ``DataTransition`` contract model in nested validation.
+    ctr: int = Field(ge=0, le=6)
     data: dict[str, object]
 
 
-class CombineOptionsBM(BaseModel):
+class CombineOptionsBM(_FiniteRequestModel):
     """
     Summary options shared by combine/incremental requests.
 

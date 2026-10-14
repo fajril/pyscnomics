@@ -28,6 +28,8 @@ from pyscnomics.contracts.gross_split import GrossSplit
 from pyscnomics.contracts.transition import Transition
 from pyscnomics.econ import FluidType
 from pyscnomics.econ.costs import ASR, CapitalCost, CostOfSales, Intangible, LBT, OPEX
+from pyscnomics.input_validation import InputValidationError, engine_input_issue
+from pyscnomics.validation_rules import uncertainty_parameters_violation
 from pyscnomics.econ.revenue import Lifting
 from pyscnomics.econ.selection import (
     DeprMethod,
@@ -218,6 +220,25 @@ class MonteCarloException(Exception):
     """Exception to be raised for a misuse of MonteCarlo class"""
 
     pass
+
+
+class MonteCarloInputError(  # pyright: ignore[reportUnsafeMultipleInheritance]
+    MonteCarloException, ValueError, InputValidationError
+):
+    """Verified user-input Monte Carlo error retaining its documented bases.
+
+    The engine raised ``ValueError`` for the invalid distribution parameters and
+    ``MonteCarloException`` for an unrecognized distribution, so this class keeps
+    both catchable for Python library callers.
+    """
+
+    _input_code: str = "UNCERTAINTY_INPUT_INVALID"
+
+    def __init__(self, message: str, *, code: str | None = None) -> None:
+        InputValidationError.__init__(
+            self,
+            (engine_input_issue(code=code or self._input_code, message=message),),
+        )
 
 
 def _extract_from_dict(
@@ -1454,13 +1475,38 @@ def get_multipliers_montecarlo(
     if min_value == mean_value == max_value:
         return np.ones(run_number, dtype=np.float64)
 
-    # Validate input: cannot have zero mean value
-    if mean_value == 0:
-        raise ValueError("Cannot have zero mean value")
-
-    # Validate input: filter incorrect assignment of `max_value` and/or `min_value`
-    if max_value <= min_value:
-        raise ValueError("Paramater max_value must be greater than min_value")
+    violation = uncertainty_parameters_violation(
+        minimum=min_value,
+        mean=mean_value,
+        maximum=max_value,
+        std_dev=std_dev,
+        distribution=distribution,
+    )
+    if violation == "zero_mean":
+        raise MonteCarloInputError(
+            "Cannot have zero mean value", code="UNCERTAINTY_ZERO_MEAN"
+        )
+    if violation == "range":
+        raise MonteCarloInputError(
+            "Paramater max_value must be greater than min_value",
+            code="UNCERTAINTY_RANGE_INVALID",
+        )
+    if violation == "distribution":
+        raise MonteCarloInputError(
+            "The type of distribution is unrecognized. "
+            + "Please select type of distribution between: "
+            + "Uniform, Triangular, Normal, and LogNormal.",
+            code="UNCERTAINTY_DISTRIBUTION_UNRECOGNIZED",
+        )
+    if violation == "zero_std":
+        raise MonteCarloInputError(
+            "Cannot have zero standard deviation", code="UNCERTAINTY_ZERO_STD"
+        )
+    if violation == "lognormal_nonpositive":
+        raise MonteCarloInputError(
+            "All input must be positive for a log-normal distribution",
+            code="UNCERTAINTY_LOGNORMAL_NONPOSITIVE",
+        )
 
     # Normalize distribution name
     distribution = distribution.lower()
@@ -1499,7 +1545,9 @@ def get_multipliers_montecarlo(
     elif distribution == "normal":
         # Validate input: cannot have zero standard deviation
         if std_dev == 0:
-            raise ValueError("Cannot have zero standard deviation")
+            raise MonteCarloInputError(
+                "Cannot have zero standard deviation", code="UNCERTAINTY_ZERO_STD"
+            )
 
         # Normalize parameters
         (min_ratio, mean_ratio, max_ratio, std_ratio) = [
@@ -1525,11 +1573,16 @@ def get_multipliers_montecarlo(
     elif distribution == "lognormal":
         # Validate input: cannot have zero standard deviation
         if std_dev == 0:
-            raise ValueError("Cannot have zero standard deviation")
+            raise MonteCarloInputError(
+                "Cannot have zero standard deviation", code="UNCERTAINTY_ZERO_STD"
+            )
 
         # Validate input
         if min_value <= 0 or mean_value <= 0 or max_value <= 0:
-            raise ValueError("All input must be positive for a log-normal distribution")
+            raise MonteCarloInputError(
+                "All input must be positive for a log-normal distribution",
+                code="UNCERTAINTY_LOGNORMAL_NONPOSITIVE",
+            )
 
         # Normalize parameters
         (min_ratio, mean_ratio, max_ratio, std_ratio) = [
@@ -1547,8 +1600,9 @@ def get_multipliers_montecarlo(
         z_max = (log_max - log_mean) / log_std
 
         if z_min > z_max:
-            raise ValueError(
-                f"Invalid truncation bounds: z_min = {z_min}, z_max = {z_max}"
+            raise MonteCarloInputError(
+                f"Invalid truncation bounds: z_min = {z_min}, z_max = {z_max}",
+                code="UNCERTAINTY_TRUNCATION_BOUNDS",
             )
 
         # Draw truncated normal samples in log-space
@@ -1564,10 +1618,11 @@ def get_multipliers_montecarlo(
         multipliers = np.exp((log_samples * log_std) + log_mean)
 
     else:
-        raise MonteCarloException(
+        raise MonteCarloInputError(
             "The type of distribution is unrecognized. "
             + "Please select type of distribution between: "
-            + "Uniform, Triangular, Normal, and LogNormal."
+            + "Uniform, Triangular, Normal, and LogNormal.",
+            code="UNCERTAINTY_DISTRIBUTION_UNRECOGNIZED",
         )
 
     return np.asarray(multipliers, dtype=np.float64)

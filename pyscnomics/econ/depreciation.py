@@ -5,6 +5,12 @@ Calculate depreciation.
 import numpy as np
 import numpy.typing as npt
 
+from pyscnomics.input_validation import InputValidationError, engine_input_issue
+from pyscnomics.validation_rules import (
+    depreciation_factor_out_of_range,
+    salvage_exceeds_cost,
+)
+
 
 class DepreciationException(Exception):
     """Raise an exception error for a misuse of depreciation method"""
@@ -12,10 +18,38 @@ class DepreciationException(Exception):
     pass
 
 
+class DepreciationInputError(  # pyright: ignore[reportUnsafeMultipleInheritance]
+    DepreciationException, InputValidationError
+):
+    """Verified user-input depreciation error retaining ``DepreciationException``."""
+
+    _input_code: str = "DEPRECIATION_INPUT_INVALID"
+
+    def __init__(self, message: str, *, code: str | None = None) -> None:
+        InputValidationError.__init__(
+            self,
+            (engine_input_issue(code=code or self._input_code, message=message),),
+        )
+
+
 class UnitOfProductionException(Exception):
     """Exception to be raised for a misuse of unit of production method"""
 
     pass
+
+
+class UnitOfProductionInputError(  # pyright: ignore[reportUnsafeMultipleInheritance]
+    UnitOfProductionException, InputValidationError
+):
+    """Verified user-input UOP error retaining ``UnitOfProductionException``."""
+
+    _input_code: str = "UNIT_OF_PRODUCTION_INPUT_INVALID"
+
+    def __init__(self, message: str, *, code: str | None = None) -> None:
+        InputValidationError.__init__(
+            self,
+            (engine_input_issue(code=code or self._input_code, message=message),),
+        )
 
 
 def _as_float_array(value: object, parameter_name: str) -> npt.NDArray[np.float64]:
@@ -322,10 +356,11 @@ def psc_declining_balance_depreciation_rate(
     concept of psc declining balance.
     """
 
-    if depreciation_factor > 1 or depreciation_factor < 0:
-        raise DepreciationException(
+    if depreciation_factor_out_of_range(depreciation_factor):
+        raise DepreciationInputError(
             "The value of depreciation_factor must fall within the following interval: "
-            + "0 <= depreciation_factor <= 1"
+            + "0 <= depreciation_factor <= 1",
+            code="DEPRECIATION_FACTOR_OUT_OF_RANGE",
         )
 
     # Create an array of exponents
@@ -450,26 +485,30 @@ def prepare_amortization(
 
     # Raise an error: unequal length of arrays
     if len(prod_array) != len(project_years_array):
-        raise UnitOfProductionException(
-            f"Unequal number of arrays: project_years: {len(project_years_array)}, prod: {len(prod_array)}."
+        raise UnitOfProductionInputError(
+            f"Unequal number of arrays: project_years: {len(project_years_array)}, prod: {len(prod_array)}.",
+            code="UOP_ARRAY_LENGTH_MISMATCH",
         )
 
     # Raise an error: salvage value is larger than cost
-    if salvage_value > cost:
-        raise UnitOfProductionException(
-            f"Salvage value ({salvage_value}) is larger than the associated cost ({cost})."
+    if salvage_exceeds_cost(salvage_value, cost):
+        raise UnitOfProductionInputError(
+            f"Salvage value ({salvage_value}) is larger than the associated cost ({cost}).",
+            code="UOP_SALVAGE_EXCEEDS_COST",
         )
 
     # Raise an error: PIS year is before the start year of the project
     if pis_year < project_years.min():
-        raise UnitOfProductionException(
-            f"Cannot have PIS year ({pis_year}) before the start year of the project ({project_years.min()})."
+        raise UnitOfProductionInputError(
+            f"Cannot have PIS year ({pis_year}) before the start year of the project ({project_years.min()}).",
+            code="UOP_PIS_YEAR_OUTSIDE_PROJECT",
         )
 
     # Raise an error: PIS year is after the end year of the project
     if pis_year > project_years.max():
-        raise UnitOfProductionException(
-            f"Cannot have PIS year ({pis_year}) after the end year of the project ({project_years.max()})."
+        raise UnitOfProductionInputError(
+            f"Cannot have PIS year ({pis_year}) after the end year of the project ({project_years.max()}).",
+            code="UOP_PIS_YEAR_OUTSIDE_PROJECT",
         )
 
 
@@ -529,8 +568,9 @@ def unit_of_production_rate(
     match_mask = np.equal(project_years_array, pis_year)
     match = np.flatnonzero(match_mask)
     if match.size != 1:
-        raise UnitOfProductionException(
-            f"PIS year ({pis_year}) must appear exactly once in project_years."
+        raise UnitOfProductionInputError(
+            f"PIS year ({pis_year}) must appear exactly once in project_years.",
+            code="UOP_PIS_YEAR_NOT_UNIQUE",
         )
     match_indices: list[int] = list(match)
     pis_idx = match_indices[0]

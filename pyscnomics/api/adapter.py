@@ -5,7 +5,7 @@ This file is utilized to be the adapter of the router into the core codes.
 from collections.abc import Mapping
 from datetime import date, datetime
 import math
-from typing import Literal, TypeGuard, TypeVar, TypedDict, overload
+from typing import Literal, TypeGuard, TypeVar, TypedDict, cast, overload
 
 import numpy as np
 import numpy.typing as npt
@@ -51,11 +51,20 @@ from pyscnomics.contracts.transition import Transition
 from pyscnomics.dataset.sample import read_fluid_type
 from pyscnomics.econ.costs import ASR, CapitalCost, CostOfSales, Intangible, LBT, OPEX
 from pyscnomics.econ.revenue import Lifting
+from pyscnomics.input_validation import (
+    InputValidationError,
+    IssueLocation,
+    ValidationIssue,
+)
+from pyscnomics.operation_validation import (
+    collect_forecast_period_issues,
+    collect_forecast_prerequisite_issues,
+)
 from pyscnomics.optimize import sensitivity_psc
 from pyscnomics.optimize.optimization import optimize_psc
 from pyscnomics.optimize.optimization_transition import optimize_psc_core
 from pyscnomics.optimize.uncertainty import uncertainty_psc
-from pyscnomics.tools.summary import get_summary
+from pyscnomics.tools.summary import Summary as SingleContractSummary, get_summary
 from pyscnomics.tools.table import (
     ContractTable,
     TransitionTable,
@@ -246,16 +255,63 @@ class ContractException(Exception):
     pass
 
 
+class ContractInputError(  # pyright: ignore[reportUnsafeMultipleInheritance]
+    ContractException, InputValidationError
+):
+    """Verified user-input contract error retaining ``ContractException``.
+
+    ``locations`` optionally carries the submitted payload path (for example
+    ``sensitivity_arguments``) so the structured response can point at the
+    affected field instead of only naming it in the message.
+    """
+
+    _input_code: str = "CONTRACT_INPUT_INVALID"
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        code: str | None = None,
+        locations: tuple[IssueLocation, ...] = (),
+    ) -> None:
+        issue = ValidationIssue(
+            code=code or self._input_code,
+            severity="error",
+            message=message,
+            guidance="",
+            locations=locations,
+        )
+        InputValidationError.__init__(self, (issue,))
+
+
 class LTPModelException(Exception):
     """Exception to be raised for an incorrect LTP configurations"""
 
     pass
 
 
+class LTPForecastInputError(  # pyright: ignore[reportUnsafeMultipleInheritance]
+    LTPModelException, InputValidationError
+):
+    """Structured LTP forecast-period failure retaining ``LTPModelException``."""
+
+    def __init__(self, issues: tuple[ValidationIssue, ...]) -> None:
+        InputValidationError.__init__(self, issues)
+
+
 class RDPModelException(Exception):
     """Exception to be raised for an incorrect RDP configurations"""
 
     pass
+
+
+class RDPForecastInputError(  # pyright: ignore[reportUnsafeMultipleInheritance]
+    RDPModelException, InputValidationError
+):
+    """Structured RPD forecast-period failure retaining ``RDPModelException``."""
+
+    def __init__(self, issues: tuple[ValidationIssue, ...]) -> None:
+        InputValidationError.__init__(self, issues)
 
 
 def _extract_from_dict(
@@ -405,7 +461,7 @@ def _to_list(value: object, *, field: str) -> list[object]:
         raise TypeError(f"{field} must be a NumPy array")
     if value.ndim != 1:
         raise TypeError(f"{field} must be one-dimensional")
-    return [value[index] for index in range(value.size)]
+    return cast(list[object], value.tolist())
 
 
 def _frame_to_payload(frame: pd.DataFrame) -> dict[str, object]:
@@ -616,12 +672,18 @@ def get_summary_dict(data: dict[str, object]) -> _SummaryArguments:
         str_object=sa.get("npv_mode", "Full Cycle Nominal Terms")
     )
     if npv_mode is None:
-        raise TypeError("summary_arguments.npv_mode is not recognized")
+        raise ContractInputError(
+            "summary_arguments.npv_mode is not recognized",
+            code="SUMMARY_NPV_MODE_UNRECOGNIZED",
+        )
     discounting_mode = convert_str_to_discountingmode(
         str_object=sa.get("discounting_mode", "End Year Discounting")
     )
     if discounting_mode is None:
-        raise TypeError("summary_arguments.discounting_mode is not recognized")
+        raise ContractInputError(
+            "summary_arguments.discounting_mode is not recognized",
+            code="SUMMARY_DISCOUNTING_MODE_UNRECOGNIZED",
+        )
     profitability_discounted = _require_bool(
         sa.get("profitability_discounted", False),
         field="summary_arguments.profitability_discounted",
@@ -702,7 +764,31 @@ def _external_summary(
     contract: BaseProject | CostRecovery | GrossSplit | Transition,
     summary_arguments: _SummaryArguments,
 ) -> Mapping[str, object]:
-    """Call the shared helper used for Transition summary calculations."""
+    """Return the executive-summary mapping for the requested contract.
+
+    Transition summaries are projected through the migrated
+    :class:`~pyscnomics.tools.summary.Summary` dataclass, whose
+    ``get_summary_dict`` reads exactly the fields a completed Transition
+    post-run profile provides. The legacy ``get_summary`` prologue requires
+    ``bulk``/``array``/``preonstream`` fields that no Transition run produces,
+    so it must not be fed a Transition profile.
+    """
+    if isinstance(contract, Transition):
+        summary = SingleContractSummary(
+            contract=contract,
+            reference_year=_summary_reference_year(summary_arguments),
+            inflation_rate=_require_float(
+                summary_arguments["inflation_rate"],
+                field="summary_arguments.inflation_rate",
+            ),
+            discount_rate=summary_arguments["discount_rate"],
+            npv_mode=summary_arguments["npv_mode"],
+            discounting_mode=summary_arguments["discounting_mode"],
+            profitability_discounted=summary_arguments["profitability_discounted"],
+        )
+        summary.run()
+        return summary.get_summary_dict()
+
     return get_summary(
         contract=contract,
         reference_year=_summary_reference_year(summary_arguments),
@@ -1798,7 +1884,11 @@ def get_transition(
         )
 
     else:
-        raise ContractException("Contract type is not recognized")
+        raise ContractInputError(
+            "Contract type is not recognized",
+            code="TRANSITION_SCHEME_UNRECOGNIZED",
+            locations=(IssueLocation(("contract_1",)),),
+        )
 
     # Defining contract_2
     if (
@@ -1818,7 +1908,11 @@ def get_transition(
         )
 
     else:
-        raise ContractException("Contract type is not recognized")
+        raise ContractInputError(
+            "Contract type is not recognized",
+            code="TRANSITION_SCHEME_UNRECOGNIZED",
+            locations=(IssueLocation(("contract_2",)),),
+        )
 
     # generating the transition contract object
     contract = Transition(
@@ -1996,6 +2090,88 @@ def _run_case_contract(
     return get_transition(data=data, summary_result=False)[1]
 
 
+def _merged_summary_value(
+    per_case: list[dict[str, object]], key: str, mode: str
+) -> float | None:
+    """Sum (combine) or difference (incremental) one numeric summary field."""
+    total = 0.0
+    seen = False
+    for index, case in enumerate(per_case):
+        summary = case.get("summary")
+        if not isinstance(summary, Mapping):
+            continue
+        summary_map = cast("Mapping[str, object]", summary)
+        value = summary_map.get(key)
+        if value is None or isinstance(value, bool) or not isinstance(value, (int, float)):
+            continue
+        seen = True
+        if index == 0 or mode == "combine":
+            total += float(value)
+        else:
+            total -= float(value)
+    return total if seen else None
+
+
+def _merged_consolidated_table(
+    per_case: list[dict[str, object]], mode: str
+) -> dict[str, object]:
+    """Sum (combine) or difference (incremental) the year-keyed case tables."""
+    merged: dict[str, dict[int, float]] = {}
+    years: set[int] = set()
+    for index, case in enumerate(per_case):
+        table = case.get("table_consolidated")
+        if not isinstance(table, Mapping):
+            continue
+        table_map = cast("Mapping[str, object]", table)
+        for column, series in table_map.items():
+            if not isinstance(series, Mapping):
+                continue
+            series_map = cast("Mapping[object, object]", series)
+            target = merged.setdefault(str(column), {})
+            for year, value in series_map.items():
+                if not isinstance(year, int) or isinstance(value, bool):
+                    continue
+                if not isinstance(value, (int, float)):
+                    continue
+                years.add(year)
+                sign = 1.0 if (index == 0 or mode == "combine") else -1.0
+                target[year] = target.get(year, 0.0) + sign * float(value)
+    result: dict[str, object] = {
+        column: dict(sorted(series.items())) for column, series in merged.items()
+    }
+    result["years"] = {year: year for year in sorted(years)}
+    return result
+
+
+def _transition_merged_row(
+    per_case: list[dict[str, object]], mode: str
+) -> dict[str, object]:
+    """Derive the combine/incremental row for Transition cases.
+
+    The multi-contract summarizer consumes profile fields that a Transition run
+    does not produce, so the derived row is assembled from the already computed
+    per-case executive summaries and consolidated tables: additive metrics are
+    summed for ``combine`` and the first case minus the remaining cases for
+    ``incremental``. With a single case this reproduces that case exactly.
+    """
+    base_summary = per_case[0].get("summary")
+    merged_summary: dict[str, object] = {}
+    if isinstance(base_summary, Mapping):
+        base_summary_map = cast("Mapping[str, object]", base_summary)
+        for key in base_summary_map:
+            if key == "execution_info":
+                continue
+            value = _merged_summary_value(per_case, key, mode)
+            if value is not None:
+                merged_summary[key] = value
+    return {
+        "cId": 0,
+        "ctr": -1,
+        "summary": merged_summary,
+        "table_consolidated": _merged_consolidated_table(per_case, mode),
+    }
+
+
 def _merged_result(
     cases: list[_CombineCase], options: _CombineOptions, mode: str
 ) -> list[dict[str, object]]:
@@ -2020,6 +2196,10 @@ def _merged_result(
                 "table_consolidated": table,
             }
         )
+
+    if any(isinstance(contract, Transition) for contract in contracts):
+        per_case.append(_transition_merged_row(per_case, mode))
+        return per_case
 
     summary = Summary(
         contract=tuple(contracts),
@@ -2185,6 +2365,16 @@ def get_ltp(
         The array of ltp
 
     """
+    # The forecast arithmetic divides by the decline rate and the plateau rate
+    # derived from the volume; a zero prerequisite has no defined result. This
+    # mirrors the existing worker failure as a located structured input error
+    # while keeping the ``LTPModelException`` compatibility for library callers.
+    zero_prerequisites = collect_forecast_prerequisite_issues(
+        {"volume": volume}, "ltp"
+    )
+    if zero_prerequisites:
+        raise LTPForecastInputError(zero_prerequisites)
+
     # Condition checking for the fluid type for initiating the array of ltp
     if fluid_type == FluidType.OIL:
         rate_ltp = oil_ltp_predict(volume=volume)
@@ -2201,9 +2391,13 @@ def get_ltp(
 
     # Checking condition for the given years gap
     if gap < 0:
-        raise LTPModelException(
-            f"Forecast years from {start_year} to {end_year} is too short. Please "
-            + f"set the end_year at least until {end_year + (-1 * gap)}"
+        raise LTPForecastInputError(
+            collect_forecast_period_issues(
+                start_year=start_year,
+                end_year=end_year,
+                forecast_length=len(rate_ltp),
+                operation="ltp",
+            )
         )
 
     rate_gap = np.zeros(gap)
@@ -2279,6 +2473,22 @@ def get_rdp(
         The array of rdp
     """
 
+    # The RPD arithmetic divides by the decline rate and by the plateau rate
+    # derived from the volume; a zero prerequisite reaches an undefined
+    # division/logarithm. Mirror that existing failure as a located structured
+    # input error while keeping ``RDPModelException`` compatibility.
+    zero_prerequisites = collect_forecast_prerequisite_issues(
+        {
+            "volume": volume,
+            "drate": drate,
+            "q_plateau_ratio": q_plateau_ratio,
+            "q_min_ratio": q_min_ratio,
+        },
+        "rpd",
+    )
+    if zero_prerequisites:
+        raise RDPForecastInputError(zero_prerequisites)
+
     # Initiating Model
     model = RPDModel(
         year_rampup=year_rampup,
@@ -2295,9 +2505,13 @@ def get_rdp(
 
     # Checking condition for the given years gap
     if gap < 0:
-        raise RDPModelException(
-            f"Forecast years from {start_year} to {end_year} is too short. Please "
-            + f"set the end_year at least until {end_year + (-1 * gap)}"
+        raise RDPForecastInputError(
+            collect_forecast_period_issues(
+                start_year=start_year,
+                end_year=end_year,
+                forecast_length=len(rate_rdp),
+                operation="rpd",
+            )
         )
 
     rate_gap = np.zeros(gap)
@@ -2386,7 +2600,11 @@ def get_transition_split(data: dict[str, object]) -> dict[str, object]:
         )
 
     else:
-        raise ContractException("Contract type is not recognized")
+        raise ContractInputError(
+            "Contract type is not recognized",
+            code="TRANSITION_SCHEME_UNRECOGNIZED",
+            locations=(IssueLocation(("contract_1",)),),
+        )
 
     # Defining contract_2
     if (
@@ -2406,7 +2624,11 @@ def get_transition_split(data: dict[str, object]) -> dict[str, object]:
         )
 
     else:
-        raise ContractException("Contract type is not recognized")
+        raise ContractInputError(
+            "Contract type is not recognized",
+            code="TRANSITION_SCHEME_UNRECOGNIZED",
+            locations=(IssueLocation(("contract_2",)),),
+        )
 
     # generating the transition contract object
     contract = Transition(
@@ -2460,7 +2682,18 @@ def get_economic_limit(data: dict[str, object]) -> np.int64:
     cash_flow: npt.NDArray[np.float64] = np.asarray(data["cash_flow"], dtype=np.float64)
     method = convert_to_method_limit(target=data["method"])
     if not isinstance(method, LimitMethod):
-        raise method
+        raise ContractInputError(
+            f"The limit method '{data['method']}' is not recognized. Choose one of: "
+            + ", ".join(
+                (
+                    LimitMethod.MAX_CUM_CASHFLOW.value,
+                    LimitMethod.NEGATIVE_CASHFLOW.value,
+                    LimitMethod.MAX_NPV.value,
+                )
+            )
+            + ".",
+            code="ECONLIMIT_METHOD_UNRECOGNIZED",
+        )
     index_limit = econ_limit(cashflow=cash_flow, method=method)
 
     return np.take(years, index_limit)
@@ -2690,14 +2923,18 @@ def get_contract_optimization(
         The result of the optimization in dictionary format
     """
 
-    if "optimization_arguments" not in data:
-        raise ContractException(
-            "The payload does not have the optimization_arguments key"
+    if "optimization_arguments" not in data or data["optimization_arguments"] is None:
+        raise ContractInputError(
+            "The payload does not have the optimization_arguments key",
+            code="OPTIMIZATION_ARGUMENTS_MISSING",
+            locations=(IssueLocation(("optimization_arguments",)),),
         )
 
-    if data["optimization_arguments"] is None:
-        raise ContractException(
-            "The payload optimization_arguments does not have any values"
+    if not data["optimization_arguments"]:
+        raise ContractInputError(
+            "The payload optimization_arguments does not have any values",
+            code="OPTIMIZATION_ARGUMENTS_EMPTY",
+            locations=(IssueLocation(("optimization_arguments",)),),
         )
 
     optimization_arguments = _require_mapping(
@@ -2919,14 +3156,18 @@ def get_sensitivity(data: dict[str, object], contract_type: str) -> dict[str, ob
     """
 
     # Check for invalid conditions
-    if "sensitivity_arguments" not in data:
-        raise ContractException(
-            "The payload does not have the sensitivity_arguments key"
+    if "sensitivity_arguments" not in data or data["sensitivity_arguments"] is None:
+        raise ContractInputError(
+            "The payload does not have the sensitivity_arguments key",
+            code="SENSITIVITY_ARGUMENTS_MISSING",
+            locations=(IssueLocation(("sensitivity_arguments",)),),
         )
 
-    if data["sensitivity_arguments"] is None:
-        raise ContractException(
-            "The payload sensitivity_arguments does not have any values"
+    if not data["sensitivity_arguments"]:
+        raise ContractInputError(
+            "The payload sensitivity_arguments does not have any values",
+            code="SENSITIVITY_ARGUMENTS_EMPTY",
+            locations=(IssueLocation(("sensitivity_arguments",)),),
         )
 
     # Retrieving the contract, contract_arguments_dict,
@@ -3007,10 +3248,22 @@ def get_uncertainty(data: dict[str, object], contract_type: str) -> dict[str, ob
     """
 
     # Prepare input "uncertainty_arguments"
-    ua = _require_mapping(
-        _extract_from_dict(target_key="uncertainty_arguments", source=data),
-        field="uncertainty_arguments",
+    raw_uncertainty = _extract_from_dict(
+        target_key="uncertainty_arguments", source=data
     )
+    if raw_uncertainty is None:
+        raise ContractInputError(
+            "The payload does not have the uncertainty_arguments key",
+            code="UNCERTAINTY_ARGUMENTS_MISSING",
+            locations=(IssueLocation(("uncertainty_arguments",)),),
+        )
+    if not raw_uncertainty:
+        raise ContractInputError(
+            "The payload uncertainty_arguments does not have any values",
+            code="UNCERTAINTY_ARGUMENTS_EMPTY",
+            locations=(IssueLocation(("uncertainty_arguments",)),),
+        )
+    ua = _require_mapping(raw_uncertainty, field="uncertainty_arguments")
 
     # Retrieving the contract, contract_arguments_dict,
     # summary_arguments_dict based on the contract type

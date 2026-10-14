@@ -6,11 +6,28 @@ from collections.abc import Sized
 import numpy as np
 import numpy.typing as npt
 
+from pyscnomics.input_validation import InputValidationError, engine_input_issue
+from pyscnomics.validation_rules import year_array_outside_project
+
 
 class TaxInflationException(Exception):
     """Exception to be raised for an incorrect tax and inflation configurations"""
 
     pass
+
+
+class TaxInflationInputError(  # pyright: ignore[reportUnsafeMultipleInheritance]
+    TaxInflationException, InputValidationError
+):
+    """Verified user-input tax/inflation error retaining ``TaxInflationException``."""
+
+    _input_code: str = "TAX_INFLATION_INPUT_INVALID"
+
+    def __init__(self, message: str, *, code: str | None = None) -> None:
+        InputValidationError.__init__(
+            self,
+            (engine_input_issue(code=code or self._input_code, message=message),),
+        )
 
 
 def _require_float_array(value: object, *, name: str) -> npt.NDArray[np.float64]:
@@ -78,20 +95,22 @@ def check_input(
     if isinstance(param, np.ndarray):
         param_arr = np.asarray(param, dtype=np.float64)
         if len(param_arr) != len(target_func):
-            raise TaxInflationException(
+            raise TaxInflationInputError(
                 "Unequal length of arrays: "
                 + f"numpy.ndarray({param_arr}): ({len(param_arr)}), "
                 + f"{target_func.__class__.__qualname__}({target_func}): "
-                + f"({len(target_func)})."
+                + f"({len(target_func)}).",
+                code="TAX_INFLATION_ARRAY_LENGTH_MISMATCH",
             )
         return param_arr
 
     if isinstance(param, (float, int)):
         return np.full(len(target_func), param, dtype=np.float64)
 
-    raise TaxInflationException(
+    raise TaxInflationInputError(
         "Input parameter must be given as a float, int, or numpy.ndarray, "
-        + f"not as a/an {param.__class__.__qualname__}"
+        + f"not as a/an {param.__class__.__qualname__}",
+        code="TAX_INFLATION_PARAMETER_TYPE",
     )
 
 
@@ -217,25 +236,28 @@ def get_cost_adjustment_by_inflation(
         year_inflation = _require_int_array(year_inflation, name="year_inflation")
 
         if len(year_inflation) != len(cost):
-            raise TaxInflationException(
+            raise TaxInflationInputError(
                 f"Unequal length of arrays: cost: {len(cost)}, "
-                + f"year_inflation: {len(year_inflation)}"
+                + f"year_inflation: {len(year_inflation)}",
+                code="TAX_INFLATION_ARRAY_LENGTH_MISMATCH",
             )
 
     year_inflation = year_inflation.astype(np.int64)
 
-    # Raise an error: year_inflation is before the start year of the project
-    if np.min(year_inflation) < start_year:
-        raise TaxInflationException(
+    # Raise an error: year_inflation is before/after the project years
+    direction = year_array_outside_project(year_inflation, start_year, end_year)
+    if direction == "before":
+        raise TaxInflationInputError(
             f"year_inflation ({np.min(year_inflation)}) is before the start year "
-            + f"of the project ({start_year})"
+            + f"of the project ({start_year})",
+            code="TAX_INFLATION_YEAR_OUTSIDE_PROJECT",
         )
 
-    # Raise an error: year_inflation is after the end year of the project
-    if np.max(year_inflation) > end_year:
-        raise TaxInflationException(
+    if direction == "after":
+        raise TaxInflationInputError(
             f"year_inflation ({np.max(year_inflation)}) is after the end year "
-            + f"of the project ({end_year})"
+            + f"of the project ({end_year})",
+            code="TAX_INFLATION_YEAR_OUTSIDE_PROJECT",
         )
 
     # Create an array of inflation_rate
@@ -477,9 +499,10 @@ def calc_distributed_cost(
 
     # Unequal length of arrays
     if len(cost) != len(expense_year):
-        raise TaxInflationException(
+        raise TaxInflationInputError(
             f"Unequal length of arrays: Expected: {len(expense_year)}, "
-            + f"Given: {len(cost)}"
+            + f"Given: {len(cost)}",
+            code="TAX_INFLATION_ARRAY_LENGTH_MISMATCH",
         )
 
     cost = cost.astype(np.float64)

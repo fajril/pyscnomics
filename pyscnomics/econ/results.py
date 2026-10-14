@@ -11,12 +11,27 @@ import numpy.typing as npt
 
 from pyscnomics.econ.selection import FluidType
 from pyscnomics.econ import indicator
+from pyscnomics.input_validation import InputValidationError, engine_input_issue
 
 
 class CashFlowException(Exception):
     """Exception to raise for a misuse of CashFlow class"""
 
     pass
+
+
+class CashFlowInputError(  # pyright: ignore[reportUnsafeMultipleInheritance]
+    CashFlowException, InputValidationError
+):
+    """Verified user-input cashflow error retaining ``CashFlowException``."""
+
+    _input_code: str = "CASHFLOW_INPUT_INVALID"
+
+    def __init__(self, message: str, *, code: str | None = None) -> None:
+        InputValidationError.__init__(
+            self,
+            (engine_input_issue(code=code or self._input_code, message=message),),
+        )
 
 
 @dataclass
@@ -58,31 +73,35 @@ class CashFlow:
             )
 
         else:
-            raise CashFlowException(
+            raise CashFlowInputError(
                 f"start date {self.start_date} "
-                + f"is after the end date: {self.end_date}"
+                + f"is after the end date: {self.end_date}",
+                code="CASHFLOW_PERIOD_REVERSED",
             )
 
         # Check input data for unequal length of arrays
         if len(self.cash) != len(self.cashed_year):
-            raise CashFlowException(
+            raise CashFlowInputError(
                 "Unequal length of array: "
                 + f"cash: {len(self.cash)}, "
-                + f"cash_year: {len(self.cashed_year)}, "
+                + f"cash_year: {len(self.cashed_year)}, ",
+                code="CASHFLOW_ARRAY_LENGTH_MISMATCH",
             )
 
         # Raise an error message: cashed_year is after the end year of the project
         if np.max(self.cashed_year) > self.end_date.year:
-            raise CashFlowException(
+            raise CashFlowInputError(
                 f"Cashed year ({np.max(self.cashed_year)}) "
-                + f"is after the end year of the project ({self.end_date.year})"
+                + f"is after the end year of the project ({self.end_date.year})",
+                code="CASHFLOW_YEAR_OUTSIDE_PROJECT",
             )
 
         # Raise an error message: cashed_year is before the start year of the project
         if np.min(self.cashed_year) < self.start_date.year:
-            raise CashFlowException(
+            raise CashFlowInputError(
                 f"Cashed year ({np.min(self.cashed_year)}) "
-                + f"is before the start year of the project ({self.start_date.year})"
+                + f"is before the start year of the project ({self.start_date.year})",
+                code="CASHFLOW_YEAR_OUTSIDE_PROJECT",
             )
 
     def __len__(self) -> int:

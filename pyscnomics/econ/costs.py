@@ -31,6 +31,17 @@ from pyscnomics.econ.costs_tools import (
     calc_indirect_tax,
     calc_distributed_cost,
 )
+from pyscnomics.validation_rules import (
+    any_below,
+    magnitude_exceeds,
+    missing_value_indices,
+    out_of_range_indices,
+    period_is_reversed,
+    unequal_lengths,
+    year_above,
+    year_below,
+)
+from pyscnomics.input_validation import InputValidationError, engine_input_issue
 
 
 def _is_missing(value: object) -> bool:
@@ -285,6 +296,84 @@ class SunkCostException(Exception):
     """Exception to be raised for an incorrect procedure associated with sunkcost"""
 
     pass
+
+
+class CapitalInputError(  # pyright: ignore[reportUnsafeMultipleInheritance]
+    CapitalException, InputValidationError
+):
+    """Verified user-input capital error retaining ``CapitalException``."""
+
+    _input_code: str = "CAPITAL_INPUT_INVALID"
+
+    def __init__(self, message: str) -> None:
+        InputValidationError.__init__(
+            self, (engine_input_issue(code=self._input_code, message=message),)
+        )
+
+
+class IntangibleInputError(  # pyright: ignore[reportUnsafeMultipleInheritance]
+    IntangibleException, InputValidationError
+):
+    """Verified user-input intangible error retaining ``IntangibleException``."""
+
+    _input_code: str = "INTANGIBLE_INPUT_INVALID"
+
+    def __init__(self, message: str) -> None:
+        InputValidationError.__init__(
+            self, (engine_input_issue(code=self._input_code, message=message),)
+        )
+
+
+class OPEXInputError(  # pyright: ignore[reportUnsafeMultipleInheritance]
+    OPEXException, InputValidationError
+):
+    """Verified user-input OPEX error retaining ``OPEXException``."""
+
+    _input_code: str = "OPEX_INPUT_INVALID"
+
+    def __init__(self, message: str) -> None:
+        InputValidationError.__init__(
+            self, (engine_input_issue(code=self._input_code, message=message),)
+        )
+
+
+class ASRInputError(  # pyright: ignore[reportUnsafeMultipleInheritance]
+    ASRException, InputValidationError
+):
+    """Verified user-input ASR error retaining ``ASRException``."""
+
+    _input_code: str = "ASR_INPUT_INVALID"
+
+    def __init__(self, message: str) -> None:
+        InputValidationError.__init__(
+            self, (engine_input_issue(code=self._input_code, message=message),)
+        )
+
+
+class LBTInputError(  # pyright: ignore[reportUnsafeMultipleInheritance]
+    LBTException, InputValidationError
+):
+    """Verified user-input LBT error retaining ``LBTException``."""
+
+    _input_code: str = "LBT_INPUT_INVALID"
+
+    def __init__(self, message: str) -> None:
+        InputValidationError.__init__(
+            self, (engine_input_issue(code=self._input_code, message=message),)
+        )
+
+
+class CostOfSalesInputError(  # pyright: ignore[reportUnsafeMultipleInheritance]
+    CostOfSalesException, InputValidationError
+):
+    """Verified user-input Cost of Sales error retaining ``CostOfSalesException``."""
+
+    _input_code: str = "COST_OF_SALES_INPUT_INVALID"
+
+    def __init__(self, message: str) -> None:
+        InputValidationError.__init__(
+            self, (engine_input_issue(code=self._input_code, message=message),)
+        )
 
 
 @dataclass
@@ -640,12 +729,12 @@ class CapitalCost(GeneralCost):
         """
 
         # Prepare attributes project_duration and project_years
-        if self.end_year >= self.start_year:
+        if not period_is_reversed(self.start_year, self.end_year):
             self.project_duration = self.end_year - self.start_year + 1
             self.project_years = np.arange(self.start_year, self.end_year + 1, 1)
 
         else:
-            raise CapitalException(
+            raise CapitalInputError(
                 f"start year {self.start_year} is after the end year {self.end_year}"
             )
 
@@ -659,9 +748,8 @@ class CapitalCost(GeneralCost):
 
         else:
             expense_year = raw_expense_year
-            expense_year_nan_sum = len(_missing_indices(expense_year))
-            if expense_year_nan_sum > 0:
-                raise CapitalException(
+            if missing_value_indices(expense_year):
+                raise CapitalInputError(
                     f"Missing values in array expense_year: {self.expense_year}"
                 )
 
@@ -830,10 +918,8 @@ class CapitalCost(GeneralCost):
                     len(tax_portion_nan_id)
                 )
 
-            tax_portion_large = np.count_nonzero(tax_portion_array > 1.0)
-            tax_portion_negative = np.count_nonzero(tax_portion_array < 0.0)
-            if tax_portion_large > 0 or tax_portion_negative > 0:
-                raise CapitalException(
+            if out_of_range_indices(tax_portion_array, 0.0, 1.0):
+                raise CapitalInputError(
                     "The value of tax_portion must be: 0 < tax_portion < 1, "
                     + f"tax_portion: {tax_portion_array}"
                 )
@@ -844,8 +930,8 @@ class CapitalCost(GeneralCost):
         raw_tax_discount = _require_capital_tax_discount(self.tax_discount)
 
         if isinstance(raw_tax_discount, (float, int)):
-            if raw_tax_discount < 0 or raw_tax_discount > 1:
-                raise CapitalException("Attribute tax_discount must be between 0 and 1")
+            if out_of_range_indices((raw_tax_discount,), 0.0, 1.0):
+                raise CapitalInputError("Attribute tax_discount must be between 0 and 1")
 
             self.tax_discount = np.repeat(raw_tax_discount, len(self.cost))
 
@@ -857,10 +943,8 @@ class CapitalCost(GeneralCost):
                     len(tax_discount_nan_id)
                 )
 
-            tax_discount_large = np.count_nonzero(tax_discount_array > 1.0)
-            tax_discount_negative = np.count_nonzero(tax_discount_array < 0.0)
-            if tax_discount_large > 0 or tax_discount_negative > 0:
-                raise CapitalException(
+            if out_of_range_indices(tax_discount_array, 0.0, 1.0):
+                raise CapitalInputError(
                     "The value of tax_discount must be: 0 < tax_discount < 1, "
                     + f"tax_discount: {tax_discount_array}"
                 )
@@ -899,25 +983,23 @@ class CapitalCost(GeneralCost):
         is_ic_applied = _require_present(
             self.is_ic_applied, CapitalException, "is_ic_applied"
         )
-        arr_reference = len(expense_year)
+        length_map = {
+            "expense_year": len(expense_year),
+            "cost": len(cost),
+            "cost_allocation": len(cost_allocation),
+            "cost_type": len(cost_type),
+            "description": len(description),
+            "tax_portion": len(tax_portion),
+            "tax_discount": len(tax_discount),
+            "pis_year": len(pis_year),
+            "salvage_value": len(salvage_value),
+            "useful_life": len(useful_life),
+            "depreciation_factor": len(depreciation_factor),
+            "is_ic_applied": len(is_ic_applied),
+        }
 
-        if not all(
-            len(arr) == arr_reference
-            for arr in [
-                cost,
-                cost_allocation,
-                cost_type,
-                description,
-                tax_portion,
-                tax_discount,
-                pis_year,
-                salvage_value,
-                useful_life,
-                depreciation_factor,
-                is_ic_applied,
-            ]
-        ):
-            raise CapitalException(
+        if unequal_lengths(length_map) is not None:
+            raise CapitalInputError(
                 "Unequal length of arrays: "
                 + f"cost: {len(cost)}, "
                 + f"expense_year: {len(expense_year)}, "
@@ -934,23 +1016,25 @@ class CapitalCost(GeneralCost):
             )
 
         # Raise an exception: salvage_value magnitude exceeds associated cost magnitude
-        if np.sum(np.abs(self.salvage_value) > np.abs(self.cost)) > 0:
-            raise CapitalException(
+        if magnitude_exceeds(self.salvage_value, self.cost):
+            raise CapitalInputError(
                 f"Salvage value magnitude ({np.abs(self.salvage_value)}) exceeds "
                 + f"associated cost magnitude ({np.abs(self.cost)})."
             )
 
         # Raise an error: expense year is after the end year of the project
-        if np.max(self.expense_year) > self.end_year:
-            raise CapitalException(
-                f"Expense year ({np.max(self.expense_year)}) "
+        above = year_above(self.expense_year, self.end_year)
+        if above is not None:
+            raise CapitalInputError(
+                f"Expense year ({above}) "
                 + f"is after the end year of the project ({self.end_year})"
             )
 
         # Raise an error: expense year is before the start year of the project
-        if np.min(self.expense_year) < self.start_year:
-            raise CapitalException(
-                f"Expense year ({np.min(self.expense_year)}) "
+        below = year_below(self.expense_year, self.start_year)
+        if below is not None:
+            raise CapitalInputError(
+                f"Expense year ({below}) "
                 + f"is before the start year of the project ({self.start_year})"
             )
 
@@ -1997,12 +2081,12 @@ class Intangible(GeneralCost):
         """
 
         # Prepare attributes project_duration and project_years
-        if self.end_year >= self.start_year:
+        if not period_is_reversed(self.start_year, self.end_year):
             self.project_duration = self.end_year - self.start_year + 1
             self.project_years = np.arange(self.start_year, self.end_year + 1, 1)
 
         else:
-            raise IntangibleException(
+            raise IntangibleInputError(
                 f"start year {self.start_year} is after the end year {self.end_year}"
             )
 
@@ -2014,9 +2098,8 @@ class Intangible(GeneralCost):
             )
 
         else:
-            expense_year_nan = len(_missing_indices(self.expense_year))
-            if expense_year_nan > 0:
-                raise IntangibleException(
+            if missing_value_indices(self.expense_year):
+                raise IntangibleInputError(
                     f"Missing values in array expense_year: {self.expense_year}"
                 )
 
@@ -2101,10 +2184,8 @@ class Intangible(GeneralCost):
                     len(tax_portion_nan_id)
                 )
 
-            tax_portion_large = np.count_nonzero(tax_portion_array > 1.0)
-            tax_portion_negative = np.count_nonzero(tax_portion_array < 0.0)
-            if tax_portion_large > 0 or tax_portion_negative > 0:
-                raise IntangibleException(
+            if out_of_range_indices(tax_portion_array, 0.0, 1.0):
+                raise IntangibleInputError(
                     "The value of tax_portion must be: 0 < tax_portion < 1, "
                     + f"tax_portion: {tax_portion_array}"
                 )
@@ -2122,8 +2203,8 @@ class Intangible(GeneralCost):
             )
 
         if isinstance(raw_tax_discount, (float, int)):
-            if raw_tax_discount < 0 or raw_tax_discount > 1:
-                raise IntangibleException(
+            if out_of_range_indices((raw_tax_discount,), 0.0, 1.0):
+                raise IntangibleInputError(
                     "Attribute tax_discount must be between 0 and 1"
                 )
 
@@ -2137,10 +2218,8 @@ class Intangible(GeneralCost):
                     len(tax_discount_nan_id)
                 )
 
-            tax_discount_large = np.count_nonzero(tax_discount_array > 1.0)
-            tax_discount_negative = np.count_nonzero(tax_discount_array < 0.0)
-            if tax_discount_large > 0 or tax_discount_negative > 0:
-                raise IntangibleException(
+            if out_of_range_indices(tax_discount_array, 0.0, 1.0):
+                raise IntangibleInputError(
                     "The value of tax_discount must be: 0 < tax_discount < 1, "
                     + f"tax_discount: {tax_discount_array}"
                 )
@@ -2165,20 +2244,18 @@ class Intangible(GeneralCost):
         tax_discount = _require_present(
             self.tax_discount, IntangibleException, "tax_discount"
         )
-        arr_reference = len(expense_year)
+        length_map = {
+            "expense_year": len(expense_year),
+            "cost": len(cost),
+            "cost_allocation": len(cost_allocation),
+            "cost_type": len(cost_type),
+            "description": len(description),
+            "tax_portion": len(tax_portion),
+            "tax_discount": len(tax_discount),
+        }
 
-        if not all(
-            len(arr) == arr_reference
-            for arr in [
-                cost,
-                cost_allocation,
-                cost_type,
-                description,
-                tax_portion,
-                tax_discount,
-            ]
-        ):
-            raise IntangibleException(
+        if unequal_lengths(length_map) is not None:
+            raise IntangibleInputError(
                 "Unequal length of arrays: "
                 + f"cost: {len(cost)}, "
                 + f"expense_year: {len(expense_year)}, "
@@ -2190,15 +2267,17 @@ class Intangible(GeneralCost):
             )
 
         # Raise an error: expense year is after the end year of the project
-        if np.max(self.expense_year) > self.end_year:
-            raise IntangibleException(
-                f"Expense year ({np.max(self.expense_year)}) "
+        above = year_above(self.expense_year, self.end_year)
+        if above is not None:
+            raise IntangibleInputError(
+                f"Expense year ({above}) "
                 + f"is after the end year of the project ({self.end_year})"
             )
 
-        if np.min(self.expense_year) < self.start_year:
-            raise IntangibleException(
-                f"Expense year ({np.min(self.expense_year)}) "
+        below = year_below(self.expense_year, self.start_year)
+        if below is not None:
+            raise IntangibleInputError(
+                f"Expense year ({below}) "
                 + f"is before the start year of the project ({self.start_year})"
             )
 
@@ -2704,20 +2783,19 @@ class OPEX(GeneralCost):
         """
 
         # Prepare attributes project_duration and project_years
-        if self.end_year >= self.start_year:
+        if not period_is_reversed(self.start_year, self.end_year):
             self.project_duration = self.end_year - self.start_year + 1
             self.project_years = np.arange(self.start_year, self.end_year + 1, 1)
 
         else:
-            raise OPEXException(
+            raise OPEXInputError(
                 f"start year {self.start_year} is after the end year {self.end_year}"
             )
 
         # Prepare attribute expense_year
         expense_year = _require_opex_array(self.expense_year, "expense_year")
-        expense_year_nan = len(_missing_indices(expense_year))
-        if expense_year_nan > 0:
-            raise OPEXException(f"Missing values in array expense_year: {expense_year}")
+        if missing_value_indices(expense_year):
+            raise OPEXInputError(f"Missing values in array expense_year: {expense_year}")
 
         self.expense_year = expense_year.astype(np.int64)
 
@@ -2821,10 +2899,8 @@ class OPEX(GeneralCost):
                     len(tax_portion_nan_id)
                 )
 
-            tax_portion_large = np.count_nonzero(tax_portion_array > 1.0)
-            tax_portion_negative = np.count_nonzero(tax_portion_array < 0.0)
-            if tax_portion_large > 0 or tax_portion_negative > 0:
-                raise OPEXException(
+            if out_of_range_indices(tax_portion_array, 0.0, 1.0):
+                raise OPEXInputError(
                     "The value of tax_portion must be: 0 < tax_portion < 1, "
                     + f"tax_portion: {tax_portion_array}"
                 )
@@ -2835,8 +2911,8 @@ class OPEX(GeneralCost):
         tax_discount = _require_opex_tax_discount(self.tax_discount)
 
         if isinstance(tax_discount, (float, int)):
-            if tax_discount < 0 or tax_discount > 1:
-                raise OPEXException("Attribute tax_discount must be between 0 and 1")
+            if out_of_range_indices((tax_discount,), 0.0, 1.0):
+                raise OPEXInputError("Attribute tax_discount must be between 0 and 1")
 
             normalized_tax_discount = np.repeat(tax_discount, len(self.expense_year))
 
@@ -2848,10 +2924,8 @@ class OPEX(GeneralCost):
                     len(tax_discount_nan_id)
                 )
 
-            tax_discount_large = np.count_nonzero(tax_discount_array > 1.0)
-            tax_discount_negative = np.count_nonzero(tax_discount_array < 0.0)
-            if tax_discount_large > 0 or tax_discount_negative > 0:
-                raise OPEXException(
+            if out_of_range_indices(tax_discount_array, 0.0, 1.0):
+                raise OPEXInputError(
                     "The value of tax_discount must be: 0 < tax_discount < 1, "
                     + f"tax_discount: {tax_discount}"
                 )
@@ -2899,22 +2973,20 @@ class OPEX(GeneralCost):
         self.cost_per_volume = self.cost_per_volume.astype(np.float64)
 
         # Check input data for unequal length
-        arr_reference = len(self.expense_year)
+        length_map = {
+            "expense_year": len(self.expense_year),
+            "fixed_cost": len(self.fixed_cost),
+            "cost_allocation": len(self.cost_allocation),
+            "cost_type": len(self.cost_type),
+            "description": len(self.description),
+            "tax_portion": len(self.tax_portion),
+            "tax_discount": len(self.tax_discount),
+            "prod_rate": len(self.prod_rate),
+            "cost_per_volume": len(self.cost_per_volume),
+        }
 
-        if not all(
-            len(arr) == arr_reference
-            for arr in [
-                self.fixed_cost,
-                self.cost_allocation,
-                self.cost_type,
-                self.description,
-                self.tax_portion,
-                self.tax_discount,
-                self.prod_rate,
-                self.cost_per_volume,
-            ]
-        ):
-            raise OPEXException(
+        if unequal_lengths(length_map) is not None:
+            raise OPEXInputError(
                 "Unequal length of arrays: "
                 + f"expense_year: {len(self.expense_year)}, "
                 + f"fixed_cost: {len(self.fixed_cost)}, "
@@ -2934,16 +3006,18 @@ class OPEX(GeneralCost):
         self.cost = self.fixed_cost + self.variable_cost
 
         # Raise an error: expense year is after the end year of the project
-        if np.max(self.expense_year) > self.end_year:
-            raise OPEXException(
-                f"Expense year ({np.max(self.expense_year)}) "
+        above = year_above(self.expense_year, self.end_year)
+        if above is not None:
+            raise OPEXInputError(
+                f"Expense year ({above}) "
                 + f"is after the end year of the project ({self.end_year})"
             )
 
         # Raise an error: expense year is before the start year of the project
-        if np.min(self.expense_year) < self.start_year:
-            raise OPEXException(
-                f"Expense year ({np.min(self.expense_year)}) "
+        below = year_below(self.expense_year, self.start_year)
+        if below is not None:
+            raise OPEXInputError(
+                f"Expense year ({below}) "
                 + f"is before the start year of the project ({self.start_year})"
             )
 
@@ -3432,12 +3506,12 @@ class ASR(GeneralCost):
         """
 
         # Prepare attributes project_duration and project_years
-        if self.end_year >= self.start_year:
+        if not period_is_reversed(self.start_year, self.end_year):
             self.project_duration = self.end_year - self.start_year + 1
             self.project_years = np.arange(self.start_year, self.end_year + 1, 1)
 
         else:
-            raise ASRException(
+            raise ASRInputError(
                 f"start year {self.start_year} is after the end year {self.end_year}"
             )
 
@@ -3449,9 +3523,8 @@ class ASR(GeneralCost):
             )
 
         else:
-            expense_year_nan_sum = len(_missing_indices(self.expense_year))
-            if expense_year_nan_sum > 0:
-                raise ASRException(
+            if missing_value_indices(self.expense_year):
+                raise ASRInputError(
                     f"Missing values in array expense_year: {self.expense_year}"
                 )
 
@@ -3539,10 +3612,8 @@ class ASR(GeneralCost):
                     len(tax_portion_nan_id)
                 )
 
-            tax_portion_large = np.count_nonzero(tax_portion_array > 1.0)
-            tax_portion_negative = np.count_nonzero(tax_portion_array < 0.0)
-            if tax_portion_large > 0 or tax_portion_negative > 0:
-                raise ASRException(
+            if out_of_range_indices(tax_portion_array, 0.0, 1.0):
+                raise ASRInputError(
                     "The value of tax_portion must be: 0 < tax_portion < 1, "
                     + f"tax_portion: {tax_portion_array}"
                 )
@@ -3557,8 +3628,8 @@ class ASR(GeneralCost):
         raw_tax_discount = _require_asr_tax_discount(raw_tax_discount)
 
         if isinstance(raw_tax_discount, (float, int)):
-            if self.tax_discount < 0 or self.tax_discount > 1:
-                raise ASRException("Attribute tax_discount must be between 0 and 1")
+            if out_of_range_indices((raw_tax_discount,), 0.0, 1.0):
+                raise ASRInputError("Attribute tax_discount must be between 0 and 1")
 
             self.tax_discount = np.repeat(raw_tax_discount, len(self.cost))
 
@@ -3570,10 +3641,8 @@ class ASR(GeneralCost):
                 )
 
             tax_discount_array = np.asarray(raw_tax_discount, dtype=np.float64)
-            tax_discount_large = np.count_nonzero(tax_discount_array > 1.0)
-            tax_discount_negative = np.count_nonzero(tax_discount_array < 0.0)
-            if tax_discount_large > 0 or tax_discount_negative > 0:
-                raise ASRException(
+            if out_of_range_indices(tax_discount_array, 0.0, 1.0):
+                raise ASRInputError(
                     "The value of tax_discount must be: 0 < tax_discount < 1, "
                     + f"tax_discount: {tax_discount_array}"
                 )
@@ -3588,8 +3657,8 @@ class ASR(GeneralCost):
             raw_future_rate = _require_asr_future_rate(self.future_rate)
 
             if isinstance(raw_future_rate, float):
-                if raw_future_rate < 0.0 or raw_future_rate > 1.0:
-                    raise ASRException("Attribute future_rate must be between 0 and 1")
+                if out_of_range_indices((raw_future_rate,), 0.0, 1.0):
+                    raise ASRInputError("Attribute future_rate must be between 0 and 1")
                 else:
                     self.future_rate = np.repeat(raw_future_rate, len(self.cost))
 
@@ -3601,10 +3670,8 @@ class ASR(GeneralCost):
                     )
 
                 future_rate_array = np.asarray(raw_future_rate, dtype=np.float64)
-                future_rate_negative = np.count_nonzero(future_rate_array < 0.0)
-                future_rate_large = np.count_nonzero(future_rate_array > 1.0)
-                if future_rate_negative > 0 or future_rate_large > 0:
-                    raise ASRException(
+                if out_of_range_indices(future_rate_array, 0.0, 1.0):
+                    raise ASRInputError(
                         "The value of future_rate must fall within the following "
                         + f"interval: 0 < future_rate < 1 (future_rate: {self.future_rate})"
                     )
@@ -3625,19 +3692,17 @@ class ASR(GeneralCost):
                 ].copy()
 
             # Exception: final_year is before expense_year
-            final_year_small_sum = np.count_nonzero(
-                final_year_numeric < self.expense_year
-            )
-            if final_year_small_sum > 0:
-                raise ASRException(
+            if any_below(final_year_numeric, self.expense_year):
+                raise ASRInputError(
                     f"Attribute final_year ({final_year_numeric}) is before "
                     + f"the expense_year ({self.expense_year})"
                 )
 
             # Exception: final_year is after the end year of the project
-            if np.max(final_year_numeric) > self.end_year:
-                raise ASRException(
-                    f"Final year ({np.max(final_year_numeric)}) "
+            above = year_above(final_year_numeric, self.end_year)
+            if above is not None:
+                raise ASRInputError(
+                    f"Final year ({above}) "
                     + f"is after the end year of the project ({self.end_year})"
                 )
 
@@ -3655,22 +3720,20 @@ class ASR(GeneralCost):
         tax_discount = _require_present(self.tax_discount, ASRException, "tax_discount")
         final_year = _require_present(self.final_year, ASRException, "final_year")
         future_rate = _require_present(self.future_rate, ASRException, "future_rate")
-        arr_reference = len(self.expense_year)
+        length_map = {
+            "expense_year": len(expense_year),
+            "cost": len(cost),
+            "cost_allocation": len(cost_allocation),
+            "cost_type": len(cost_type),
+            "description": len(description),
+            "tax_portion": len(tax_portion),
+            "tax_discount": len(tax_discount),
+            "final_year": len(final_year),
+            "future_rate": len(future_rate),
+        }
 
-        if not all(
-            len(arr) == arr_reference
-            for arr in [
-                cost,
-                cost_allocation,
-                cost_type,
-                description,
-                tax_portion,
-                tax_discount,
-                final_year,
-                future_rate,
-            ]
-        ):
-            raise ASRException(
+        if unequal_lengths(length_map) is not None:
+            raise ASRInputError(
                 "Unequal length of array: "
                 + f"cost: {len(cost)}, expense_year: {len(expense_year)}, "
                 + f"cost_allocation: {len(cost_allocation)}, cost_type: {len(cost_type)}, "
@@ -3680,16 +3743,18 @@ class ASR(GeneralCost):
             )
 
         # Raise an exception: expense year is after the end year of the project
-        if np.max(self.expense_year) > self.end_year:
-            raise ASRException(
-                f"Expense year ({np.max(self.expense_year)}) "
+        above = year_above(self.expense_year, self.end_year)
+        if above is not None:
+            raise ASRInputError(
+                f"Expense year ({above}) "
                 + f"is after the end year of the project ({self.end_year})"
             )
 
         # Raise an exception: expense year is before the start year of the project
-        if np.min(self.expense_year) < self.start_year:
-            raise ASRException(
-                f"Expense year ({np.min(self.expense_year)}) "
+        below = year_below(self.expense_year, self.start_year)
+        if below is not None:
+            raise ASRInputError(
+                f"Expense year ({below}) "
                 + f"is before the start year of the project ({self.start_year})"
             )
 
@@ -4375,12 +4440,12 @@ class LBT(GeneralCost):
         """
 
         # Prepare attributes project_duration and project_years
-        if self.end_year >= self.start_year:
+        if not period_is_reversed(self.start_year, self.end_year):
             self.project_duration = self.end_year - self.start_year + 1
             self.project_years = np.arange(self.start_year, self.end_year + 1, 1)
 
         else:
-            raise LBTException(
+            raise LBTInputError(
                 f"start year {self.start_year} is after the end year {self.end_year}"
             )
 
@@ -4392,9 +4457,8 @@ class LBT(GeneralCost):
             )
 
         else:
-            expense_year_nan_sum = len(_missing_indices(self.expense_year))
-            if expense_year_nan_sum > 0:
-                raise LBTException(
+            if missing_value_indices(self.expense_year):
+                raise LBTInputError(
                     f"Missing values in array expense_year: {self.expense_year}"
                 )
 
@@ -4471,10 +4535,8 @@ class LBT(GeneralCost):
             if len(tax_portion_nan_id) > 0:
                 self.tax_portion[tax_portion_nan_id] = np.zeros(len(tax_portion_nan_id))
 
-            tax_portion_large = np.count_nonzero(self.tax_portion > 1.0)
-            tax_portion_negative = np.count_nonzero(self.tax_portion < 0.0)
-            if tax_portion_large > 0 or tax_portion_negative > 0:
-                raise LBTException(
+            if out_of_range_indices(self.tax_portion, 0.0, 1.0):
+                raise LBTInputError(
                     "The value of tax_portion must be: 0 < tax_portion < 1, "
                     + f"tax_portion: {self.tax_portion}"
                 )
@@ -4494,8 +4556,8 @@ class LBT(GeneralCost):
             )
 
         if isinstance(raw_tax_discount, (float, int)):
-            if self.tax_discount < 0 or self.tax_discount > 1:
-                raise LBTException("Attribute tax_discount must be between 0 and 1")
+            if out_of_range_indices((raw_tax_discount,), 0.0, 1.0):
+                raise LBTInputError("Attribute tax_discount must be between 0 and 1")
 
             self.tax_discount = np.repeat(self.tax_discount, len(self.expense_year))
 
@@ -4507,10 +4569,8 @@ class LBT(GeneralCost):
                     len(tax_discount_nan_id)
                 )
 
-            tax_discount_large = np.count_nonzero(tax_discount_array > 1.0)
-            tax_discount_negative = np.count_nonzero(tax_discount_array < 0.0)
-            if tax_discount_large > 0 or tax_discount_negative > 0:
-                raise LBTException(
+            if out_of_range_indices(tax_discount_array, 0.0, 1.0):
+                raise LBTInputError(
                     "The value of tax_discount must be: 0 < tax_discount < 1, "
                     + f"tax_discount: {tax_discount_array}"
                 )
@@ -4536,19 +4596,19 @@ class LBT(GeneralCost):
                 ].copy()
 
             # Exception: final_year is before expense_year
-            final_year_small_sum = np.count_nonzero(
-                np.asarray(self.final_year, dtype=np.int64) < self.expense_year
-            )
-            if final_year_small_sum > 0:
-                raise LBTException(
+            if any_below(
+                np.asarray(self.final_year, dtype=np.int64), self.expense_year
+            ):
+                raise LBTInputError(
                     f"Attribute final_year ({self.final_year}) is before "
                     + f"the expense_year ({self.expense_year})"
                 )
 
             # Exception: final_year is after the end year of the project
-            if np.max(np.asarray(self.final_year, dtype=np.int64)) > self.end_year:
-                raise LBTException(
-                    f"Final year ({np.max(self.final_year)}) "
+            above = year_above(np.asarray(self.final_year, dtype=np.int64), self.end_year)
+            if above is not None:
+                raise LBTInputError(
+                    f"Final year ({above}) "
                     + f"is after the end year of the project ({self.end_year})"
                 )
 
@@ -4574,11 +4634,8 @@ class LBT(GeneralCost):
                 )
 
             # Exception: negative values in array utilized_land_area
-            utilized_land_area_negative_sum = np.count_nonzero(
-                np.asarray(self.utilized_land_area, dtype=np.float64) < 0
-            )
-            if utilized_land_area_negative_sum > 0:
-                raise LBTException(
+            if out_of_range_indices(self.utilized_land_area, 0.0, float("inf")):
+                raise LBTInputError(
                     f"Negative values in array utilized_land_area: {self.utilized_land_area}"
                 )
 
@@ -4606,11 +4663,8 @@ class LBT(GeneralCost):
                 )
 
             # Exception: negative values in array utilized_building_area
-            utilized_building_negative_sum = np.count_nonzero(
-                np.asarray(self.utilized_building_area, dtype=np.float64) < 0
-            )
-            if utilized_building_negative_sum > 0:
-                raise LBTException(
+            if out_of_range_indices(self.utilized_building_area, 0.0, float("inf")):
+                raise LBTInputError(
                     f"Negative values in array utilized_building_area: {self.utilized_building_area}"
                 )
 
@@ -4720,19 +4774,24 @@ class LBT(GeneralCost):
             normalized_tax_portion,
         ) = self._normalized_general_fields(LBTException)
 
-        if not all(
-            len(arr) == arr_reference
-            for arr in [
-                normalized_cost_allocation,
-                normalized_cost_type,
-                normalized_description,
-                normalized_tax_portion,
-                self.tax_discount,
-                *normalized_lbt,
-                _require_present(self.cost, LBTException, "cost"),
-            ]
-        ):
-            raise LBTException(
+        length_map = {
+            "expense_year": arr_reference,
+            "cost_allocation": len(normalized_cost_allocation),
+            "cost_type": len(normalized_cost_type),
+            "description": len(normalized_description),
+            "tax_portion": len(normalized_tax_portion),
+            "tax_discount": len(np.asarray(self.tax_discount)),
+            "final_year": len(normalized_lbt[0]),
+            "utilized_land_area": len(self.utilized_land_area),
+            "utilized_building_area": len(self.utilized_building_area),
+            "njop_land": len(self.njop_land),
+            "njop_building": len(self.njop_building),
+            "gross_revenue": len(self.gross_revenue),
+            "cost": len(_require_present(self.cost, LBTException, "cost")),
+        }
+
+        if unequal_lengths(length_map) is not None:
+            raise LBTInputError(
                 "Unequal length of arrays: "
                 + f"expense_year: {len(self.expense_year)}, "
                 + f"cost_allocation: {len(normalized_cost_allocation)}, "
@@ -4750,16 +4809,18 @@ class LBT(GeneralCost):
             )
 
         # Exception: expense year is after the end year of the project
-        if np.max(self.expense_year) > self.end_year:
-            raise LBTException(
-                f"Expense year ({np.max(self.expense_year)}) "
+        above = year_above(self.expense_year, self.end_year)
+        if above is not None:
+            raise LBTInputError(
+                f"Expense year ({above}) "
                 + f"is after the end year of the project ({self.end_year})"
             )
 
         # Exception: expense_year is before the start year of the project
-        if np.min(self.expense_year) < self.start_year:
-            raise LBTException(
-                f"Expense year ({np.min(self.expense_year)}) "
+        below = year_below(self.expense_year, self.start_year)
+        if below is not None:
+            raise LBTInputError(
+                f"Expense year ({below}) "
                 + f"is before the start year of the project ({self.start_year})"
             )
 
@@ -5411,8 +5472,8 @@ class CostOfSales(GeneralCost):
             raise CostOfSalesException(
                 f"Attribute expense_year must be provided as a numpy.ndarray, not as a/an {expense_year.__class__.__qualname__}"
             )
-        if len(_missing_indices(expense_year)) > 0:
-            raise CostOfSalesException(
+        if missing_value_indices(expense_year):
+            raise CostOfSalesInputError(
                 f"Missing values in array expense_year: {expense_year}"
             )
         return expense_year.astype(np.int64)
@@ -5476,12 +5537,12 @@ class CostOfSales(GeneralCost):
         """
 
         # Prepare attributes project_duration and project_years
-        if self.end_year >= self.start_year:
+        if not period_is_reversed(self.start_year, self.end_year):
             self.project_duration = self.end_year - self.start_year + 1
             self.project_years = np.arange(self.start_year, self.end_year + 1, 1)
 
         else:
-            raise CostOfSalesException(
+            raise CostOfSalesInputError(
                 f"start year {self.start_year} is after the end year {self.end_year}"
             )
 
@@ -5555,10 +5616,8 @@ class CostOfSales(GeneralCost):
                     len(tax_portion_nan_id)
                 )
 
-            tax_portion_large = np.count_nonzero(tax_portion_array > 1.0)
-            tax_portion_negative = np.count_nonzero(tax_portion_array < 0.0)
-            if tax_portion_large > 0 or tax_portion_negative > 0:
-                raise CostOfSalesException(
+            if out_of_range_indices(tax_portion_array, 0.0, 1.0):
+                raise CostOfSalesInputError(
                     "The value of tax_portion must be: 0 < tax_portion < 1, "
                     + f"tax_portion: {tax_portion_array}"
                 )
@@ -5576,8 +5635,8 @@ class CostOfSales(GeneralCost):
             )
 
         if isinstance(raw_tax_discount, (float, int)):
-            if raw_tax_discount < 0 or raw_tax_discount > 1:
-                raise CostOfSalesException(
+            if out_of_range_indices((raw_tax_discount,), 0.0, 1.0):
+                raise CostOfSalesInputError(
                     "Attribute tax_discount must be between 0 and 1"
                 )
 
@@ -5591,10 +5650,8 @@ class CostOfSales(GeneralCost):
                     len(tax_discount_nan_id)
                 )
 
-            tax_discount_large = np.count_nonzero(tax_discount_array > 1.0)
-            tax_discount_negative = np.count_nonzero(tax_discount_array < 0.0)
-            if tax_discount_large > 0 or tax_discount_negative > 0:
-                raise CostOfSalesException(
+            if out_of_range_indices(tax_discount_array, 0.0, 1.0):
+                raise CostOfSalesInputError(
                     "The value of tax_discount must be: 0 < tax_discount < 1, "
                     + f"tax_discount: {tax_discount_array}"
                 )
@@ -5619,20 +5676,18 @@ class CostOfSales(GeneralCost):
         tax_discount = _require_present(
             self.tax_discount, CostOfSalesException, "tax_discount"
         )
-        arr_length = len(expense_year)
+        length_map = {
+            "expense_year": len(expense_year),
+            "cost": len(cost),
+            "cost_allocation": len(cost_allocation),
+            "cost_type": len(cost_type),
+            "description": len(description),
+            "tax_portion": len(tax_portion),
+            "tax_discount": len(tax_discount),
+        }
 
-        if not all(
-            len(arr) == arr_length
-            for arr in [
-                cost,
-                cost_allocation,
-                cost_type,
-                description,
-                tax_portion,
-                tax_discount,
-            ]
-        ):
-            raise CostOfSalesException(
+        if unequal_lengths(length_map) is not None:
+            raise CostOfSalesInputError(
                 "Unequal length of arrays: "
                 + f"expense_year: {len(expense_year)}, "
                 + f"cost: {len(cost)}, "
@@ -5644,16 +5699,18 @@ class CostOfSales(GeneralCost):
             )
 
         # Raise an error message: expense_year is after the end year of the project
-        if np.max(self.expense_year) > self.end_year:
-            raise CostOfSalesException(
-                f"Expense year ({np.max(self.expense_year)}) "
+        above = year_above(self.expense_year, self.end_year)
+        if above is not None:
+            raise CostOfSalesInputError(
+                f"Expense year ({above}) "
                 + f"is after the end year of the project ({self.end_year})"
             )
 
         # Raise an error message: expense_year is before the start year of the project
-        if np.min(self.expense_year) < self.start_year:
-            raise CostOfSalesException(
-                f"Expense year ({np.min(self.expense_year)}) "
+        below = year_below(self.expense_year, self.start_year)
+        if below is not None:
+            raise CostOfSalesInputError(
+                f"Expense year ({below}) "
                 + f"is before the start year of the project ({self.start_year})"
             )
 

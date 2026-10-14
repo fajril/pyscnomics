@@ -8,9 +8,9 @@ import pandas as pd
 from dataclasses import dataclass, field
 from datetime import date
 from functools import reduce
-from typing import TypeVar
+from typing import TypeVar, cast
 
-from pyscnomics.econ.revenue import Lifting
+from pyscnomics.econ.revenue import Lifting, aggregate_lifting_for_fluid
 from pyscnomics.contracts.summary_profile import PostRunSummaryProfile
 from pyscnomics.econ.selection import (
     FluidType,
@@ -39,6 +39,23 @@ from pyscnomics.econ.indicator import (
     npv_point_forward,
     pot_psc,
 )
+from pyscnomics.validation_rules import (
+    CLASSIFICATION_ORDER,
+    OnstreamResolutionError,
+    approval_year_violation,
+    boundary_year_classification_violation,
+    classification_allowed_in_period,
+    classification_period,
+    dates_reversed,
+    default_cost_type_for_year,
+    inconsistent_component_years,
+    pis_after_onstream_indices,
+    pis_before_onstream_indices,
+    resolve_onstream_year,
+    sunk_cost_cutoff_year,
+    sunk_cost_year_exceeds_cutoff,
+)
+from pyscnomics.input_validation import InputValidationError, engine_input_issue
 
 # Set display for pandas dataframe
 pd.set_option("display.max_rows", 200)
@@ -360,6 +377,20 @@ class BaseProjectException(Exception):
     pass
 
 
+class BaseProjectInputError(  # pyright: ignore[reportUnsafeMultipleInheritance]
+    BaseProjectException, InputValidationError
+):
+    """Verified user-input project error retaining ``BaseProjectException``."""
+
+    _input_code: str = "BASE_PROJECT_INPUT_INVALID"
+
+    def __init__(self, message: str, *, code: str | None = None) -> None:
+        InputValidationError.__init__(
+            self,
+            (engine_input_issue(code=code or self._input_code, message=message),),
+        )
+
+
 class OtherRevenueException(Exception):
     """Exception to be raised for a misuse of Other Revenue"""
 
@@ -372,16 +403,58 @@ class SunkCostException(Exception):
     pass
 
 
+class SunkCostInputError(  # pyright: ignore[reportUnsafeMultipleInheritance]
+    SunkCostException, InputValidationError
+):
+    """Verified user-input sunk-cost error retaining ``SunkCostException``."""
+
+    _input_code: str = "SUNK_COST_AFTER_CUTOFF"
+
+    def __init__(self, message: str, *, code: str | None = None) -> None:
+        InputValidationError.__init__(
+            self,
+            (engine_input_issue(code=code or self._input_code, message=message),),
+        )
+
+
 class PreOnstreamException(Exception):
     """Exception to be raised for an incorrect preonstream cost configuration"""
 
     pass
 
 
+class PreOnstreamInputError(  # pyright: ignore[reportUnsafeMultipleInheritance]
+    PreOnstreamException, InputValidationError
+):
+    """Verified user-input pre-onstream error retaining ``PreOnstreamException``."""
+
+    _input_code: str = "PREONSTREAM_YEAR_OUTSIDE_PROJECT"
+
+    def __init__(self, message: str, *, code: str | None = None) -> None:
+        InputValidationError.__init__(
+            self,
+            (engine_input_issue(code=code or self._input_code, message=message),),
+        )
+
+
 class PostOnstreamException(Exception):
     """Exception to be raised for incorrect postonstream cost configurations"""
 
     pass
+
+
+class PostOnstreamInputError(  # pyright: ignore[reportUnsafeMultipleInheritance]
+    PostOnstreamException, InputValidationError
+):
+    """Verified user-input post-onstream error retaining ``PostOnstreamException``."""
+
+    _input_code: str = "POSTONSTREAM_YEAR_BEFORE_ONSTREAM"
+
+    def __init__(self, message: str, *, code: str | None = None) -> None:
+        InputValidationError.__init__(
+            self,
+            (engine_input_issue(code=code or self._input_code, message=message),),
+        )
 
 
 class BaseProjectSummaryException(Exception):
@@ -905,14 +978,14 @@ class BaseProject:
         """
 
         # Prepare attributes project_duration and project_years
-        if self.start_date <= self.end_date:
+        if not dates_reversed(self.start_date, self.end_date):
             self.project_duration = self.end_date.year - self.start_date.year + 1
             self.project_years = np.arange(
                 self.start_date.year, self.end_date.year + 1, 1, dtype=np.int64
             )
 
         else:
-            raise BaseProjectException(
+            raise BaseProjectInputError(
                 f"start date {self.start_date} "
                 + f"is after the end date: {self.end_date}"
             )
@@ -1335,44 +1408,35 @@ class BaseProject:
             lifting = self._gas_lifting
             revenue = self._gas_revenue
 
-        # Identify years with positive revenue
-        revenue_idx = np.flatnonzero(revenue > 0)
+        provided_year = onstream_date.year if onstream_date is not None else None
 
-        # Case 1: fluid has positive revenue
-        if len(revenue_idx) > 0:
-            earliest_revenue_year = int(self.project_years[revenue_idx[0]])
+        # Delegate the effective-onstream rule to the shared pure resolver so
+        # preflight and the engine cannot drift. The resolver implements: infer
+        # the earliest positive-revenue year when no date is provided; validate
+        # a provided date against the project period and the allowed lifting /
+        # revenue years; and fall back to the project end date when there is no
+        # positive revenue at all.
+        try:
+            resolved = resolve_onstream_year(
+                fluid=fluid,
+                provided_year=provided_year,
+                start_year=self.start_date.year,
+                end_year=self.end_date.year,
+                revenue=revenue,
+                lifting_prod_years=list(lifting.prod_year),
+            )
+        except OnstreamResolutionError as exc:
+            raise BaseProjectInputError(str(exc)) from exc
 
-            # If onstream date is not provided, infer it from the earliest revenue year
-            if onstream_date is None:
-                return date(year=earliest_revenue_year, month=1, day=1)
-
-            # If onstream date is provided, validate it
-            else:
-                onstream_year = onstream_date.year
-
-                # Onstream year must fall within project duration
-                if not (self.start_date.year <= onstream_year <= self.end_date.year):
-                    raise BaseProjectException(
-                        f"{fluid.capitalize()} onstream year ({onstream_year}) must be within "
-                        + f"project period ({self.start_date.year}-{self.end_date.year})."
-                    )
-
-                # Only allow two values as onstream year:
-                # (1) earliest_lifting_year, or (2) earliest_revenue_year
-                earliest_lifting_year = int(np.min(lifting.prod_year))
-                allowed_years = {earliest_lifting_year, earliest_revenue_year}
-
-                if onstream_year not in allowed_years:
-                    raise BaseProjectException(
-                        f"Invalid {fluid} onstream year ({onstream_year}). "
-                        + f"Allowed values: {sorted(allowed_years)}."
-                    )
-
-                return onstream_date
-
-        # Case 2: No revenue at all -> fallback to project end date
-        else:
+        # No positive revenue always falls back to the project end date,
+        # regardless of any supplied date.
+        if resolved.source == "project_end":
             return self.end_date
+
+        if onstream_date is not None:
+            return onstream_date
+
+        return date(year=resolved.year, month=1, day=1)
 
     def _require_onstream_dates(self) -> tuple[date, date]:
         oil_onstream_date = self.oil_onstream_date
@@ -1425,22 +1489,11 @@ class BaseProject:
         if lifting is None:
             raise BaseProjectException("Attribute lifting is missing")
 
-        fluid_types = [lft.fluid_type for lft in lifting]
-
-        if commodity not in fluid_types:
-            return Lifting(
-                start_year=self.start_date.year,
-                end_year=self.end_date.year,
-                prod_year=self.project_years,
-                lifting_rate=np.zeros(self.project_duration),
-                price=np.zeros(self.project_duration),
-                fluid_type=commodity,
-                prod_rate=np.zeros(self.project_duration),
-                prod_rate_baseline=np.zeros(self.project_duration),
-            )
-
-        return reduce(
-            lambda x, y: x + y, (lft for lft in lifting if lft.fluid_type == commodity)
+        return aggregate_lifting_for_fluid(
+            lifting,
+            fluid_type=commodity,
+            start_year=self.start_date.year,
+            end_year=self.end_date.year,
         )
 
     def _get_oil_lifting(self) -> Lifting:
@@ -2152,28 +2205,37 @@ class BaseProject:
         oil_onstream_date, gas_onstream_date = self._require_onstream_dates()
         onstream_yr = min([oil_onstream_date.year, gas_onstream_date.year])
 
-        # Raise an error: approval year is not provided
-        approval_year = self.approval_year
+        # Delegate the approval-year rule to the shared predicate so the
+        # preflight and the engine cannot drift.
+        violation = approval_year_violation(
+            self.approval_year,
+            start_year=self.start_date.year,
+            end_year=self.end_date.year,
+            onstream_year=onstream_yr,
+        )
 
         # Raise an error: approval year is before the start year of the project
-        if approval_year < self.start_date.year:
-            raise BaseProjectException(
+        if violation == "before_project":
+            raise BaseProjectInputError(
                 f"Approval year ({self.approval_year}) is before the project "
-                + f"start year ({self.start_date.year})"
+                + f"start year ({self.start_date.year})",
+                code="APPROVAL_YEAR_OUTSIDE_PROJECT",
             )
 
         # Raise an error: approval year is after the end year of the project
-        if approval_year > self.end_date.year:
-            raise BaseProjectException(
+        if violation == "after_project":
+            raise BaseProjectInputError(
                 f"Approval year ({self.approval_year}) is after the project "
-                + f"end year ({self.end_date.year})"
+                + f"end year ({self.end_date.year})",
+                code="APPROVAL_YEAR_OUTSIDE_PROJECT",
             )
 
         # Raise an error: approval year is after onstream year
-        if approval_year > onstream_yr:
-            raise BaseProjectException(
+        if violation == "after_onstream":
+            raise BaseProjectInputError(
                 f"Approval year ({self.approval_year}) as after "
-                + f"onstream year ({onstream_yr})"
+                + f"onstream year ({onstream_yr})",
+                code="APPROVAL_YEAR_AFTER_ONSTREAM",
             )
 
     def _assign_default_cost_types(
@@ -2213,23 +2275,22 @@ class BaseProject:
         ct = np.array(cost_obj.cost_type)
         ry = _require_int_array(cost_obj.expense_year, "expense_year")
 
-        # Identify entries without an explicitly assigned cost type
-        is_none = np.equal(ct, np.asarray(None, dtype=np.object_))
-
-        # Define masks for default cost type assignment based on project periods
-        defaults = {
-            "sunk_cost": (ry < self.approval_year) & is_none,
-            "preonstream": (ry >= self.approval_year) & (ry < onstream_year) & is_none,
-            "postonstream": (ry >= onstream_year) & is_none,
-        }
-
-        # Assign default values for cost types using the above masks
-        # For non-POD I projects, sunk costs default to pre-onstream costs
-        ct[defaults["sunk_cost"]] = (
-            CostType.SUNK_COST if self.is_pod_1 else CostType.PRE_ONSTREAM_COST
-        )
-        ct[defaults["preonstream"]] = CostType.PRE_ONSTREAM_COST
-        ct[defaults["postonstream"]] = CostType.POST_ONSTREAM_COST
+        # Assign the engine default to every unset classification through the
+        # shared predicate; an explicit classification is never overwritten.
+        # For non-POD I projects, sunk rows default to pre-onstream costs.
+        years = cast("list[int]", ry.tolist())
+        existing = cast("list[object]", ct.tolist())
+        for index in range(len(existing)):
+            if existing[index] is not None:
+                continue
+            ct[index] = CostType(
+                default_cost_type_for_year(
+                    years[index],
+                    approval_year=self.approval_year,
+                    onstream_year=onstream_year,
+                    is_pod_1=bool(self.is_pod_1),
+                )
+            )
 
         return ry, ct
 
@@ -2268,62 +2329,42 @@ class BaseProject:
         - Validation stops at the first detected inconsistency.
         """
 
-        # Define boolean masks for each project period based on reference year "ry"
-        masks = {
-            "sunk_cost": ry < self.approval_year,
-            "preonstream_cost": (ry > self.approval_year) & (ry < onstream_year),
-            "postonstream_cost": ry > onstream_year,
-        }
-
-        # Validation rules:
-        # (period_name, mask, list of invalid cost types for that period)
-        rules = [
-            ("sunk_cost", masks["sunk_cost"], [CostType.POST_ONSTREAM_COST]),
-            (
-                "preonstream_cost",
-                masks["preonstream_cost"],
-                [CostType.POST_ONSTREAM_COST],
-            ),
-            (
-                "postonstream_cost",
-                masks["postonstream_cost"],
-                [CostType.SUNK_COST, CostType.PRE_ONSTREAM_COST],
-            ),
-        ]
-
-        # Apply validation rules sequentially
-        for period, mask, invalid_types in rules:
-            # Skip periods with no applicable records
-            if not np.any(mask):
+        # Group the classifications that violate the shared period rule, in the
+        # engine's original period order (sunk, pre-onstream, post-onstream).
+        found_by_period: dict[str, list[str]] = {}
+        years = cast("list[int]", ry.tolist())
+        classifications = cast("list[object]", ct.tolist())
+        for index in range(len(classifications)):
+            classification = classifications[index]
+            if classification is None:
                 continue
+            period = classification_period(
+                years[index],
+                approval_year=self.approval_year,
+                onstream_year=onstream_year,
+            )
+            if period is None:
+                continue
+            value = (
+                classification.value
+                if isinstance(classification, CostType)
+                else str(classification)
+            )
+            if not classification_allowed_in_period(period, value):
+                found_by_period.setdefault(period, []).append(value)
 
-            # Identify entries whose cost type violates the rule for this period
-            invalid_masks: list[tuple[CostType, npt.NDArray[np.bool_]]] = []
-            hit = np.zeros(len(ct), dtype=np.bool_)
-            for invalid_type in invalid_types:
-                match = np.asarray(ct == invalid_type, dtype=np.bool_)
-                invalid_masks.append((invalid_type, match))
-                hit |= match
-            hit &= mask
-
-            if hit.any():
-                # Extract invalid cost type for reporting
-                found: list[str] = []
-                for index in range(len(ct)):
-                    if not bool(hit.item(index)):
-                        continue
-                    for invalid_type, match in invalid_masks:
-                        if bool(match.item(index)):
-                            found.append(invalid_type.value)
-                            break
-
-                # Specify message to be displayed
+        # Apply validation rules sequentially; stop at the first period with a
+        # violation, matching the original behavior.
+        for period in CLASSIFICATION_ORDER:
+            found = found_by_period.get(period)
+            if found:
                 msg = (
                     "Cost type classification mismatch. "
                     + f"Found {found} in {period} period."
                 )
-
-                raise BaseProjectException(msg)
+                raise BaseProjectInputError(
+                    msg, code="COST_TYPE_PERIOD_MISMATCH"
+                )
 
     def _validate_boundary_year_cost_types(
         self,
@@ -2361,27 +2402,43 @@ class BaseProject:
         - This method performs validation only and does not modify cost types.
         """
 
-        at_approval = np.asarray(ry == self.approval_year, dtype=np.bool_)
-        at_onstream = np.asarray(ry == onstream_year, dtype=np.bool_)
+        # Delegate the boundary-year rule to the shared predicate. An explicit
+        # classification is what is checked; defaults are already assigned. The
+        # approval-year rule is evaluated before the onstream-year rule, matching
+        # the original order so the reported message is unchanged.
+        years = cast("list[int]", ry.tolist())
+        classifications = cast("list[object]", ct.tolist())
 
-        # Validate cost type at exact approval year
-        approval_match = np.asarray(ct == CostType.POST_ONSTREAM_COST, dtype=np.bool_)
-        if np.any(at_approval & approval_match):
-            # Prepare messages to be displayed
-            msg_error = (
-                "Cannot accept POST ONSTREAM COST as cost type at approval year "
-                + f"({self.approval_year})."
+        def _values() -> list[str]:
+            result: list[str] = []
+            for classification in classifications:
+                result.append(
+                    classification.value
+                    if isinstance(classification, CostType)
+                    else str(classification)
+                )
+            return result
+
+        boundaries = [
+            boundary_year_classification_violation(
+                years[index],
+                value,
+                approval_year=self.approval_year,
+                onstream_year=onstream_year,
             )
-
-            raise BaseProjectException(msg_error)
-
-        # Validate cost type at exact onstream year
-        onstream_match = np.asarray(ct == CostType.SUNK_COST, dtype=np.bool_)
-        if np.any(at_onstream & onstream_match):
-            # Prepare messages to be displayed
-            msg_error = f"Cannot accept SUNK COST as cost type at onstream year ({onstream_year})."
-
-            raise BaseProjectException(msg_error)
+            for index, value in enumerate(_values())
+        ]
+        if "approval_year" in boundaries:
+            raise BaseProjectInputError(
+                "Cannot accept POST ONSTREAM COST as cost type at approval year "
+                + f"({self.approval_year}).",
+                code="COST_TYPE_POSTONSTREAM_AT_APPROVAL",
+            )
+        if "onstream_year" in boundaries:
+            raise BaseProjectInputError(
+                f"Cannot accept SUNK COST as cost type at onstream year ({onstream_year}).",
+                code="COST_TYPE_SUNK_AT_ONSTREAM",
+            )
 
     def _prepare_cost_types(
         self,
@@ -3064,9 +3121,7 @@ class BaseProject:
             (oil and gas).
         """
 
-        if not all(
-            i == self.start_date.year
-            for i in [
+        component_years = [
                 self._oil_lifting.start_year,
                 self._gas_lifting.start_year,
                 self._sulfur_lifting.start_year,
@@ -3109,8 +3164,8 @@ class BaseProject:
                 self._oil_cost_of_sales_preonstream.start_year,
                 self._gas_cost_of_sales_preonstream.start_year,
             ]
-        ):
-            raise BaseProjectException(
+        if inconsistent_component_years(self.start_date.year, component_years):
+            raise BaseProjectInputError(
                 "Inconsistent start project year: "
                 + f"Base project ({self.start_date.year}), "
                 + f"Oil lifting ({self._oil_lifting.start_year}), "
@@ -3199,9 +3254,7 @@ class BaseProject:
             (oil and gas).
         """
 
-        if not all(
-            i == self.end_date.year
-            for i in [
+        component_years = [
                 self._oil_lifting.end_year,
                 self._gas_lifting.end_year,
                 self._sulfur_lifting.end_year,
@@ -3244,8 +3297,8 @@ class BaseProject:
                 self._oil_cost_of_sales_preonstream.end_year,
                 self._gas_cost_of_sales_preonstream.end_year,
             ]
-        ):
-            raise BaseProjectException(
+        if inconsistent_component_years(self.end_date.year, component_years):
+            raise BaseProjectInputError(
                 "Inconsistent end project year: "
                 + f"Base project ({self.end_date.year}), "
                 + f"Oil lifting ({self._oil_lifting.end_year}), "
@@ -3340,8 +3393,17 @@ class BaseProject:
             ],
             dtype=np.int64,
         )
-        cutoff_year = min([self.approval_year, onstream_yr])
-        mask = sunkcost_max_years > cutoff_year
+        cutoff_year = sunk_cost_cutoff_year(
+            approval_year=self.approval_year, onstream_year=onstream_yr
+        )
+        max_years = cast("list[int]", sunkcost_max_years.tolist())
+        mask = np.array(
+            [
+                sunk_cost_year_exceeds_cutoff(year, cutoff_year)
+                for year in max_years
+            ],
+            dtype=np.bool_,
+        )
 
         if np.any(mask):
             # Collect offending years for reporting
@@ -3350,7 +3412,7 @@ class BaseProject:
 
             # Strict mode: raise an error
             if self.is_strict:
-                raise SunkCostException(message)
+                raise SunkCostInputError(message, code="SUNK_COST_AFTER_CUTOFF")
 
             # Loose mode: display a warning message
             else:
@@ -3452,7 +3514,9 @@ class BaseProject:
         if message is not None:
             # Strict mode: raise an error
             if self.is_strict:
-                raise PreOnstreamException(message)
+                raise PreOnstreamInputError(
+                    message, code="PREONSTREAM_YEAR_OUTSIDE_PROJECT"
+                )
 
             # Loose mode: emit a warning and continue
             else:
@@ -3509,7 +3573,9 @@ class BaseProject:
                 + f"onstream year ({onstream_yr})"
             )
 
-            raise PostOnstreamException(message)
+            raise PostOnstreamInputError(
+                message, code="POSTONSTREAM_YEAR_BEFORE_ONSTREAM"
+            )
 
     def _get_cost_objects_validation(self) -> None:
         """
@@ -5473,18 +5539,18 @@ class BaseProject:
         costs = _require_float_array(obj_capital.cost, "cost")
         pis_yrs = _require_int_array(obj_capital.pis_year, "pis_year")
 
-        # Identify PIS years occurring before the onstream year. Only entries
-        # carrying cost are considered: a zero-cost entry is never depreciated
-        # or amortized, so it must not fail validation.
-        mask = (pis_yrs < onstream_year) & (np.abs(costs) > 0.0)
+        # Identify PIS years occurring before the onstream year through the
+        # shared predicate. Only entries carrying cost are considered: a
+        # zero-cost entry is never depreciated or amortized.
+        indices = pis_before_onstream_indices(pis_yrs, costs, onstream_year)
 
         # Exit early if all PIS years are NOT before onstream year
-        if not np.any(mask):
+        if not indices:
             return
 
         # Collect invalid costs and their associated PIS years
-        invalid_costs = costs[mask]
-        invalid_pis_yrs = pis_yrs[mask]
+        invalid_costs = costs[indices]
+        invalid_pis_yrs = pis_yrs[indices]
 
         # Pair invalid PIS years with their corresponding costs
         invalid = [
@@ -5520,7 +5586,7 @@ class BaseProject:
 
         # Strict mode: raise an error and stop execution
         if is_strict:
-            raise BaseProjectException(msg_error)
+            raise BaseProjectInputError(msg_error, code="PIS_YEAR_BEFORE_ONSTREAM")
 
         # Loose mode: record a warning message and continue execution
         else:
@@ -5567,16 +5633,17 @@ class BaseProject:
         costs = _require_float_array(obj_capital.cost, "cost")
         pis_yrs = _require_int_array(obj_capital.pis_year, "pis_year")
 
-        # Idenitfy PIS years occurring after the onstream year
-        mask = pis_yrs > onstream_year
+        # Identify PIS years occurring after the onstream year through the
+        # shared predicate.
+        indices = pis_after_onstream_indices(pis_yrs, onstream_year)
 
         # Exit early if all PIS years are NOT after onstream year
-        if not np.any(mask):
+        if not indices:
             return
 
         # Collect invalid costs and their associated PIS years
-        invalid_costs = costs[mask]
-        invalid_pis_yrs = pis_yrs[mask]
+        invalid_costs = costs[indices]
+        invalid_pis_yrs = pis_yrs[indices]
 
         # Pair invalid PIS years with their corresponding costs
         invalid = [
@@ -5599,7 +5666,7 @@ class BaseProject:
 
         # Strict mode: raise an error and stop execution
         if is_strict:
-            raise BaseProjectException(msg_error)
+            raise BaseProjectInputError(msg_error, code="PIS_YEAR_AFTER_ONSTREAM")
 
         # Loose mode: record a warning message and continue execution
         else:
@@ -5767,8 +5834,16 @@ class BaseProject:
             ),
             oil_sunk_cost=self._require_array(self._oil_sunk_cost, "_oil_sunk_cost"),
             gas_sunk_cost=self._require_array(self._gas_sunk_cost, "_gas_sunk_cost"),
-            oil_cashflow=self._require_array(self._oil_cashflow, "_oil_cashflow"),
-            gas_cashflow=self._require_array(self._gas_cashflow, "_gas_cashflow"),
+            oil_cashflow=(
+                None
+                if self._oil_cashflow is None
+                else self._require_array(self._oil_cashflow, "_oil_cashflow")
+            ),
+            gas_cashflow=(
+                None
+                if self._gas_cashflow is None
+                else self._require_array(self._gas_cashflow, "_gas_cashflow")
+            ),
             oil_total_indirect_tax=self._require_array(
                 self._oil_total_indirect_tax, "_oil_total_indirect_tax"
             ),

@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from typing import cast
 import numpy as np
 import numpy.typing as npt
 
@@ -50,13 +51,6 @@ def _require_years(value: YearArray | None) -> YearArray:
     return value
 
 
-def _require_scalar(value: float | np.float64 | None, name: str) -> float:
-    """Require named scalar data from a completed contract run."""
-    if value is None:
-        raise RuntimeError(f"{name} is unavailable before the contract is run")
-    return float(value)
-
-
 def _float_array(value: SummaryValue, name: str = "summary value") -> FloatArray:
     """Normalize an internal numeric profile to the summary's float-array shape."""
     if not isinstance(value, np.ndarray) or value.ndim != 1:
@@ -85,9 +79,18 @@ def _sum_float(values: FloatArray) -> np.float64:
     return np.sum(values)
 
 
-def _is_nonzero(value: float | np.float64) -> bool:
-    """Convert a NumPy scalar comparison to the Python bool expected by NumPy."""
-    return bool(value != 0)
+def _ratio_float(
+    numerator: float | np.float64, denominator: float | np.float64
+) -> float:
+    """Return a plain-scalar ratio, using 0.0 for a zero denominator.
+
+    ``np.divide`` with a scalar ``out`` array returns a zero-dimensional array,
+    which the JSON response boundary cannot serialize. The executive-summary
+    ratios are scalar, so they are reduced to a Python ``float`` here.
+    """
+    if denominator == 0:
+        return 0.0
+    return float(numerator / denominator)
 
 
 @dataclass
@@ -458,6 +461,9 @@ class Summary:
     consolidated_ctr_share: FloatArray | None = field(
         default=None, init=False, repr=False
     )
+    consolidated_ctr_net_share: FloatArray | None = field(
+        default=None, init=False, repr=False
+    )
     consolidated_gov_share: FloatArray | None = field(
         default=None, init=False, repr=False
     )
@@ -505,6 +511,35 @@ class Summary:
             self.reference_year = min_year
         else:
             pass
+
+    @staticmethod
+    def _array_or_zeros(value: FloatArray | None, years: YearArray) -> FloatArray:
+        """Return a profile array, substituting a documented zero profile when absent."""
+        if value is None:
+            return np.zeros_like(years, dtype=np.float64)
+        return np.asarray(value, dtype=np.float64)
+
+    @staticmethod
+    def _scalar_or_zero(value: float | np.float64 | None) -> float:
+        """Return a profile scalar, treating absence as the documented zero value."""
+        return 0.0 if value is None else float(value)
+
+    @staticmethod
+    def _fluid_non_capital(profile: PostRunSummaryProfile, fluid: str) -> FloatArray:
+        """Rebuild non-capital spend from the per-case post-tax cost components.
+
+        A contract's non-capital spend is the sum of its post-tax intangible,
+        opex, ASR, LBT and cost-of-sales components (the same components the
+        per-case summary and the cost-recovery/gross-split tables expose). The
+        multi-contract profile does not snapshot the aggregate, so it is derived
+        here rather than read from a missing field.
+        """
+        total = np.zeros_like(profile.project_years, dtype=np.float64)
+        for category in ("intangible", "opex", "asr", "lbt", "cost_of_sales"):
+            field_name = f"{fluid}_{category}_expenditures_post_tax"
+            value = cast("FloatArray | None", getattr(profile, field_name))
+            total = total + _require_array(value, f"_{field_name}")
+        return total
 
     def _get_lifting_dict(self) -> ContractSummaryMap:
         return {
@@ -1101,28 +1136,19 @@ class Summary:
                     ),
                     "_oil_lbt_expenditures_post_tax",
                 ),
-                "oil_depreciation": _require_array(
-                    _require_array(contract.oil_depreciation, "_oil_depreciation"),
-                    "_oil_depreciation",
+                "oil_depreciation": self._array_or_zeros(
+                    contract.oil_depreciation, contract.project_years
                 ),
-                "oil_non_capital": _require_array(
-                    _require_array(contract.oil_non_capital, "_oil_non_capital"),
-                    "_oil_non_capital",
-                ),
+                "oil_non_capital": self._fluid_non_capital(contract, "oil"),
                 "oil_sunk_cost": _require_array(
                     _require_array(contract.oil_sunk_cost, "_oil_sunk_cost"),
                     "_oil_sunk_cost",
                 ),
-                "oil_undepreciated_asset": _require_scalar(
+                "oil_undepreciated_asset": self._scalar_or_zero(
                     contract.oil_sum_undepreciated_asset,
-                    "_oil_sum_undepreciated_asset",
                 ),
-                "oil_carry_forward_depreciation": _require_array(
-                    _require_array(
-                        contract.oil_carry_forward_depreciation,
-                        "_oil_carry_forward_depreciation",
-                    ),
-                    "_oil_carry_forward_depreciation",
+                "oil_carry_forward_depreciation": self._array_or_zeros(
+                    contract.oil_carry_forward_depreciation, contract.project_years
                 ),
                 "gas_depreciable": _require_array(
                     _require_array(
@@ -1159,28 +1185,19 @@ class Summary:
                     ),
                     "_gas_lbt_expenditures_post_tax",
                 ),
-                "gas_depreciation": _require_array(
-                    _require_array(contract.gas_depreciation, "_gas_depreciation"),
-                    "_gas_depreciation",
+                "gas_depreciation": self._array_or_zeros(
+                    contract.gas_depreciation, contract.project_years
                 ),
-                "gas_non_capital": _require_array(
-                    _require_array(contract.gas_non_capital, "_gas_non_capital"),
-                    "_gas_non_capital",
-                ),
+                "gas_non_capital": self._fluid_non_capital(contract, "gas"),
                 "gas_sunk_cost": _require_array(
                     _require_array(contract.gas_sunk_cost, "_gas_sunk_cost"),
                     "_gas_sunk_cost",
                 ),
-                "gas_undepreciated_asset": _require_scalar(
+                "gas_undepreciated_asset": self._scalar_or_zero(
                     contract.gas_sum_undepreciated_asset,
-                    "_gas_sum_undepreciated_asset",
                 ),
-                "gas_carry_forward_depreciation": _require_array(
-                    _require_array(
-                        contract.gas_carry_forward_depreciation,
-                        "_gas_carry_forward_depreciation",
-                    ),
-                    "_gas_carry_forward_depreciation",
+                "gas_carry_forward_depreciation": self._array_or_zeros(
+                    contract.gas_carry_forward_depreciation, contract.project_years
                 ),
                 "consolidated_depreciable": _require_array(
                     _require_array(
@@ -1252,35 +1269,28 @@ class Summary:
                     ),
                     "_gas_lbt_expenditures_post_tax",
                 ),
-                "consolidated_depreciation": _require_array(
-                    _require_array(contract.oil_depreciation, "_oil_depreciation"),
-                    "_oil_depreciation",
+                "consolidated_depreciation": self._array_or_zeros(
+                    contract.oil_depreciation, contract.project_years
                 )
-                + _require_array(contract.gas_depreciation, "_gas_depreciation"),
-                "consolidated_non_capital": _require_array(
-                    _require_array(contract.oil_non_capital, "_oil_non_capital"),
-                    "_oil_non_capital",
-                )
-                + _require_array(contract.gas_non_capital, "_gas_non_capital"),
+                + self._array_or_zeros(
+                    contract.gas_depreciation, contract.project_years
+                ),
+                "consolidated_non_capital": self._fluid_non_capital(contract, "oil")
+                + self._fluid_non_capital(contract, "gas"),
                 "consolidated_sunk_cost": _require_array(
                     _require_array(contract.oil_sunk_cost, "_oil_sunk_cost"),
                     "_oil_sunk_cost",
                 )
                 + _require_array(contract.gas_sunk_cost, "_gas_sunk_cost"),
-                "consolidated_undepreciated_asset": _require_scalar(
+                "consolidated_undepreciated_asset": self._scalar_or_zero(
                     contract.oil_sum_undepreciated_asset,
-                    "_oil_sum_undepreciated_asset",
                 )
-                + _require_scalar(
+                + self._scalar_or_zero(
                     contract.gas_sum_undepreciated_asset,
-                    "_gas_sum_undepreciated_asset",
                 ),
-                "consolidated_carry_forward_depreciation": _require_array(
-                    _require_array(
-                        contract.consolidated_carry_forward_depreciation,
-                        "_consolidated_carry_forward_depreciation",
-                    ),
-                    "_consolidated_carry_forward_depreciation",
+                "consolidated_carry_forward_depreciation": self._array_or_zeros(
+                    contract.consolidated_carry_forward_depreciation,
+                    contract.project_years,
                 ),
             }
             for idx, contract in enumerate(self._profiles)
@@ -1504,12 +1514,19 @@ class Summary:
                     if contract.contract_type == "cost_recovery"
                     else _require_array(
                         _require_array(
+                            contract.consolidated_ctr_share_before_tf,
+                            "_consolidated_ctr_share_before_tf",
+                        ),
+                        "_consolidated_ctr_share_before_tf",
+                    ),
+                    # 'consolidated_ctr_share': _require_array(contract.consolidated_contractor_share, "_consolidated_contractor_share") if contract.contract_type == "cost_recovery" else _require_array(contract.consolidated_ctr_share_after_transfer, "_consolidated_ctr_share_after_transfer"),
+                    "consolidated_ctr_net_share": _require_array(
+                        _require_array(
                             contract.consolidated_ctr_net_share,
                             "_consolidated_ctr_net_share",
                         ),
                         "_consolidated_ctr_net_share",
                     ),
-                    # 'consolidated_ctr_share': _require_array(contract.consolidated_contractor_share, "_consolidated_contractor_share") if contract.contract_type == "cost_recovery" else _require_array(contract.consolidated_ctr_share_after_transfer, "_consolidated_ctr_share_after_transfer"),
                     "consolidated_gov_share": _require_array(
                         _require_array(
                             contract.consolidated_government_share,
@@ -1725,6 +1742,102 @@ class Summary:
                     )
                     + _require_array(contract.gas_cashflow, "_gas_cashflow"),
                 }
+            elif contract.contract_type == "base_project":
+                # A base project has no production-sharing terms: the per-case
+                # summary reports zero government take and treats the gross
+                # revenue as the contractor gross share, with the consolidated
+                # cashflow as the contractor cashflow. These are the documented
+                # ``BaseProject.get_summary`` semantics, materialized as profile
+                # arrays so the combine/increment merge stays additive.
+                years = _require_years(contract.project_years)
+                zeros = np.zeros_like(years, dtype=np.float64)
+                oil_revenue = _require_array(contract.oil_revenue, "_oil_revenue")
+                gas_revenue = _require_array(contract.gas_revenue, "_gas_revenue")
+                consolidated_revenue = _require_array(
+                    contract.consolidated_revenue, "_consolidated_revenue"
+                )
+                oil_cashflow = _require_array(contract.oil_cashflow, "_oil_cashflow")
+                gas_cashflow = _require_array(contract.gas_cashflow, "_gas_cashflow")
+                consolidated_cashflow = _require_array(
+                    contract.consolidated_cashflow, "_consolidated_cashflow"
+                )
+                # Documented base-project net share: gross revenue less the
+                # tangible/intangible investment and the opex/ASR/LBT charges
+                # (BaseProject.get_summary). No production-sharing terms apply.
+                ctr_net_share = (
+                    consolidated_revenue
+                    - _require_array(
+                        contract.oil_capital_expenditures_post_tax,
+                        "_oil_capital_expenditures_post_tax",
+                    )
+                    - _require_array(
+                        contract.gas_capital_expenditures_post_tax,
+                        "_gas_capital_expenditures_post_tax",
+                    )
+                    - _require_array(
+                        contract.oil_intangible_expenditures_post_tax,
+                        "_oil_intangible_expenditures_post_tax",
+                    )
+                    - _require_array(
+                        contract.gas_intangible_expenditures_post_tax,
+                        "_gas_intangible_expenditures_post_tax",
+                    )
+                    - _require_array(
+                        contract.oil_opex_expenditures_post_tax,
+                        "_oil_opex_expenditures_post_tax",
+                    )
+                    - _require_array(
+                        contract.gas_opex_expenditures_post_tax,
+                        "_gas_opex_expenditures_post_tax",
+                    )
+                    - _require_array(
+                        contract.oil_asr_expenditures_post_tax,
+                        "_oil_asr_expenditures_post_tax",
+                    )
+                    - _require_array(
+                        contract.gas_asr_expenditures_post_tax,
+                        "_gas_asr_expenditures_post_tax",
+                    )
+                    - _require_array(
+                        contract.oil_lbt_expenditures_post_tax,
+                        "_oil_lbt_expenditures_post_tax",
+                    )
+                    - _require_array(
+                        contract.gas_lbt_expenditures_post_tax,
+                        "_gas_lbt_expenditures_post_tax",
+                    )
+                )
+                result[idx] = {
+                    "years": years,
+                    "oil_costrecovery_or_deductible_cost": zeros,
+                    "oil_unrecoverable_cost_or_carryforward_cost": zeros,
+                    "oil_ctr_share": oil_revenue,
+                    "oil_gov_share": zeros,
+                    "oil_effective_tax_payment": zeros,
+                    "oil_ddmo": zeros,
+                    "oil_ctr_take": oil_revenue,
+                    "oil_government_take": zeros,
+                    "oil_ctr_cashflow": oil_cashflow,
+                    "gas_costrecovery_or_deductible_cost": zeros,
+                    "gas_unrecoverable_cost_or_carryforward_cost": zeros,
+                    "gas_ctr_share": gas_revenue,
+                    "gas_gov_share": zeros,
+                    "gas_effective_tax_payment": zeros,
+                    "gas_ddmo": zeros,
+                    "gas_ctr_take": gas_revenue,
+                    "gas_government_take": zeros,
+                    "gas_ctr_cashflow": gas_cashflow,
+                    "consolidated_costrecovery_or_deductible_cost": zeros,
+                    "consolidated_unrecoverable_cost_or_carryforward_cost": zeros,
+                    "consolidated_ctr_share": consolidated_revenue,
+                    "consolidated_ctr_net_share": ctr_net_share,
+                    "consolidated_gov_share": zeros,
+                    "consolidated_effective_tax_payment": zeros,
+                    "consolidated_ddmo": zeros,
+                    "consolidated_ctr_take": consolidated_revenue,
+                    "consolidated_government_take": zeros,
+                    "consolidated_ctr_cashflow": consolidated_cashflow,
+                }
             else:
                 pass
 
@@ -1735,21 +1848,21 @@ class Summary:
             idx: {
                 "years": contract.project_years,
                 "oil_ftp_ctr": np.zeros_like(contract.project_years, dtype=float)
-                if contract.contract_type == "gross_split"
+                if contract.contract_type in {"gross_split", "base_project"}
                 else _require_array(contract.oil_ftp_ctr, "_oil_ftp_ctr"),
                 "oil_ftp_gov": np.zeros_like(contract.project_years, dtype=float)
-                if contract.contract_type == "gross_split"
+                if contract.contract_type in {"gross_split", "base_project"}
                 else _require_array(contract.oil_ftp_gov, "_oil_ftp_gov"),
                 "gas_ftp_ctr": np.zeros_like(contract.project_years, dtype=float)
-                if contract.contract_type == "gross_split"
+                if contract.contract_type in {"gross_split", "base_project"}
                 else _require_array(contract.gas_ftp_ctr, "_gas_ftp_ctr"),
                 "gas_ftp_gov": np.zeros_like(contract.project_years, dtype=float)
-                if contract.contract_type == "gross_split"
+                if contract.contract_type in {"gross_split", "base_project"}
                 else _require_array(contract.gas_ftp_gov, "_gas_ftp_gov"),
                 "consolidated_ctr_ftp": np.zeros_like(
                     contract.project_years, dtype=float
                 )
-                if contract.contract_type == "gross_split"
+                if contract.contract_type in {"gross_split", "base_project"}
                 else (
                     _require_array(contract.oil_ftp_ctr, "_oil_ftp_ctr")
                     + _require_array(contract.gas_ftp_ctr, "_gas_ftp_ctr")
@@ -1757,7 +1870,7 @@ class Summary:
                 "consolidated_gov_ftp": np.zeros_like(
                     contract.project_years, dtype=float
                 )
-                if contract.contract_type == "gross_split"
+                if contract.contract_type in {"gross_split", "base_project"}
                 else (
                     _require_array(contract.oil_ftp_gov, "_oil_ftp_gov")
                     + _require_array(contract.gas_ftp_gov, "_gas_ftp_gov")
@@ -2109,6 +2222,9 @@ class Summary:
             psc_terms["consolidated_unrecoverable_cost_or_carryforward_cost"]
         )
         self.consolidated_ctr_share = _float_array(psc_terms["consolidated_ctr_share"])
+        self.consolidated_ctr_net_share = _float_array(
+            psc_terms["consolidated_ctr_net_share"]
+        )
         self.consolidated_gov_share = _float_array(psc_terms["consolidated_gov_share"])
         self.consolidated_effective_tax_payment = _float_array(
             psc_terms["consolidated_effective_tax_payment"]
@@ -2417,18 +2533,8 @@ class Summary:
         gross_revenue = gross_revenue_oil + gross_revenue_gas
 
         # WAP Group
-        oil_wap = np.divide(
-            gross_revenue_oil,
-            lifting_oil,
-            out=np.zeros_like(gross_revenue_oil),
-            where=_is_nonzero(lifting_oil),
-        )
-        gas_wap = np.divide(
-            gross_revenue_gas,
-            lifting_gas,
-            out=np.zeros_like(gross_revenue_gas),
-            where=_is_nonzero(lifting_gas),
-        )
+        oil_wap = _ratio_float(gross_revenue_oil, lifting_oil)
+        gas_wap = _ratio_float(gross_revenue_gas, lifting_gas)
 
         # Contractor and Government Gross share
         ctr_gross_share = _sum_float(self._require_array(self.consolidated_ctr_share))
@@ -2460,45 +2566,27 @@ class Summary:
         costrecovery_or_deductible_cost = _sum_float(
             self._require_array(self.consolidated_costrecovery_or_deductible_cost)
         )
-        cost_recovery_over_gross_rev = np.divide(
-            costrecovery_or_deductible_cost,
-            gross_revenue,
-            out=np.zeros_like(costrecovery_or_deductible_cost),
-            where=_is_nonzero(gross_revenue),
+        cost_recovery_over_gross_rev = _ratio_float(
+            costrecovery_or_deductible_cost, gross_revenue
         )
 
-        # Unrecoverable Cost
+        # Unrecoverable Cost (terminal balance, matching the per-case summary)
         unrec_cost = _sum_float(
             self._require_array(
                 self.consolidated_unrecoverable_cost_or_carryforward_cost
-            )
+            )[-1:]
         )
-        unrec_over_gross_rev = np.divide(
-            unrec_cost,
-            gross_revenue,
-            out=np.zeros_like(unrec_cost),
-            where=_is_nonzero(gross_revenue),
-        )
+        unrec_over_gross_rev = _ratio_float(unrec_cost, gross_revenue)
 
         # Contractor Net Share
-        ctr_share = _sum_float(self._require_array(self.consolidated_ctr_share))
-        ctr_net_share_over_gross_share = np.divide(
-            ctr_share,
-            gross_revenue,
-            out=np.zeros_like(ctr_share),
-            where=_is_nonzero(gross_revenue),
-        )
+        ctr_net_share = _sum_float(self._require_array(self.consolidated_ctr_net_share))
+        ctr_net_share_over_gross_share = _ratio_float(ctr_net_share, gross_revenue)
 
         # Contractor Net Cashflow
         ctr_net_cashflow = _sum_float(
             self._require_array(self.consolidated_ctr_cashflow)
         )
-        ctr_net_cashflow_over_gross_rev = np.divide(
-            ctr_net_cashflow,
-            gross_revenue,
-            out=np.zeros_like(ctr_net_cashflow),
-            where=_is_nonzero(gross_revenue),
-        )
+        ctr_net_cashflow_over_gross_rev = _ratio_float(ctr_net_cashflow, gross_revenue)
 
         # Contractor NPV
         self._calc_npv()
@@ -2531,10 +2619,7 @@ class Summary:
             self._require_array(self.consolidated_effective_tax_payment)
         )
         gov_take = _sum_float(self._require_array(self.consolidated_government_take))
-        result_zeros = np.zeros_like(gov_take, dtype=float)
-        gov_take_over_gross_rev = np.divide(
-            gov_take, gross_revenue, out=result_zeros, where=_is_nonzero(gross_revenue)
-        )
+        gov_take_over_gross_rev = _ratio_float(gov_take, gross_revenue)
 
         oil_indirect_taxes = _sum_float(
             self._require_array(self.oil_capital_indirect_tax)
@@ -2592,7 +2677,7 @@ class Summary:
             "cost_recovery_over_gross_rev": cost_recovery_over_gross_rev,
             "unrec_cost": unrec_cost,
             "unrec_over_gross_rev": unrec_over_gross_rev,
-            "ctr_net_share": ctr_share,
+            "ctr_net_share": ctr_net_share,
             "ctr_net_share_over_gross_share": ctr_net_share_over_gross_share,
             "ctr_net_cashflow": ctr_net_cashflow,
             "ctr_net_cashflow_over_gross_rev": ctr_net_cashflow_over_gross_rev,

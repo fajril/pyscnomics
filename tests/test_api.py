@@ -4,10 +4,10 @@ Run: uv run pytest tests/test_api.py -v
 """
 
 import asyncio
-from collections.abc import Coroutine, Mapping
+from collections.abc import Callable, Coroutine, Mapping
 from datetime import date
 import math
-from typing import Protocol, TypeGuard, final
+from typing import Protocol, TypeGuard, cast, final
 
 import numpy as np
 import pandas as pd
@@ -61,6 +61,7 @@ def test_cost_input_mapping_rejects_malformed_nested_record() -> None:
 class _Response(Protocol):
     status_code: int
     headers: Mapping[str, str]
+    text: str
 
     def json(self) -> object: ...
 
@@ -126,7 +127,17 @@ def _data_request() -> Data:
 def _cases_request() -> CasesRequestBM:
     return CasesRequestBM.model_validate(
         {
-            "cases": [{"cId": 1, "ctr": 1, "data": {}}],
+            "cases": [
+                {
+                    "cId": 1,
+                    "ctr": 1,
+                    "data": {
+                        "setup": {},
+                        "summary_arguments": {},
+                        "contract_arguments": {},
+                    },
+                }
+            ],
             "options": {"reference_year": 2023},
         }
     )
@@ -223,21 +234,36 @@ def _transition_child_payload(scheme: str) -> dict[str, object]:
     return data
 
 
-def _transition_payload() -> dict[str, object]:
+def _transition_summary_arguments() -> dict[str, object]:
     return {
-        "contract_1": _transition_child_payload("cr"),
-        "contract_2": _transition_child_payload("gs"),
-        "contract_arguments": {"unrec_portion": 0.0},
-        "summary_arguments": {
-            "reference_year": 2023,
-            "discount_rate_start_year": 2023,
-            "inflation_rate": 0.0,
-            "discount_rate": 0.1,
-            "npv_mode": "SKK Full Cycle Nominal Terms",
-            "discounting_mode": "End Year",
-            "profitability_discounted": False,
-        },
+        "reference_year": 2023,
+        "discount_rate_start_year": 2023,
+        "inflation_rate": 0.0,
+        "discount_rate": 0.1,
+        "npv_mode": "SKK Full Cycle Nominal Terms",
+        "discounting_mode": "End Year",
+        "profitability_discounted": False,
     }
+
+
+def _transition_payload_for(scheme_1: str, scheme_2: str) -> dict[str, object]:
+    """Build one valid Transition payload for a CR/GS child combination."""
+    return {
+        "contract_1": _transition_child_payload(scheme_1),
+        "contract_2": _transition_child_payload(scheme_2),
+        "contract_arguments": {"unrec_portion": 0.0},
+        "summary_arguments": _transition_summary_arguments(),
+    }
+
+
+def _transition_payload() -> dict[str, object]:
+    return _transition_payload_for("cr", "gs")
+
+
+def _costrecovery_payload() -> dict[str, object]:
+    payload = _transition_child_payload("cr")
+    payload["summary_arguments"] = _transition_summary_arguments()
+    return payload
 
 
 # ── GET endpoints ──────────────────────────────────────────────────
@@ -574,6 +600,7 @@ class TestCostTypeSchema:
             "setup": {
                 "start_date": "01/01/2023",
                 "end_date": "31/12/2027",
+                "is_strict": False,
             },
             "summary_arguments": {},
             "contract_arguments": {},
@@ -770,6 +797,17 @@ class TestTransitionUncertainty:
             def run(self, **_kwargs: object) -> None:
                 pass
 
+        @final
+        class FakeSummary:
+            def __init__(self, **kwargs: object) -> None:
+                calls.update(kwargs)
+
+            def run(self) -> None:
+                pass
+
+            def get_summary_dict(self) -> dict[str, object]:
+                return {}
+
         def fake_costrecovery(
             data: dict[str, object], summary_result: bool = True
         ) -> tuple[None, object, dict[str, object], None]:
@@ -777,16 +815,12 @@ class TestTransitionUncertainty:
             assert summary_result is False
             return None, object(), {}, None
 
-        def fake_summary(**kwargs: object) -> dict[str, object]:
-            calls.update(kwargs)
-            return {}
-
         def identity_summary(dict_object: Mapping[str, object]) -> dict[str, object]:
             return dict(dict_object)
 
         monkeypatch.setattr(adapter, "Transition", FakeTransition)
         monkeypatch.setattr(adapter, "get_costrecovery", fake_costrecovery)
-        monkeypatch.setattr(adapter, "get_summary", fake_summary)
+        monkeypatch.setattr(adapter, "SingleContractSummary", FakeSummary)
         monkeypatch.setattr(adapter, "convert_summary_to_dict", identity_summary)
 
         payload: dict[str, object] = {
@@ -831,6 +865,17 @@ class TestTransitionUncertainty:
             def run(self, **_kwargs: object) -> None:
                 pass
 
+        @final
+        class FakeSummary:
+            def __init__(self, **kwargs: object) -> None:
+                calls.update(kwargs)
+
+            def run(self) -> None:
+                pass
+
+            def get_summary_dict(self) -> dict[str, object]:
+                return {}
+
         def fake_costrecovery(
             data: dict[str, object], summary_result: bool = True
         ) -> tuple[None, object, dict[str, object], None]:
@@ -838,16 +883,12 @@ class TestTransitionUncertainty:
             assert summary_result is False
             return None, object(), {}, None
 
-        def fake_summary(**kwargs: object) -> dict[str, object]:
-            calls.update(kwargs)
-            return {}
-
         def identity_summary(dict_object: Mapping[str, object]) -> dict[str, object]:
             return dict(dict_object)
 
         monkeypatch.setattr(adapter, "Transition", FakeTransition)
         monkeypatch.setattr(adapter, "get_costrecovery", fake_costrecovery)
-        monkeypatch.setattr(adapter, "get_summary", fake_summary)
+        monkeypatch.setattr(adapter, "SingleContractSummary", FakeSummary)
         monkeypatch.setattr(adapter, "convert_summary_to_dict", identity_summary)
 
         summary_arguments: dict[str, object] = {
@@ -1597,3 +1638,313 @@ class TestTransitionTableRealEndpoint:
                 else:
                     actual_value = actual
                     assert actual_value == expected
+
+
+class TestTransitionSummaryRealEndpoint:
+    """Real (non-monkeypatched) valid Transition executive-summary regression.
+
+    The previous Transition summary tests only used an invalid 422 payload or
+    stubbed ``adapter.get_summary``; these exercise the real four CR/GS
+    combinations plus a real combine/increment Transition case.
+    """
+
+    COMBINATIONS: list[tuple[str, str]] = [
+        ("cr", "cr"),
+        ("cr", "gs"),
+        ("gs", "cr"),
+        ("gs", "gs"),
+    ]
+
+    @pytest.mark.parametrize(("scheme_1", "scheme_2"), COMBINATIONS)
+    def test_transition_summary_routes_return_200(
+        self, scheme_1: str, scheme_2: str
+    ) -> None:
+        payload = _transition_payload_for(scheme_1, scheme_2)
+
+        summary = client.post("/api/transition", json=payload)
+        assert summary.status_code == 200
+        summary_body = _response_body(summary)
+        assert "execution_info" in summary_body
+
+        detailed = client.post("/api/transition/detailed_summary", json=payload)
+        assert detailed.status_code == 200
+        assert _is_record(detailed.json())
+
+        warnings = client.post("/api/transition/warnings", json=payload)
+        assert warnings.status_code == 200
+        assert isinstance(warnings.json(), list)
+
+    @pytest.mark.parametrize(("scheme_1", "scheme_2"), COMBINATIONS)
+    def test_transition_summary_has_costrecovery_output_shape(
+        self, scheme_1: str, scheme_2: str
+    ) -> None:
+        """The Transition response must match the convert_summary_to_dict shape."""
+        summary_body = _response_body(
+            client.post("/api/transition", json=_transition_payload_for(scheme_1, scheme_2))
+        )
+        costrecovery_body = _response_body(
+            client.post("/api/costrecovery", json=_costrecovery_payload())
+        )
+        assert set(summary_body) == set(costrecovery_body)
+
+    @pytest.mark.parametrize(("scheme_1", "scheme_2"), COMBINATIONS)
+    def test_transition_summary_matches_table_profiles(
+        self, scheme_1: str, scheme_2: str
+    ) -> None:
+        """Executive-summary aggregates must reproduce the transition table."""
+        payload = _transition_payload_for(scheme_1, scheme_2)
+        summary_body = _response_body(client.post("/api/transition", json=payload))
+        table_body = _response_body(client.post("/api/transition/table", json=payload))
+
+        def table_sum(column: str) -> float:
+            total = 0.0
+            for side in ("contract_1", "contract_2"):
+                side_value = table_body[side]
+                assert _is_record(side_value)
+                for fluid in ("oil", "gas"):
+                    fluid_value = side_value[fluid]
+                    assert _is_record(fluid_value)
+                    column_value = fluid_value[column]
+                    assert _is_record(column_value)
+                    total += sum(
+                        float(value)
+                        for value in column_value.values()
+                        if isinstance(value, (int, float))
+                    )
+            return total
+
+        gross_revenue = summary_body["gross_revenue"]
+        sunk_cost = summary_body["sunk_cost"]
+        assert isinstance(gross_revenue, (int, float))
+        assert isinstance(sunk_cost, (int, float))
+        assert math.isclose(float(gross_revenue), table_sum("revenue"), rel_tol=1e-9)
+        assert math.isclose(float(sunk_cost), table_sum("sunk_cost"), rel_tol=1e-9)
+
+    @pytest.mark.parametrize(("scheme_1", "scheme_2"), COMBINATIONS)
+    def test_combine_increment_transition_case_returns_200(
+        self, scheme_1: str, scheme_2: str
+    ) -> None:
+        payload = _transition_payload_for(scheme_1, scheme_2)
+        summary_arguments = payload["summary_arguments"]
+        assert _is_mapping(summary_arguments)
+        options = {
+            "reference_year": summary_arguments["reference_year"],
+            "discount_rate_start_year": summary_arguments["discount_rate_start_year"],
+            "inflation_rate": summary_arguments["inflation_rate"],
+            "discount_rate": summary_arguments["discount_rate"],
+            "npv_mode": summary_arguments["npv_mode"],
+            "discounting_mode": summary_arguments["discounting_mode"],
+            "profitability_discounted": summary_arguments["profitability_discounted"],
+        }
+        request = {"cases": [{"cId": 3, "ctr": 3, "data": payload}], "options": options}
+        transition_summary = _response_body(
+            client.post("/api/transition", json=payload)
+        )
+
+        for route, key in (("/api/combine", "combine"), ("/api/increment", "increment")):
+            response = client.post(route, json=request)
+            assert response.status_code == 200, route
+            body = _response_body(response)
+            rows = body[key]
+            assert _is_record_list(rows)
+            assert rows[0]["ctr"] == 3
+            merged = rows[-1]
+            assert merged["cId"] == 0
+            merged_summary = merged["summary"]
+            assert _is_record(merged_summary)
+            case_summary = rows[0]["summary"]
+            assert _is_record(case_summary)
+            assert set(merged_summary) == set(case_summary) - {"execution_info"}
+            for field, value in merged_summary.items():
+                expected = transition_summary[field]
+                assert isinstance(value, (int, float))
+                assert isinstance(expected, (int, float))
+                assert math.isclose(float(value), float(expected), rel_tol=1e-9)
+
+
+# ── Real combine / increment aggregation (non-monkeypatched) ─────────
+
+
+def _grosssplit_payload() -> dict[str, object]:
+    """Standalone Gross Split payload built from bundled repository evidence."""
+    payload = _transition_child_payload("gs")
+    payload["summary_arguments"] = _transition_summary_arguments()
+    return payload
+
+
+def _baseproject_payload() -> dict[str, object]:
+    """Standalone Base Project payload (no CR/GS contract map)."""
+    payload = _transition_child_payload("gs")
+    payload["grosssplit"] = None
+    payload["costrecovery"] = None
+    payload["summary_arguments"] = _transition_summary_arguments()
+    return payload
+
+
+def _combine_arguments(
+    cases: list[tuple[int, dict[str, object]]],
+) -> dict[str, object]:
+    """Build a frontend-shaped combine/increment request from (ctr, data) pairs."""
+    summary_arguments = _transition_summary_arguments()
+    return {
+        "cases": [
+            {"cId": index + 1, "ctr": ctr, "data": data}
+            for index, (ctr, data) in enumerate(cases)
+        ],
+        "options": {
+            "reference_year": summary_arguments["reference_year"],
+            "inflation_rate": summary_arguments["inflation_rate"],
+            "discount_rate": summary_arguments["discount_rate"],
+            "npv_mode": summary_arguments["npv_mode"],
+            "discounting_mode": summary_arguments["discounting_mode"],
+            "profitability_discounted": summary_arguments["profitability_discounted"],
+        },
+    }
+
+
+class TestCombineIncrementRealEndpoint:
+    """Real (non-monkeypatched) combine/increment aggregation regressions.
+
+    The derived row must reproduce a single case exactly and, for several
+    cases, the documented element-wise combination: ``combine`` adds every
+    case and ``increment`` subtracts the trailing cases from the first. The
+    contractor NPV is re-derived from the per-case consolidated cashflow
+    tables so the merge is anchored on the table results, not on the
+    summarizer that produced it.
+    """
+
+    _CASE_BUILDERS: list[tuple[str, int, Callable[[], dict[str, object]]]] = [
+        ("CR", 1, _costrecovery_payload),
+        ("GS", 2, _grosssplit_payload),
+        ("Base", 0, _baseproject_payload),
+        ("Transition", 3, lambda: _transition_payload_for("cr", "gs")),
+    ]
+    # Additive fields are everything except the recomputed scalar indicators.
+    _INDICATOR_TOKENS: tuple[str, ...] = (
+        "npv",
+        "irr",
+        "pot",
+        "pv_ratio",
+        "pi",
+        "_wap",
+        "over_",
+    )
+
+    @staticmethod
+    def _merged_rows(
+        route: str, cases: list[tuple[int, dict[str, object]]]
+    ) -> list[dict[str, object]]:
+        response = client.post(route, json=_combine_arguments(cases))
+        assert response.status_code == 200, response.text
+        key = "combine" if route.endswith("combine") else "increment"
+        rows = _response_body(response)[key]
+        assert _is_record_list(rows)
+        return rows
+
+    @pytest.mark.parametrize("route", ["/api/combine", "/api/increment"])
+    @pytest.mark.parametrize(("name", "ctr", "builder"), _CASE_BUILDERS)
+    def test_single_case_derived_equals_contract_summary(
+        self,
+        route: str,
+        name: str,
+        ctr: int,
+        builder: Callable[[], dict[str, object]],
+    ) -> None:
+        """Combine/increment of one case equals that case's summary values."""
+        payload = builder()
+        rows = self._merged_rows(route, [(ctr, payload)])
+        assert [row["ctr"] for row in rows] == [ctr, -1]
+        case_summary = rows[0]["summary"]
+        derived = rows[-1]["summary"]
+        assert _is_record(case_summary)
+        assert _is_record(derived)
+        assert derived, name
+        for field, value in derived.items():
+            assert field in case_summary, f"{name}: {field} missing from case summary"
+            expected = case_summary[field]
+            assert isinstance(value, (int, float)), f"{name}:{field}"
+            assert isinstance(expected, (int, float)), f"{name}:{field}"
+            assert math.isclose(
+                float(value), float(expected), rel_tol=1e-9, abs_tol=1e-9
+            ), f"{name}:{field}"
+
+    @pytest.mark.parametrize(
+        ("route", "mode"),
+        [("/api/combine", "combine"), ("/api/increment", "increment")],
+    )
+    def test_multi_case_aggregate_matches_per_case_combination(
+        self, route: str, mode: str
+    ) -> None:
+        """Multi-case aggregate equals the documented per-case combination."""
+        cases = [
+            (1, _costrecovery_payload()),
+            (2, _grosssplit_payload()),
+            (0, _baseproject_payload()),
+        ]
+        rows = self._merged_rows(route, cases)
+        per_case = rows[:-1]
+        derived = rows[-1]["summary"]
+        assert _is_record(derived)
+        assert [row["ctr"] for row in per_case] == [1, 2, 0]
+
+        checked = 0
+        for field, value in derived.items():
+            if any(token in field for token in self._INDICATOR_TOKENS):
+                continue
+            values: list[float] = []
+            for row in per_case:
+                summary = row["summary"]
+                assert _is_record(summary)
+                assert field in summary, field
+                raw = summary[field]
+                assert isinstance(raw, (int, float)), field
+                values.append(float(raw))
+            expected = sum(values) if mode == "combine" else values[0] - sum(values[1:])
+            assert isinstance(value, (int, float)), field
+            assert math.isclose(float(value), expected, rel_tol=1e-6, abs_tol=1e-6), (
+                f"{field}: derived={value} expected={expected}"
+            )
+            checked += 1
+        assert checked >= 20
+
+        # Re-derive the contractor NPV from the per-case consolidated cashflow
+        # tables so the merge is anchored on the table results.
+        cashflow_column = {0: "cashflow", 1: "cashflow", 2: "ctr_cashflow"}
+        year_keys: set[int] = set()
+        for row in per_case:
+            table = row["table_consolidated"]
+            assert _is_record(table)
+            series = table[cashflow_column[cast("int", row["ctr"])]]
+            assert _is_record(series)
+            year_keys.update(int(year) for year in series)
+        years = list(range(min(year_keys), max(year_keys) + 1))
+        merged_cashflow = np.zeros(len(years), dtype=np.float64)
+        for index, row in enumerate(per_case):
+            table = row["table_consolidated"]
+            assert _is_record(table)
+            series = table[cashflow_column[cast("int", row["ctr"])]]
+            assert _is_record(series)
+            sign = 1.0 if (index == 0 or mode == "combine") else -1.0
+            for year, column_value in series.items():
+                if not isinstance(column_value, (int, float)):
+                    continue
+                position = years.index(int(year))
+                merged_cashflow[position] += sign * float(column_value)
+
+        from pyscnomics.econ.indicator import npv_skk_nominal_terms
+        from pyscnomics.econ.selection import DiscountingMode
+
+        expected_npv = npv_skk_nominal_terms(
+            cashflow=merged_cashflow,
+            cashflow_years=np.array(years, dtype=np.int64),
+            discount_rate=float(
+                cast("float", _transition_summary_arguments()["discount_rate"])
+            ),
+            discounting_mode=DiscountingMode.END_YEAR,
+        )
+        assert math.isclose(
+            float(cast("float", derived["ctr_npv"])),
+            float(expected_npv),
+            rel_tol=1e-9,
+            abs_tol=1e-6,
+        )

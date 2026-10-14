@@ -49,6 +49,17 @@ from pyscnomics.econ.indicator import (
     npv_point_forward,
     pot_psc,
 )
+from pyscnomics.input_validation import InputValidationError, engine_input_issue
+from pyscnomics.validation_rules import (
+    contains_negative,
+    cum_split_offset_length_mismatch,
+    fraction_value_out_of_range,
+    length_exceeds_project,
+    missing_variable_split_components,
+    nonzero_indices,
+    variable_split_enforced,
+    variable_split_required_components,
+)
 
 pd.set_option("display.max_rows", 200)
 pd.set_option("display.max_columns", 50)
@@ -122,6 +133,34 @@ class GrossSplitSummaryException(Exception):
     """Exception to be raised for a misuse of get_summary() method"""
 
     pass
+
+
+class GrossSplitInputError(  # pyright: ignore[reportUnsafeMultipleInheritance]
+    GrossSplitException, InputValidationError
+):
+    """Verified user-input Gross Split error retaining ``GrossSplitException``."""
+
+    _input_code: str = "GROSS_SPLIT_INPUT_INVALID"
+
+    def __init__(self, message: str, *, code: str | None = None) -> None:
+        InputValidationError.__init__(
+            self,
+            (engine_input_issue(code=code or self._input_code, message=message),),
+        )
+
+
+class CumulativeProductionSplitInputError(  # pyright: ignore[reportUnsafeMultipleInheritance]
+    CumulativeProductionSplitException, InputValidationError
+):
+    """Verified cumulative-split offset error retaining the domain superclass."""
+
+    _input_code: str = "GS_CUM_PRODUCTION_SPLIT_OFFSET_LENGTH"
+
+    def __init__(self, message: str, *, code: str | None = None) -> None:
+        InputValidationError.__init__(
+            self,
+            (engine_input_issue(code=code or self._input_code, message=message),),
+        )
 
 
 def _require_variable_split_value(value: str | Enum | None) -> str | Enum:
@@ -711,11 +750,12 @@ class GrossSplit(BaseProject):
         )
 
         for attr_name, attr in fraction_attributes:
-            if not (min_fraction <= attr <= max_fraction):
+            if fraction_value_out_of_range(attr, min_fraction, max_fraction):
                 range_type = "exceeding 1.0" if attr > max_fraction else "below 0.0"
-                raise GrossSplitException(
+                raise GrossSplitInputError(
                     f"The {attr_name} value ({attr}) is {range_type}. "
-                    + f"Allowed range: {min_fraction} - {max_fraction}."
+                    + f"Allowed range: {min_fraction} - {max_fraction}.",
+                    code="GS_ATTRIBUTE_OUT_OF_RANGE",
                 )
 
         # Prepare attributes associated with DMO holiday
@@ -725,10 +765,11 @@ class GrossSplit(BaseProject):
         )
 
         for attr_name, attr in discrete_attributes:
-            if attr < 0:
-                raise GrossSplitException(
+            if contains_negative([attr]):
+                raise GrossSplitInputError(
                     f"The {attr_name} value, {attr}, is below 0. "
-                    + "The minimum value for this attribute is 0."
+                    + "The minimum value for this attribute is 0.",
+                    code="GS_ATTRIBUTE_NEGATIVE",
                 )
 
         # Prepare attributes associated with carry forward depreciation
@@ -751,14 +792,18 @@ class GrossSplit(BaseProject):
                 )
 
             # Check for negative values
-            if np.any(array_value < 0):
-                raise GrossSplitException(f"The {attr_name} contains negative values")
+            if contains_negative(array_value):
+                raise GrossSplitInputError(
+                    f"The {attr_name} contains negative values",
+                    code="GS_CARRY_FORWARD_NEGATIVE",
+                )
 
             # Check length exceeding project duration
-            if len(array_value) > self.project_duration:
-                raise GrossSplitException(
+            if length_exceeds_project(len(array_value), self.project_duration):
+                raise GrossSplitInputError(
                     f"The {attr_name} length ({len(array_value)}) exceeds "
-                    + f"project duration ({self.project_duration})."
+                    + f"project duration ({self.project_duration}).",
+                    code="GS_CARRY_FORWARD_TOO_LONG",
                 )
 
             # Modify 'carward_depr' to array with length equals to project duration
@@ -804,12 +849,15 @@ class GrossSplit(BaseProject):
         """
 
         if isinstance(cum_production_split_offset, np.ndarray):
-            if len(cum_production_split_offset) != self.project_duration:
-                raise CumulativeProductionSplitException(
+            if cum_split_offset_length_mismatch(
+                len(cum_production_split_offset), self.project_duration
+            ):
+                raise CumulativeProductionSplitInputError(
                     "Length of the cum_production_split_offset: "
                     + f"({len(cum_production_split_offset)}) "
                     + "is different from the length of project years: "
-                    + f"{self.project_duration}"
+                    + f"{self.project_duration}",
+                    code="GS_CUM_PRODUCTION_SPLIT_OFFSET_LENGTH",
                 )
 
     def _check_invalid_non_capital_costs(
@@ -849,7 +897,11 @@ class GrossSplit(BaseProject):
         expense_years: YearArray = np.asarray(
             obj_non_capital.expense_year, dtype=np.int64
         )
-        nonzero_mask: BoolArray = np.asarray(costs != 0, dtype=np.bool_)
+        # Use the shared per-row non-zero predicate so the engine and preflight
+        # classify exactly the same rows.
+        nonzero_mask = np.zeros(len(costs), dtype=np.bool_)
+        for nonzero_index in nonzero_indices(costs):
+            nonzero_mask[nonzero_index] = True
 
         # Exit early if all sunk costs are zeros
         if not np.any(nonzero_mask):
@@ -886,7 +938,7 @@ class GrossSplit(BaseProject):
 
         # Strict mode: raise an error and stop execution
         if is_strict:
-            raise GrossSplitException(msg_error)
+            raise GrossSplitInputError(msg_error, code="GS_POD1_NONCAPITAL")
 
         # Loose mode: record a warning message, validate PIS years with onstream year,
         # and continue execution
@@ -935,7 +987,11 @@ class GrossSplit(BaseProject):
         # Identify nonzero sunk costs
         costs: FloatArray = np.asarray(sc_object.cost, dtype=np.float64)
         expense_years: YearArray = np.asarray(sc_object.expense_year, dtype=np.int64)
-        nonzero_mask: BoolArray = np.asarray(costs != 0, dtype=np.bool_)
+        # Use the shared per-row non-zero predicate so the engine and preflight
+        # classify exactly the same rows.
+        nonzero_mask = np.zeros(len(costs), dtype=np.bool_)
+        for nonzero_index in nonzero_indices(costs):
+            nonzero_mask[nonzero_index] = True
 
         # Exit early if all sunk costs are zeros
         if not np.any(nonzero_mask):
@@ -970,7 +1026,7 @@ class GrossSplit(BaseProject):
 
         # Strict mode: raise an error and stop execution
         if is_strict:
-            raise GrossSplitException(msg_error)
+            raise GrossSplitInputError(msg_error, code="GS_NONPOD1_SUNK_COST")
 
         # Loose mode: record a warning message, validate PIS years with onstream year,
         # and continue execution
@@ -2209,6 +2265,33 @@ class GrossSplit(BaseProject):
         elif reservoir_type == VariableSplit132024.ReservoirType.MNK:
             self._variable_split = 0.46
 
+    def _require_variable_split_components(
+        self,
+        regime: GrossSplitRegime | str,
+        reservoir_type: VariableSplit132024.ReservoirType,
+    ) -> None:
+        """Raise when the active regime's variable-split components are unset.
+
+        Mirrors ``_require_variable_split_value`` but reports the missing
+        components through the shared, user-input predicate so an incomplete
+        split block is a structured input error rather than an internal failure.
+        """
+        # The shared predicate is regime-generic; enforcement is scoped to the
+        # regimes the current editor uses (see ``GS_ENFORCED_REGIME_CODES``).
+        if not variable_split_enforced(regime):
+            return
+        names = variable_split_required_components(regime, reservoir_type)
+        if not names:
+            return
+        components = {name: getattr(self, name, None) for name in names}
+        missing = missing_variable_split_components(components)
+        if missing:
+            raise GrossSplitInputError(
+                "Variable split components cannot be None: "
+                + ", ".join(missing),
+                code="GS_VARIABLE_SPLIT_COMPONENT_MISSING",
+            )
+
     def _wrapper_variable_split(
         self,
         regime: GrossSplitRegime | str,
@@ -2266,6 +2349,13 @@ class GrossSplit(BaseProject):
           while keeping the regime-specific logic encapsulated in dedicated
           helper methods.
         """
+
+        # The active regime's variable split cannot be computed without all of
+        # its components; a missing component is user input, not an internal
+        # failure. The shared predicate is the same one the API preflight uses.
+        self._require_variable_split_components(
+            regime=regime, reservoir_type=reservoir_type
+        )
 
         # For fiscal regime following PERMEN ESDM No. 8 Year 2017
         if regime == GrossSplitRegime.PERMEN_ESDM_8_2017:

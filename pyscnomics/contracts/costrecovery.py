@@ -38,6 +38,15 @@ from pyscnomics.econ.indicator import (
     npv_point_forward,
     pot_psc,
 )
+from pyscnomics.input_validation import InputValidationError, engine_input_issue
+from pyscnomics.validation_rules import (
+    condition_dict_is_mixed_form,
+    contains_negative,
+    fraction_value_out_of_range,
+    length_exceeds_project,
+    length_mismatch,
+    nonzero_indices,
+)
 
 # Set display for pandas dataframe
 pd.set_option("display.max_rows", 200)
@@ -74,6 +83,20 @@ class CostRecoverySummaryException(Exception):
     """Exception to be raised for a misuse of get_summary() method"""
 
     pass
+
+
+class CostRecoveryInputError(  # pyright: ignore[reportUnsafeMultipleInheritance]
+    CostRecoveryException, InputValidationError
+):
+    """Verified user-input Cost Recovery error retaining ``CostRecoveryException``."""
+
+    _input_code: str = "COST_RECOVERY_INPUT_INVALID"
+
+    def __init__(self, message: str, *, code: str | None = None) -> None:
+        InputValidationError.__init__(
+            self,
+            (engine_input_issue(code=code or self._input_code, message=message),),
+        )
 
 
 def _as_float_array(values: object, name: str) -> FloatArray:
@@ -786,18 +809,20 @@ class CostRecovery(BaseProject):
         for attr_name, attr in fraction_attributes:
             if isinstance(attr, (int, float)):
                 value = _as_float(attr, attr_name)
-                if not (min_fraction <= value <= max_fraction):
+                if fraction_value_out_of_range(value, min_fraction, max_fraction):
                     range_type = (
                         "exceeding 1.0" if value > max_fraction else "below 0.0"
                     )
-                    raise CostRecoveryException(
-                        f"The {attr_name} value ({value}) is {range_type}. Allowed range: {min_fraction} - {max_fraction}."
+                    raise CostRecoveryInputError(
+                        f"The {attr_name} value ({value}) is {range_type}. Allowed range: {min_fraction} - {max_fraction}.",
+                        code="CR_ATTRIBUTE_OUT_OF_RANGE",
                     )
             else:
                 arr = _as_float_array(attr, attr_name)
-                if len(arr) != len(self.project_years):
-                    raise CostRecoveryException(
-                        f"The {attr_name} length is ({len(arr)}). The length of {attr_name} ({len(arr)}) is different from the length of the project {self.project_duration}"
+                if length_mismatch(len(arr), len(self.project_years)):
+                    raise CostRecoveryInputError(
+                        f"The {attr_name} length is ({len(arr)}). The length of {attr_name} ({len(arr)}) is different from the length of the project {self.project_duration}",
+                        code="CR_ATTRIBUTE_LENGTH_MISMATCH",
                     )
 
         # Prepare attributes associated with DMO holiday
@@ -807,9 +832,10 @@ class CostRecovery(BaseProject):
         )
 
         for attr_name, attr in discrete_attributes:
-            if attr < 0:
-                raise CostRecoveryException(
-                    f"The {attr_name} value ({attr}) is below 0. The minimum value of this attribute is 0. "
+            if contains_negative([attr]):
+                raise CostRecoveryInputError(
+                    f"The {attr_name} value ({attr}) is below 0. The minimum value of this attribute is 0. ",
+                    code="CR_ATTRIBUTE_NEGATIVE",
                 )
 
         # Prepare attributes associated with carry forward depreciation
@@ -821,12 +847,16 @@ class CostRecovery(BaseProject):
             else:
                 arr = _as_float_array(value, attr_name)
 
-            if np.any(arr < 0):
-                raise CostRecoveryException(f"The {attr_name} contains negative values")
+            if contains_negative(arr):
+                raise CostRecoveryInputError(
+                    f"The {attr_name} contains negative values",
+                    code="CR_CARRY_FORWARD_NEGATIVE",
+                )
 
-            if len(arr) > self.project_duration:
-                raise CostRecoveryException(
-                    f"The {attr_name} length ({len(arr)}) exceeds project duration ({self.project_duration})"
+            if length_exceeds_project(len(arr), self.project_duration):
+                raise CostRecoveryInputError(
+                    f"The {attr_name} length ({len(arr)}) exceeds project duration ({self.project_duration})",
+                    code="CR_CARRY_FORWARD_TOO_LONG",
                 )
 
             result = np.zeros_like(self.project_years, dtype=float)
@@ -876,12 +906,20 @@ class CostRecovery(BaseProject):
 
         first_key = next(iter(raw))
         first_value = raw[first_key]
+        if condition_dict_is_mixed_form(raw):
+            raise CostRecoveryInputError(
+                "condition_dict cannot mix normalized and column forms",
+                code="CR_CONDITION_DICT_MIXED_FORM",
+            )
         if isinstance(first_value, dict):
             normalized: RCICPConditions = {}
             for name, band in raw.items():
                 if not isinstance(band, dict):
-                    raise CostRecoveryException(
-                        "condition_dict cannot mix normalized and column forms"
+                    # Unreachable after the shared mixed-form check; kept so the
+                    # band value is narrowed for the type checker.
+                    raise CostRecoveryInputError(
+                        "condition_dict cannot mix normalized and column forms",
+                        code="CR_CONDITION_DICT_MIXED_FORM",
                     )
                 normalized[name] = {
                     "bot_limit": _as_float(band["bot_limit"], "bot_limit"),
@@ -946,7 +984,11 @@ class CostRecovery(BaseProject):
         expense_year = self._require_array(
             sc_capital_object.expense_year, f"{name}.expense_year"
         )
-        nonzero_mask = np.asarray(cost != 0.0, dtype=np.bool_)
+        # Use the shared per-row non-zero predicate so the engine and preflight
+        # classify exactly the same rows.
+        nonzero_mask = np.zeros(len(cost), dtype=np.bool_)
+        for nonzero_index in nonzero_indices(cost):
+            nonzero_mask[nonzero_index] = True
 
         # Exit early if all sunk costs are zeros
         if not np.any(nonzero_mask):
@@ -976,7 +1018,7 @@ class CostRecovery(BaseProject):
 
         # Strict mode: raise an error and stop execution
         if is_strict:
-            raise CostRecoveryException(msg_error)
+            raise CostRecoveryInputError(msg_error, code="CR_CAPITAL_SUNK_COST")
 
         # Loose mode: record a warning message, validate PIS years with onstream year,
         # and continue execution

@@ -4,6 +4,7 @@ This file is utilized for routing the API.
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from pyscnomics.api.errors import install_error_handlers
 from pyscnomics.api.router import router
 
 
@@ -27,6 +28,9 @@ print('\t')
 print('description = \n', description)
 
 app = FastAPI(title="PySCnomics", description=description, version="1.4.0")
+# Install handlers before CORS so the unexpected-failure middleware sits inside
+# the CORS middleware and its 500 responses keep the allowed-origin headers.
+install_error_handlers(app)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -36,6 +40,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["X-Request-ID"],
 )
 
 app.include_router(router)

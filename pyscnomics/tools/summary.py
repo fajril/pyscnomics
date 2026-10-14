@@ -18,12 +18,28 @@ from pyscnomics.econ.indicator import (
     npv_point_forward,
     pot_psc,
 )
+from pyscnomics.input_validation import InputValidationError, engine_input_issue
+from pyscnomics.validation_rules import reference_year_violation
 
 
 class SummaryException(Exception):
     """Exception to raise for a misuse of Summary Method"""
 
     pass
+
+
+class SummaryInputError(  # pyright: ignore[reportUnsafeMultipleInheritance]
+    SummaryException, InputValidationError
+):
+    """Verified user-input summary error retaining ``SummaryException``."""
+
+    _input_code: str = "SUMMARY_INPUT_INVALID"
+
+    def __init__(self, message: str, *, code: str | None = None) -> None:
+        InputValidationError.__init__(
+            self,
+            (engine_input_issue(code=code or self._input_code, message=message),),
+        )
 
 
 FloatArray = npt.NDArray[np.float64]
@@ -115,17 +131,22 @@ def get_summary(
     if reference_year is None:
         reference_year = contract_start_object
 
-    if reference_year < contract_start_object:
-        raise SummaryException(
+    direction = reference_year_violation(
+        reference_year, contract_start_object, contract_end_object
+    )
+    if direction == "before":
+        raise SummaryInputError(
             f"The Discounting Reference Year {reference_year} "
-            + f"is before the project years: {contract_start_object}"
+            + f"is before the project years: {contract_start_object}",
+            code="SUMMARY_REFERENCE_YEAR_OUTSIDE_PROJECT",
         )
 
     # Condition when the reference year is after than project end date year
-    if reference_year > contract_end_object:
-        raise SummaryException(
+    if direction == "after":
+        raise SummaryInputError(
             f"The Discounting Reference Year {reference_year} "
-            + f"is after the project years: {contract_end_object}"
+            + f"is after the project years: {contract_end_object}",
+            code="SUMMARY_REFERENCE_YEAR_OUTSIDE_PROJECT",
         )
 
     if not isinstance(contract, Transition):
@@ -1593,6 +1614,20 @@ class Summary:
     gov_take_over_gross_rev: float = field(default=0.0, init=False, repr=False)
     gov_take_npv: float = field(default=0.0, init=False, repr=False)
 
+    # Transition reporting residuals read from the post-run profile
+    lbt: float | np.float64 = field(default=0.0, init=False, repr=False)
+    oil_indirect_taxes: float | np.float64 = field(default=0.0, init=False, repr=False)
+    gas_indirect_taxes: float | np.float64 = field(default=0.0, init=False, repr=False)
+    total_indirect_taxes: float | np.float64 = field(default=0.0, init=False, repr=False)
+    undepreciated_asset_oil: float = field(default=0.0, init=False, repr=False)
+    undepreciated_asset_gas: float = field(default=0.0, init=False, repr=False)
+    undepreciated_asset_total: float = field(default=0.0, init=False, repr=False)
+    oil_carry_forward_depreciation: float = field(default=0.0, init=False, repr=False)
+    gas_carry_forward_depreciation: float = field(default=0.0, init=False, repr=False)
+    total_carry_forward_depreciation: float = field(
+        default=0.0, init=False, repr=False
+    )
+
     investment_npv: float | np.float64 = field(default=0.0, init=False, repr=False)
     investment_pi: float | np.float64 = field(default=0.0, init=False, repr=False)
     cost_recovery: float | np.float64 = field(default=0.0, init=False, repr=False)
@@ -1666,17 +1701,22 @@ class Summary:
         if self.reference_year is None:
             self.reference_year = contract_start_object
 
-        if self.reference_year < contract_start_object:
-            raise SummaryException(
+        direction = reference_year_violation(
+            self.reference_year, contract_start_object, contract_end_object
+        )
+        if direction == "before":
+            raise SummaryInputError(
                 f"The Discounting Reference Year {self.reference_year} "
-                + f"is before the project years: {contract_start_object}"
+                + f"is before the project years: {contract_start_object}",
+                code="SUMMARY_REFERENCE_YEAR_OUTSIDE_PROJECT",
             )
 
         # Condition when the reference year is after than project end date year
-        if self.reference_year > contract_end_object:
-            raise SummaryException(
+        if direction == "after":
+            raise SummaryInputError(
                 f"The Discounting Reference Year {self.reference_year} "
-                + f"is after the project years: {contract_end_object}"
+                + f"is after the project years: {contract_end_object}",
+                code="SUMMARY_REFERENCE_YEAR_OUTSIDE_PROJECT",
             )
 
     def _get_sum_lifting(self):
@@ -2459,8 +2499,9 @@ class Summary:
         elif self.npv_mode == NPVSelection.NPV_POINT_FORWARD:
             self._npv_pointforward_terms()
         else:
-            raise SummaryException(
-                f"The NPV Method {self.npv_mode} , is not recognized"
+            raise SummaryInputError(
+                f"The NPV Method {self.npv_mode} , is not recognized",
+                code="SUMMARY_NPV_MODE_UNRECOGNIZED",
             )
 
     def _get_profitability_index(self):
@@ -2818,8 +2859,10 @@ class Summary:
                 "Transition indicators require a Transition contract"
             )
         transition = self.contract
-        contract1_view = transition.contract1.get_post_run_summary_profile()
-        contract2_view = transition.contract2.get_post_run_summary_profile()
+        # The transitioned children carry the post-transfer run that the table
+        # and the consolidated profile are built from; the pre-transition
+        # originals do not expose the reporting profile for every scheme.
+        first_contract, second_contract = transition.get_transitioned_contracts()
 
         self.ctr_ftp = _sum_float(_require_array(self._profile.ctr_ftp, "_ctr_ftp"))
         self.gov_ftp = _sum_float(_require_array(self._profile.gov_ftp, "_gov_ftp"))
@@ -2879,64 +2922,72 @@ class Summary:
             reference_year=self._require_reference_year(),
         )
 
-        # Contractor Gross Share
-        self.ctr_gross_share = _as_float(
-            _sum_float(
-                (
-                    _require_array(
-                        contract1_view.consolidated_ctr_share_before_tf,
-                        "_consolidated_ctr_share_before_tf",
-                    )
-                    if isinstance(transition.contract1, GrossSplit)
-                    else _require_array(
-                        contract1_view.consolidated_contractor_share,
-                        "_consolidated_contractor_share",
-                    )
-                ),
+        # Land and Building Tax
+        self.lbt = _sum_float(
+            _require_array(
+                self._profile.oil_lbt_expenditures_post_tax,
+                "_oil_lbt_expenditures_post_tax",
             )
-            + _sum_float(
-                (
-                    _require_array(
-                        contract2_view.consolidated_ctr_share_before_tf,
-                        "_consolidated_ctr_share_before_tf",
-                    )
-                    if isinstance(transition.contract2, GrossSplit)
-                    else _require_array(
-                        contract2_view.consolidated_contractor_share,
-                        "_consolidated_contractor_share",
-                    )
-                ),
+            + _require_array(
+                self._profile.gas_lbt_expenditures_post_tax,
+                "_gas_lbt_expenditures_post_tax",
             )
         )
 
-        # GOV GOV Gross Share
+        # Indirect Taxes
+        self.oil_indirect_taxes = _sum_float(
+            _require_array(self._profile.oil_total_indirect_tax, "_oil_total_indirect_tax")
+        )
+        self.gas_indirect_taxes = _sum_float(
+            _require_array(self._profile.gas_total_indirect_tax, "_gas_total_indirect_tax")
+        )
+        self.total_indirect_taxes = self.oil_indirect_taxes + self.gas_indirect_taxes
+
+        # Undepreciated Asset (combined scalars produced by the Transition run)
+        fiscal_profiles = transition.get_fiscal_profiles()
+        self.undepreciated_asset_oil = float(fiscal_profiles.oil_undepreciated_asset)
+        self.undepreciated_asset_gas = float(fiscal_profiles.gas_undepreciated_asset)
+        self.undepreciated_asset_total = float(
+            fiscal_profiles.consolidated_undepreciated_asset
+        )
+
+        # Contractor / Government Gross Share. The transitioned children own the
+        # authoritative consolidated share, and the sum reproduces the table.
+        first_summary = first_contract.get_summary(
+            discount_rate=self.discount_rate,
+            npv_mode=self.npv_mode,
+            discounting_mode=self.discounting_mode,
+            discount_rate_start_year=self._require_reference_year(),
+            inflation_rate=self.inflation_rate,
+            profitability_discounted=self.profitability_discounted,
+        )
+        second_summary = second_contract.get_summary(
+            discount_rate=self.discount_rate,
+            npv_mode=self.npv_mode,
+            discounting_mode=self.discounting_mode,
+            discount_rate_start_year=self._require_reference_year(),
+            inflation_rate=self.inflation_rate,
+            profitability_discounted=self.profitability_discounted,
+        )
+        self.ctr_gross_share = _as_float(
+            first_summary["ctr_gross_share"] + second_summary["ctr_gross_share"]
+        )
         self.gov_gross_share = _as_float(
-            _sum_float(
-                (
-                    _require_array(
-                        contract1_view.consolidated_gov_share_before_tf,
-                        "_consolidated_gov_share_before_tf",
-                    )
-                    if isinstance(transition.contract1, GrossSplit)
-                    else _require_array(
-                        contract1_view.consolidated_gov_share_before_tf,
-                        "_consolidated_gov_share_before_tf",
-                    )
-                ),
-            )
-            + _sum_float(
-                (
-                    _require_array(
-                        contract2_view.consolidated_gov_share_before_tf,
-                        "_consolidated_gov_share_before_tf",
-                    )
-                    if isinstance(transition.contract2, GrossSplit)
-                    else _require_array(
-                        contract2_view.consolidated_gov_share_before_tf,
-                        "_consolidated_gov_share_before_tf",
-                    )
-                ),
-            )
+            first_summary["gov_gross_share"] + second_summary["gov_gross_share"]
+        )
+
+        # Carry Forward Depreciation is a scheme-level input reported by each
+        # transitioned child; the Transition total is their sum.
+        self.oil_carry_forward_depreciation = float(
+            first_summary["oil_carry_forward_depreciation"]
+            + second_summary["oil_carry_forward_depreciation"]
+        )
+        self.gas_carry_forward_depreciation = float(
+            first_summary["gas_carry_forward_depreciation"]
+            + second_summary["gas_carry_forward_depreciation"]
+        )
+        self.total_carry_forward_depreciation = (
+            self.oil_carry_forward_depreciation + self.gas_carry_forward_depreciation
         )
 
     def run(self):
@@ -3113,52 +3164,52 @@ class Summary:
             }
 
         elif isinstance(self.contract, Transition):
+            # Mirrors the Cost Recovery / Gross Split executive-summary shape so
+            # ``convert_summary_to_dict`` can consume the Transition result.
             return {
                 "lifting_oil": self.lifting_oil,
                 "oil_wap": self.oil_wap,
                 "lifting_gas": self.lifting_gas,
                 "gas_wap": self.gas_wap,
                 "gross_revenue": self.gross_revenue,
-                "gross_revenue_oil": self.gross_revenue_oil,
-                "gross_revenue_gas": self.gross_revenue_gas,
                 "ctr_gross_share": self.ctr_gross_share,
-                "gov_gross_share": self.gov_gross_share,
-                "ftp": self.ftp,
-                "gov_ftp": self.gov_ftp,
-                "ctr_ftp": self.ctr_ftp,
                 "sunk_cost": self.sunk_cost,
                 "investment": self.investment,
                 "tangible": self.capital_cost,
                 "intangible": self.intangible,
-                "opex_and_asr": self.opex + self.asr,
+                "opex_asr_lbt": self.opex + self.asr + self.lbt,
                 "opex": self.opex,
                 "asr": self.asr,
-                "cost_recovery / deductible_cost": self.deductible_cost,
+                "lbt": self.lbt,
+                "cost_recovery/deductible_cost": self.deductible_cost,
                 "cost_recovery_over_gross_rev": self.deductible_cost_over_grossrev,
                 "unrec_cost": self.carry_forward_cost,
                 "unrec_over_gross_rev": self.carry_forward_cost_over_grossrev,
-                "equity_to_be_split": self.equity_to_be_split,
                 "ctr_net_share": self.ctr_net_operating_profit,
                 "ctr_net_share_over_gross_share": self.ctr_net_operating_profit_over_grossrev,
-                "ctr_equity_share": self.ctr_equity_share,
-                "gov_equity_share": self.gov_equity_share,
-                "ctr_net_operating_profit": self.ctr_net_operating_profit,
-                "ctr_net_operating_profit_over_grossrev": self.ctr_net_operating_profit_over_grossrev,
                 "ctr_net_cashflow": self.ctr_net_cash_flow,
                 "ctr_net_cashflow_over_gross_rev": self.ctr_net_cash_flow_over_grossrev,
                 "ctr_npv": self.ctr_npv,
-                "ctr_npv_sunk_cost_pooled": self.ctr_npv_sunk_cost_pooled,
                 "ctr_irr": self.ctr_irr,
-                "ctr_irr_sunk_cost_pooled": self.ctr_irr_sunk_cost_pooled,
                 "ctr_pot": self.ctr_pot,
                 "ctr_pv_ratio": self.ctr_pv_ratio,
                 "ctr_pi": self.ctr_pi,
+                "gov_gross_share": self.gov_gross_share,
+                "gov_ftp_share": self.gov_ftp,
                 "gov_ddmo": self.gov_ddmo,
                 "gov_tax_income": self.gov_tax_income,
                 "gov_take": self.gov_take,
                 "gov_take_over_gross_rev": self.gov_take_over_gross_rev,
                 "gov_take_npv": self.gov_take_npv,
-                "gov_ftp_share": self.gov_ftp,
+                "undepreciated_asset_oil": self.undepreciated_asset_oil,
+                "undepreciated_asset_gas": self.undepreciated_asset_gas,
+                "undepreciated_asset_total": self.undepreciated_asset_total,
+                "total_indirect_taxes": self.total_indirect_taxes,
+                "oil_indirect_taxes": self.oil_indirect_taxes,
+                "gas_indirect_taxes": self.gas_indirect_taxes,
+                "total_carry_forward_depreciation": self.total_carry_forward_depreciation,
+                "oil_carry_forward_depreciation": self.oil_carry_forward_depreciation,
+                "gas_carry_forward_depreciation": self.gas_carry_forward_depreciation,
             }
         else:
             return {

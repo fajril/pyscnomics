@@ -28,6 +28,10 @@ from pyscnomics.econ.selection import (
 # from pyscnomics.tools.summary import get_summary
 
 from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR, LBT
+from pyscnomics.input_validation import InputValidationError, engine_input_issue
+from pyscnomics.validation_rules import (
+    adjustment_out_of_unit_range,
+)
 
 
 _NumericArray: TypeAlias = np.ndarray[tuple[int, ...], np.dtype[np.generic]]
@@ -168,6 +172,20 @@ class OptimizationException(Exception):
     """Exception to raise for a misuse of BaseProject class"""
 
     pass
+
+
+class OptimizationInputError(  # pyright: ignore[reportUnsafeMultipleInheritance]
+    OptimizationException, InputValidationError
+):
+    """Verified user-input optimization error retaining ``OptimizationException``."""
+
+    _input_code: str = "OPTIMIZATION_INPUT_INVALID"
+
+    def __init__(self, message: str, *, code: str | None = None) -> None:
+        InputValidationError.__init__(
+            self,
+            (engine_input_issue(code=code or self._input_code, message=message),),
+        )
 
 
 def adjust_contract(
@@ -378,8 +396,9 @@ def optimize_psc_core(
     try:
         target_param = target_param_mapping[target_parameter]
     except KeyError:
-        raise OptimizationException(
-            f"Unrecognized target parameter: {target_parameter}."
+        raise OptimizationInputError(
+            f"Unrecognized target parameter: {target_parameter}.",
+            code="OPTIMIZATION_TARGET_UNRECOGNIZED",
         )
 
     # Changing the parameters list[str] into list[OptimizationParameters(Enum)]
@@ -421,9 +440,10 @@ def optimize_psc_core(
         try:
             bound_key = param_bound_source[param]
         except KeyError:
-            raise OptimizationException(
+            raise OptimizationInputError(
                 f"Invalid optimization parameter: ({param}). "
-                + "Optimization parameter should be chosen from OptimizationParameter enum."
+                + "Optimization parameter should be chosen from OptimizationParameter enum.",
+                code="OPTIMIZATION_PARAMETER_UNRECOGNIZED",
             )
 
         max_value = _optimization_bound_value(dict_optimization[bound_key], index)
@@ -555,9 +575,10 @@ def adjust_cost_element(
     )
 
     # Check for unsuitable "adjustment_value" parameter
-    if not 0.0 <= adjustment_value <= 1.0:
-        raise OptimizationException(
-            f"Adjustment value {adjustment_value} is out of valid range [0, 1]"
+    if adjustment_out_of_unit_range(adjustment_value):
+        raise OptimizationInputError(
+            f"Adjustment value {adjustment_value} is out of valid range [0, 1]",
+            code="OPTIMIZATION_ADJUSTMENT_OUT_OF_RANGE",
         )
 
     capital_adjusted = contract.capital_cost
@@ -839,24 +860,27 @@ def adjust_useful_life_years(
     """
 
     # Check for unsuitable "adjustment_value" input
-    if not 0.0 <= adjustment_value <= 1.0:
-        raise OptimizationException(
-            f"Adjustment value {adjustment_value} is out of valid range [0, 1]"
+    if adjustment_out_of_unit_range(adjustment_value):
+        raise OptimizationInputError(
+            f"Adjustment value {adjustment_value} is out of valid range [0, 1]",
+            code="OPTIMIZATION_ADJUSTMENT_OUT_OF_RANGE",
         )
 
     # Does not allow optimization if useful life is below 2 years
     below_mask = useful_life_array < 2
 
     if np.all(below_mask):
-        raise OptimizationException(
+        raise OptimizationInputError(
             "Cannot optimize useful life for project duration < 2 years. "
-            + "Please remove 'depreciation_acceleration' as target optimization parameter."
+            + "Please remove 'depreciation_acceleration' as target optimization parameter.",
+            code="OPTIMIZATION_USEFUL_LIFE_TOO_SHORT",
         )
 
     if np.any(below_mask):
         values_below = useful_life_array[below_mask]
-        raise OptimizationException(
-            f"Useful life contains values below 2 years: {values_below}"
+        raise OptimizationInputError(
+            f"Useful life contains values below 2 years: {values_below}",
+            code="OPTIMIZATION_USEFUL_LIFE_TOO_SHORT",
         )
 
     # Adjust "useful_life" with "acceleration_rate", ensuring at least 2 years
@@ -957,8 +981,9 @@ def optimize_psc(
     try:
         target_value_base = summary_base[_target_key_mapping[target_parameter]]
     except KeyError:
-        raise OptimizationException(
-            f"Optimization target ({target_parameter}) is not recognized."
+        raise OptimizationInputError(
+            f"Optimization target ({target_parameter}) is not recognized.",
+            code="OPTIMIZATION_TARGET_UNRECOGNIZED",
         )
 
     # Defining the dictionary that could be in multi-values

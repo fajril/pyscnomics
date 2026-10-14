@@ -33,6 +33,12 @@ from pyscnomics.contracts.run_arguments import (
     validate_cost_recovery_run_arguments,
     validate_gross_split_run_arguments,
 )
+from pyscnomics.input_validation import InputValidationError, engine_input_issue
+from pyscnomics.validation_rules import (
+    deviation_is_negative,
+    increment_not_positive,
+    step_not_positive,
+)
 
 
 FloatArray: TypeAlias = npt.NDArray[np.float64]
@@ -117,7 +123,10 @@ def _validate_base_project_run_arguments(
 ) -> _BaseProjectRunArguments:
     allowed = frozenset(_BaseProjectRunArguments.__annotations__)
     if any(key not in allowed for key in arguments):
-        raise SensitivityException("contract arguments contain an unsupported keyword")
+        raise SensitivityInputError(
+            "contract arguments contain an unsupported keyword",
+            code="SENSITIVITY_UNSUPPORTED_KEYWORD",
+        )
 
     result: _BaseProjectRunArguments = {}
     for key in ("sulfur_revenue", "electricity_revenue", "co2_revenue"):
@@ -134,8 +143,9 @@ def _validate_base_project_run_arguments(
         if key in arguments:
             value = arguments[key]
             if not isinstance(value, float) and not _is_float_array(value):
-                raise SensitivityException(
-                    f"{key} must be a float or float64 NumPy array"
+                raise SensitivityInputError(
+                    f"{key} must be a float or float64 NumPy array",
+                    code="SENSITIVITY_RUN_ARGUMENT_TYPE",
                 )
             if key == "vat_rate":
                 result["vat_rate"] = value
@@ -145,8 +155,9 @@ def _validate_base_project_run_arguments(
     if "year_inflation" in arguments:
         value = arguments["year_inflation"]
         if value is not None and not _is_year_array(value):
-            raise SensitivityException(
-                "year_inflation must be an int64 NumPy array or None"
+            raise SensitivityInputError(
+                "year_inflation must be an int64 NumPy array or None",
+                code="SENSITIVITY_RUN_ARGUMENT_TYPE",
             )
         result["year_inflation"] = value
 
@@ -165,7 +176,10 @@ def _validate_summary_arguments(
 ) -> _ValidatedSummaryArguments:
     allowed = frozenset(_ValidatedSummaryArguments.__annotations__)
     if any(key not in allowed for key in arguments):
-        raise SensitivityException("summary arguments contain an unsupported keyword")
+        raise SensitivityInputError(
+            "summary arguments contain an unsupported keyword",
+            code="SENSITIVITY_UNSUPPORTED_KEYWORD",
+        )
 
     result: _ValidatedSummaryArguments = {}
     if "discount_rate" in arguments:
@@ -185,8 +199,9 @@ def _validate_summary_arguments(
         if value is not None and (
             not isinstance(value, int) or isinstance(value, bool)
         ):
-            raise SensitivityException(
-                "discount_rate_start_year must be an int or None"
+            raise SensitivityInputError(
+                "discount_rate_start_year must be an int or None",
+                code="SENSITIVITY_SUMMARY_ARGUMENT_TYPE",
             )
         result["discount_rate_start_year"] = value
     if "inflation_rate" in arguments:
@@ -196,7 +211,10 @@ def _validate_summary_arguments(
     if "profitability_discounted" in arguments:
         value = arguments["profitability_discounted"]
         if not isinstance(value, bool):
-            raise SensitivityException("profitability_discounted must be a bool")
+            raise SensitivityInputError(
+                "profitability_discounted must be a bool",
+                code="SENSITIVITY_SUMMARY_ARGUMENT_TYPE",
+            )
         result["profitability_discounted"] = value
     return result
 
@@ -244,7 +262,10 @@ def _run_adjusted_contract(
     if isinstance(contract, Transition):
         value = arguments.get("unrec_portion", 0.0)
         if not isinstance(value, (float, int)):
-            raise SensitivityException("unrec_portion must be numeric")
+            raise SensitivityInputError(
+                "unrec_portion must be numeric",
+                code="SENSITIVITY_RUN_ARGUMENT_TYPE",
+            )
         contract.run(unrec_portion=value)
         return
     _run_contract(contract, arguments)
@@ -268,6 +289,20 @@ class SensitivityException(Exception):
     """Exception to be raised for a misuse of Sensitivity Method"""
 
     pass
+
+
+class SensitivityInputError(  # pyright: ignore[reportUnsafeMultipleInheritance]
+    SensitivityException, InputValidationError
+):
+    """Verified user-input sensitivity error retaining ``SensitivityException``."""
+
+    _input_code: str = "SENSITIVITY_INPUT_INVALID"
+
+    def __init__(self, message: str, *, code: str | None = None) -> None:
+        InputValidationError.__init__(
+            self,
+            (engine_input_issue(code=code or self._input_code, message=message),),
+        )
 
 
 def get_sensitivity_multipliers(
@@ -323,12 +358,18 @@ def get_sensitivity_multipliers(
     """
 
     # Throw exceptions for unsuitable input data
-    if min_deviation < 0 or max_deviation < 0:
-        raise SensitivityException("Deviations must be non negative.")
+    if deviation_is_negative(min_deviation) or deviation_is_negative(max_deviation):
+        raise SensitivityInputError(
+            "Deviations must be non negative.",
+            code="SENSITIVITY_DEVIATION_NEGATIVE",
+        )
 
     if increment is not None:
-        if increment <= 0:
-            raise SensitivityException("Increment must be greater than zero.")
+        if increment_not_positive(increment):
+            raise SensitivityInputError(
+                "Increment must be greater than zero.",
+                code="SENSITIVITY_INCREMENT_NOT_POSITIVE",
+            )
 
         n_low = round(min_deviation / increment)
         n_high = round(max_deviation / increment)
@@ -339,8 +380,11 @@ def get_sensitivity_multipliers(
             np.concatenate((lower_mults, [base_value], upper_mults)), dtype=np.float64
         )
 
-    if step <= 0:
-        raise SensitivityException("Step must be greater than zero.")
+    if step_not_positive(step):
+        raise SensitivityInputError(
+            "Step must be greater than zero.",
+            code="SENSITIVITY_STEP_NOT_POSITIVE",
+        )
 
     # Specify the minimum and maximum values
     min_val = base_value - min_deviation
@@ -440,9 +484,10 @@ def _prepare_adjusted_parameters_single_contract(
     ) -> tuple[Lifting, ...]:
 
         if target_field not in ["lifting_rate", "price"]:
-            raise SensitivityException(
+            raise SensitivityInputError(
                 f"Unrecognized target_field: {target_field}. "
-                + "Parameter target_field must be 'lifting_rate' or 'price'."
+                + "Parameter target_field must be 'lifting_rate' or 'price'.",
+                code="SENSITIVITY_TARGET_FIELD_UNRECOGNIZED",
             )
 
         return tuple(

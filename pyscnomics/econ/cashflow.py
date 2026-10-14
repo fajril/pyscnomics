@@ -17,12 +17,27 @@ from pyscnomics.econ.indicator import (
     pot_psc,
 )
 from pyscnomics.econ.selection import DiscountingMode, NPVSelection
+from pyscnomics.input_validation import InputValidationError, engine_input_issue
 
 
 class CashflowException(Exception):
     """Exception to raise for a misuse of Cashflow Exception"""
 
     pass
+
+
+class CashflowInputError(  # pyright: ignore[reportUnsafeMultipleInheritance]
+    CashflowException, InputValidationError
+):
+    """Verified user-input cashflow error retaining ``CashflowException``."""
+
+    _input_code: str = "CASHFLOW_INPUT_INVALID"
+
+    def __init__(self, message: str, *, code: str | None = None) -> None:
+        InputValidationError.__init__(
+            self,
+            (engine_input_issue(code=code or self._input_code, message=message),),
+        )
 
 
 def _require_integer_value(value: object) -> int:
@@ -282,12 +297,14 @@ class Cashflow:
         """
         if self.reference_year is not None:
             if self.reference_year < self.start_year:
-                raise CashflowException(
-                    f"The reference year: {self.reference_year}, is less than start_year {self.start_year}. The reference year should be in the range of the start_year and end_year"
+                raise CashflowInputError(
+                    f"The reference year: {self.reference_year}, is less than start_year {self.start_year}. The reference year should be in the range of the start_year and end_year",
+                    code="CASHFLOW_REFERENCE_YEAR_OUTSIDE_PROJECT",
                 )
             elif self.reference_year > self.end_year:
-                raise CashflowException(
-                    f"The reference year: {self.reference_year}, is greater than end_year {self.end_year}. The reference year should be in the range of the start_year and end_year"
+                raise CashflowInputError(
+                    f"The reference year: {self.reference_year}, is greater than end_year {self.end_year}. The reference year should be in the range of the start_year and end_year",
+                    code="CASHFLOW_REFERENCE_YEAR_OUTSIDE_PROJECT",
                 )
 
     def get_cashflow_all(self) -> None:
@@ -398,8 +415,9 @@ class Cashflow:
 
         # Condition when the npv_mode is not recognized
         else:
-            raise CashflowException(
-                f"The npv_mode: {self.npv_mode} , is not recognized.The npv_mode input should be in one of NPVSelection."
+            raise CashflowInputError(
+                f"The npv_mode: {self.npv_mode} , is not recognized.The npv_mode input should be in one of NPVSelection.",
+                code="CASHFLOW_NPV_MODE_UNRECOGNIZED",
             )
 
         return ctr_npv
