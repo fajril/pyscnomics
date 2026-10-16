@@ -24,6 +24,7 @@ from pyscnomics.econ.selection import (
     FTPTaxRegime,
     FluidType,
     GrossSplitRegime,
+    InflationAppliedTo,
     NPVSelection,
     OtherRevenue,
     TaxRegime,
@@ -54,6 +55,7 @@ from pyscnomics.optimize.uncertainty import (
     min_mean_max_retriever,
     uncertainty_psc,
 )
+from pyscnomics.tools.summary import get_summary
 
 
 def test_generic_lifting_adjustment_scales_every_producer_type():
@@ -898,6 +900,62 @@ def test_run_argument_rate_normalization_preserves_arrays_and_rejects_invalid_ty
         for invalid in (True, "0"):
             with pytest.raises(TypeError, match="inflation_rate must be a float"):
                 _ = validator({"inflation_rate": invalid})
+
+
+def test_gross_split_run_arguments_preserve_inflation_scope() -> None:
+    normalized = validate_gross_split_run_arguments(
+        {"inflation_rate_applied_to": InflationAppliedTo.OPEX}
+    )
+
+    assert normalized.get("inflation_rate_applied_to") is InflationAppliedTo.OPEX
+
+    normalized_without_inflation = validate_gross_split_run_arguments(
+        {"inflation_rate_applied_to": None}
+    )
+    assert "inflation_rate_applied_to" in normalized_without_inflation
+    assert normalized_without_inflation["inflation_rate_applied_to"] is None
+
+    with pytest.raises(TypeError, match="inflation_rate_applied_to has an invalid value"):
+        _ = validate_gross_split_run_arguments(
+            {"inflation_rate_applied_to": "OPEX"}
+        )
+
+
+def test_sensitivity_preserves_gross_split_inflation_scope() -> None:
+    results = {}
+    for target in (None, InflationAppliedTo.OPEX):
+        contract = load_data("case3", "gross_split")
+        assert isinstance(contract, GrossSplit)
+        arguments: GrossSplitRunArguments = {
+            "effective_tax_rate": 0.22,
+            "vat_rate": 0.11,
+            "inflation_rate": 0.05,
+            "inflation_rate_applied_to": target,
+            "regime": GrossSplitRegime.PERMEN_ESDM_12_2020,
+        }
+        contract_arguments: dict[str, object] = dict(arguments)
+        sensitivity = sensitivity_psc(
+            contract=contract,
+            contract_arguments=contract_arguments,
+            summary_arguments={},
+            min_deviation=0.0,
+            max_deviation=0.0,
+            step=1,
+            dataframe_output=False,
+        )
+
+        expected = load_data("case3", "gross_split")
+        assert isinstance(expected, GrossSplit)
+        expected.run(**arguments)
+        expected_summary = get_summary(expected)
+        base_multiplier = np.float64(1.0)
+        assert (
+            sensitivity["ctr_npv"][base_multiplier]["OPEX"]
+            == expected_summary["ctr_npv"]
+        )
+        results[target] = sensitivity["ctr_npv"][base_multiplier]["OPEX"]
+
+    assert results[InflationAppliedTo.OPEX] < results[None]
 
 
 def test_uncertainty_summary_defaults_to_zero_inflation():

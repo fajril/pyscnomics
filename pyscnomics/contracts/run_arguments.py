@@ -151,6 +151,13 @@ def _validate_common_run_arguments(
         result["inflation_rate"] = _require_float_array_or_float(
             arguments["inflation_rate"], "inflation_rate"
         )
+    if "inflation_rate_applied_to" in arguments:
+        value = arguments["inflation_rate_applied_to"]
+        result["inflation_rate_applied_to"] = (
+            None
+            if value is None
+            else _require_enum(value, InflationAppliedTo, "inflation_rate_applied_to")
+        )
     if "is_dmo_end_weighted" in arguments:
         result["is_dmo_end_weighted"] = _require_bool(
             arguments["is_dmo_end_weighted"], "is_dmo_end_weighted"
@@ -180,13 +187,6 @@ def validate_cost_recovery_run_arguments(
     allowed = frozenset(CostRecoveryRunArguments.__annotations__)
     _validate_keys(arguments, allowed)
     result: CostRecoveryRunArguments = {**_validate_common_run_arguments(arguments)}
-    if "inflation_rate_applied_to" in arguments:
-        value = arguments["inflation_rate_applied_to"]
-        result["inflation_rate_applied_to"] = (
-            None
-            if value is None
-            else _require_enum(value, InflationAppliedTo, "inflation_rate_applied_to")
-        )
     if "post_uu_22_year2001" in arguments:
         result["post_uu_22_year2001"] = _require_bool(
             arguments["post_uu_22_year2001"], "post_uu_22_year2001"
@@ -216,7 +216,6 @@ def validate_gross_split_run_arguments(
     allowed = frozenset(GrossSplitRunArguments.__annotations__)
     _validate_keys(arguments, allowed)
     result: GrossSplitRunArguments = {**_validate_common_run_arguments(arguments)}
-    # Preserve GS behavior: inflation_rate_applied_to is accepted but omitted.
     if "cum_production_split_offset" in arguments:
         result["cum_production_split_offset"] = _require_float_array_or_float_or_none(
             arguments["cum_production_split_offset"], "cum_production_split_offset"

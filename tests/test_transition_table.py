@@ -13,8 +13,15 @@ from pyscnomics.contracts.transition import (
     adjusting_contract_arguments,
 )
 from pyscnomics.dataset.sample import load_data
-from pyscnomics.econ.selection import FTPTaxRegime, GrossSplitRegime
+from pyscnomics.econ.costs import ASR, CapitalCost, CostOfSales, Intangible, LBT, OPEX
+from pyscnomics.econ.selection import (
+    DiscountingMode,
+    FTPTaxRegime,
+    GrossSplitRegime,
+    NPVSelection,
+)
 from pyscnomics.tools.table import get_table
+from pyscnomics.tools.summary import Summary, get_summary
 
 
 Scheme = Literal["cr", "gs"]
@@ -59,6 +66,69 @@ def _make_transition(first: Scheme, second: Scheme) -> Transition:
         contract2=second_contract,
         argument_contract1=first_arguments,
         argument_contract2=second_arguments,
+    )
+
+
+def _shift_cost_years(
+    cost: CapitalCost | Intangible | OPEX | ASR | LBT | CostOfSales,
+    offset: int,
+) -> None:
+    cost.start_year += offset
+    cost.end_year += offset
+    if cost.expense_year is not None:
+        cost.expense_year += offset
+    if cost.project_years is not None:
+        cost.project_years += offset
+    if isinstance(cost, CapitalCost) and cost.pis_year is not None:
+        cost.pis_year = cost.pis_year.astype(np.int64) + offset
+    if isinstance(cost, (ASR, LBT)) and cost.final_year is not None:
+        cost.final_year = cost.final_year.astype(np.int64) + offset
+
+
+def _shift_gross_split_years(contract: GrossSplit, offset: int) -> None:
+    contract.start_date = contract.start_date.replace(
+        year=contract.start_date.year + offset
+    )
+    contract.end_date = contract.end_date.replace(year=contract.end_date.year + offset)
+    contract.project_years = contract.project_years.astype(np.int64) + offset
+    contract.approval_year += offset
+    if contract.oil_onstream_date is not None:
+        contract.oil_onstream_date = contract.oil_onstream_date.replace(
+            year=contract.oil_onstream_date.year + offset
+        )
+    if contract.gas_onstream_date is not None:
+        contract.gas_onstream_date = contract.gas_onstream_date.replace(
+            year=contract.gas_onstream_date.year + offset
+        )
+    if contract.lifting is not None:
+        for lifting in contract.lifting:
+            lifting.start_year += offset
+            lifting.end_year += offset
+            lifting.prod_year += offset
+            lifting.project_years += offset
+    for costs in (
+        contract.capital_cost,
+        contract.intangible_cost,
+        contract.opex,
+        contract.asr_cost,
+        contract.lbt_cost,
+        contract.cost_of_sales,
+    ):
+        if costs is not None:
+            for cost in costs:
+                _shift_cost_years(cost, offset)
+
+
+def _make_sequential_transition() -> Transition:
+    first_contract = _load_child("cr")
+    second_contract = _load_child("gs")
+    assert isinstance(second_contract, GrossSplit)
+    _shift_gross_split_years(second_contract, 26)
+    return Transition(
+        contract1=first_contract,
+        contract2=second_contract,
+        argument_contract1=CR_RUN_ARGUMENTS.copy(),
+        argument_contract2=GS_RUN_ARGUMENTS.copy(),
     )
 
 
@@ -135,6 +205,49 @@ def test_transition_table_requires_run(transition_cr_to_gs: Transition) -> None:
         match=r"Transition\.run\(\) must be called before table generation",
     ):
         _ = get_table(transition_cr_to_gs)
+
+
+def test_transition_get_summary_uses_transition_profile() -> None:
+    transition = _make_sequential_transition()
+    assert transition.contract1.end_date.year + 1 == transition.contract2.start_date.year
+    np.testing.assert_array_equal(
+        transition.contract2.project_years,
+        np.arange(
+            transition.contract2.start_date.year,
+            transition.contract2.end_date.year + 1,
+            dtype=np.int64,
+        ),
+    )
+    transition.run()
+    reference_year = transition.contract1.start_date.year
+    expected_summary = Summary(
+        contract=transition,
+        reference_year=reference_year,
+        inflation_rate=0.03,
+        discount_rate=0.08,
+        npv_mode=NPVSelection.NPV_REAL_TERMS,
+        discounting_mode=DiscountingMode.MID_YEAR,
+        profitability_discounted=False,
+    )
+    expected_summary.run()
+
+    actual = get_summary(
+        transition,
+        reference_year=reference_year,
+        inflation_rate=0.03,
+        discount_rate=0.08,
+        npv_mode=NPVSelection.NPV_REAL_TERMS,
+        discounting_mode=DiscountingMode.MID_YEAR,
+        profitability_discounted=False,
+    )
+
+    assert actual == expected_summary.get_summary_dict()
+    profile = transition.get_post_run_summary_profile()
+    oil_sunk_cost = profile.oil_sunk_cost
+    gas_sunk_cost = profile.gas_sunk_cost
+    assert oil_sunk_cost is not None
+    assert gas_sunk_cost is not None
+    assert actual["sunk_cost"] == float(np.sum(oil_sunk_cost + gas_sunk_cost))
 
 
 def test_adjusting_contract_arguments_preserves_integer_scalar() -> None:
