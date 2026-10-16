@@ -9,8 +9,13 @@ from pydantic import ValidationError
 from pyscnomics.api.converter import SensitivityBM
 from pyscnomics.contracts.gross_split import GrossSplit
 from pyscnomics.contracts.project import BaseProject
+from pyscnomics.contracts.run_arguments import (
+    GrossSplitRunArguments,
+    validate_cost_recovery_run_arguments,
+    validate_gross_split_run_arguments,
+)
 from pyscnomics.contracts.transition import Transition
-from pyscnomics.dataset.sample import read_fluid_type
+from pyscnomics.dataset.sample import load_data, read_fluid_type
 from pyscnomics.econ.costs import ASR, CapitalCost, CostOfSales, Intangible, LBT, OPEX
 from pyscnomics.econ.revenue import Lifting
 from pyscnomics.econ.selection import (
@@ -18,6 +23,7 @@ from pyscnomics.econ.selection import (
     DiscountingMode,
     FTPTaxRegime,
     FluidType,
+    GrossSplitRegime,
     NPVSelection,
     OtherRevenue,
     TaxRegime,
@@ -36,7 +42,6 @@ from pyscnomics.optimize.adjuster import (
     get_price_and_rate_adjustment,
     get_tangible_adjustment,
 )
-from pyscnomics.contracts.run_arguments import validate_gross_split_run_arguments
 from pyscnomics.optimize.sensitivity import (
     SensitivityException,
     adjust_sensitivity_contract,
@@ -825,6 +830,74 @@ def test_sensitivity_psc_rejects_bool_inflation_rate():
             step=1,
             dataframe_output=False,
         )
+
+
+@pytest.mark.parametrize("argument_name", ["inflation_rate", "vat_rate"])
+def test_sensitivity_psc_accepts_integer_zero_runtime_rates(
+    argument_name: str,
+) -> None:
+    contract = load_data("case3", "gross_split")
+    run_arguments: GrossSplitRunArguments = {
+        "effective_tax_rate": 0.22,
+        "vat_rate": 0.11,
+        "inflation_rate": 0.0,
+        "inflation_rate_applied_to": None,
+        "regime": GrossSplitRegime.PERMEN_ESDM_12_2020,
+    }
+    contract.run(**run_arguments)
+
+    zero_rate_arguments: dict[str, object] = {**run_arguments, argument_name: 0}
+    float_rate_arguments: dict[str, object] = {
+        **run_arguments,
+        argument_name: 0.0,
+    }
+    integer_result = sensitivity_psc(
+        contract=contract,
+        contract_arguments=zero_rate_arguments,
+        summary_arguments={},
+        min_deviation=0,
+        max_deviation=0,
+        step=1,
+        dataframe_output=False,
+    )
+    float_result = sensitivity_psc(
+        contract=contract,
+        contract_arguments=float_rate_arguments,
+        summary_arguments={},
+        min_deviation=0,
+        max_deviation=0,
+        step=1,
+        dataframe_output=False,
+    )
+
+    assert set(integer_result) == {
+        "ctr_npv",
+        "ctr_irr",
+        "ctr_pi",
+        "ctr_pot",
+        "gov_take",
+        "ctr_net_share",
+    }
+    assert set(integer_result) == set(float_result)
+    for indicator in integer_result:
+        assert set(integer_result[indicator]) == {1.0}
+        assert set(integer_result[indicator]) == set(float_result[indicator])
+        assert integer_result[indicator] == float_result[indicator]
+
+
+def test_run_argument_rate_normalization_preserves_arrays_and_rejects_invalid_types() -> None:
+    rates = np.array([0.0, 0.1], dtype=np.float64)
+    for validator in (
+        validate_cost_recovery_run_arguments,
+        validate_gross_split_run_arguments,
+    ):
+        normalized_integer = validator({"inflation_rate": 0}).get("inflation_rate")
+        assert isinstance(normalized_integer, float)
+        assert normalized_integer == 0.0
+        assert validator({"inflation_rate": rates}).get("inflation_rate") is rates
+        for invalid in (True, "0"):
+            with pytest.raises(TypeError, match="inflation_rate must be a float"):
+                _ = validator({"inflation_rate": invalid})
 
 
 def test_uncertainty_summary_defaults_to_zero_inflation():

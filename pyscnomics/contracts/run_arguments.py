@@ -18,7 +18,7 @@ from pyscnomics.econ.selection import (
 )
 
 
-class CostRecoveryRunArguments(TypedDict, total=False):
+class _CommonRunArguments(TypedDict, total=False):
     sulfur_revenue: OtherRevenue
     electricity_revenue: OtherRevenue
     co2_revenue: OtherRevenue
@@ -28,30 +28,21 @@ class CostRecoveryRunArguments(TypedDict, total=False):
     inflation_rate_applied_to: InflationAppliedTo | None
     is_dmo_end_weighted: bool
     tax_regime: TaxRegime
-    effective_tax_rate: npt.NDArray[np.float64] | float | None
-    ftp_tax_regime: FTPTaxRegime
     depr_method: DeprMethod
     decline_factor: float | int
+    sum_undepreciated_cost: bool
+
+
+class CostRecoveryRunArguments(_CommonRunArguments, total=False):
+    effective_tax_rate: npt.NDArray[np.float64] | float | None
+    ftp_tax_regime: FTPTaxRegime
     post_uu_22_year2001: bool
     oil_cost_of_sales_applied: bool
     gas_cost_of_sales_applied: bool
-    sum_undepreciated_cost: bool
 
 
-class GrossSplitRunArguments(TypedDict, total=False):
-    sulfur_revenue: OtherRevenue
-    electricity_revenue: OtherRevenue
-    co2_revenue: OtherRevenue
-    vat_rate: npt.NDArray[np.float64] | float
-    year_inflation: npt.NDArray[np.int64] | None
-    inflation_rate: npt.NDArray[np.float64] | float
-    inflation_rate_applied_to: InflationAppliedTo | None
+class GrossSplitRunArguments(_CommonRunArguments, total=False):
     cum_production_split_offset: npt.NDArray[np.float64] | float | None
-    depr_method: DeprMethod
-    decline_factor: float | int
-    sum_undepreciated_cost: bool
-    is_dmo_end_weighted: bool
-    tax_regime: TaxRegime
     effective_tax_rate: npt.NDArray[np.float64] | float | int | None
     amortization: bool
     regime: GrossSplitRegime
@@ -74,6 +65,8 @@ def _require_enum(value: object, expected: type[_EnumValue], name: str) -> _Enum
 def _require_float_array_or_float(
     value: object, name: str
 ) -> npt.NDArray[np.float64] | float:
+    if isinstance(value, int) and not isinstance(value, bool):
+        return float(value)
     if isinstance(value, float):
         return value
     if _is_float_array(value):
@@ -130,12 +123,10 @@ def _validate_keys(arguments: Mapping[str, object], allowed: frozenset[str]) -> 
         raise TypeError("contract arguments contain an unsupported keyword")
 
 
-def validate_cost_recovery_run_arguments(
+def _validate_common_run_arguments(
     arguments: Mapping[str, object],
-) -> CostRecoveryRunArguments:
-    allowed = frozenset(CostRecoveryRunArguments.__annotations__)
-    _validate_keys(arguments, allowed)
-    result: CostRecoveryRunArguments = {}
+) -> _CommonRunArguments:
+    result: _CommonRunArguments = {}
     if "sulfur_revenue" in arguments:
         result["sulfur_revenue"] = _require_enum(
             arguments["sulfur_revenue"], OtherRevenue, "sulfur_revenue"
@@ -160,16 +151,41 @@ def validate_cost_recovery_run_arguments(
         result["inflation_rate"] = _require_float_array_or_float(
             arguments["inflation_rate"], "inflation_rate"
         )
+    if "is_dmo_end_weighted" in arguments:
+        result["is_dmo_end_weighted"] = _require_bool(
+            arguments["is_dmo_end_weighted"], "is_dmo_end_weighted"
+        )
+    if "tax_regime" in arguments:
+        result["tax_regime"] = _require_enum(
+            arguments["tax_regime"], TaxRegime, "tax_regime"
+        )
+    if "depr_method" in arguments:
+        result["depr_method"] = _require_enum(
+            arguments["depr_method"], DeprMethod, "depr_method"
+        )
+    if "decline_factor" in arguments:
+        result["decline_factor"] = _require_number(
+            arguments["decline_factor"], "decline_factor"
+        )
+    if "sum_undepreciated_cost" in arguments:
+        result["sum_undepreciated_cost"] = _require_bool(
+            arguments["sum_undepreciated_cost"], "sum_undepreciated_cost"
+        )
+    return result
+
+
+def validate_cost_recovery_run_arguments(
+    arguments: Mapping[str, object],
+) -> CostRecoveryRunArguments:
+    allowed = frozenset(CostRecoveryRunArguments.__annotations__)
+    _validate_keys(arguments, allowed)
+    result: CostRecoveryRunArguments = {**_validate_common_run_arguments(arguments)}
     if "inflation_rate_applied_to" in arguments:
         value = arguments["inflation_rate_applied_to"]
         result["inflation_rate_applied_to"] = (
             None
             if value is None
             else _require_enum(value, InflationAppliedTo, "inflation_rate_applied_to")
-        )
-    if "is_dmo_end_weighted" in arguments:
-        result["is_dmo_end_weighted"] = _require_bool(
-            arguments["is_dmo_end_weighted"], "is_dmo_end_weighted"
         )
     if "post_uu_22_year2001" in arguments:
         result["post_uu_22_year2001"] = _require_bool(
@@ -183,14 +199,6 @@ def validate_cost_recovery_run_arguments(
         result["gas_cost_of_sales_applied"] = _require_bool(
             arguments["gas_cost_of_sales_applied"], "gas_cost_of_sales_applied"
         )
-    if "sum_undepreciated_cost" in arguments:
-        result["sum_undepreciated_cost"] = _require_bool(
-            arguments["sum_undepreciated_cost"], "sum_undepreciated_cost"
-        )
-    if "tax_regime" in arguments:
-        result["tax_regime"] = _require_enum(
-            arguments["tax_regime"], TaxRegime, "tax_regime"
-        )
     if "effective_tax_rate" in arguments:
         result["effective_tax_rate"] = _require_float_array_or_float_or_none(
             arguments["effective_tax_rate"], "effective_tax_rate"
@@ -198,14 +206,6 @@ def validate_cost_recovery_run_arguments(
     if "ftp_tax_regime" in arguments:
         result["ftp_tax_regime"] = _require_enum(
             arguments["ftp_tax_regime"], FTPTaxRegime, "ftp_tax_regime"
-        )
-    if "depr_method" in arguments:
-        result["depr_method"] = _require_enum(
-            arguments["depr_method"], DeprMethod, "depr_method"
-        )
-    if "decline_factor" in arguments:
-        result["decline_factor"] = _require_number(
-            arguments["decline_factor"], "decline_factor"
         )
     return result
 
@@ -215,65 +215,19 @@ def validate_gross_split_run_arguments(
 ) -> GrossSplitRunArguments:
     allowed = frozenset(GrossSplitRunArguments.__annotations__)
     _validate_keys(arguments, allowed)
-    result: GrossSplitRunArguments = {}
-    if "sulfur_revenue" in arguments:
-        result["sulfur_revenue"] = _require_enum(
-            arguments["sulfur_revenue"], OtherRevenue, "sulfur_revenue"
-        )
-    if "electricity_revenue" in arguments:
-        result["electricity_revenue"] = _require_enum(
-            arguments["electricity_revenue"], OtherRevenue, "electricity_revenue"
-        )
-    if "co2_revenue" in arguments:
-        result["co2_revenue"] = _require_enum(
-            arguments["co2_revenue"], OtherRevenue, "co2_revenue"
-        )
-    if "vat_rate" in arguments:
-        result["vat_rate"] = _require_float_array_or_float(
-            arguments["vat_rate"], "vat_rate"
-        )
-    if "inflation_rate" in arguments:
-        result["inflation_rate"] = _require_float_array_or_float(
-            arguments["inflation_rate"], "inflation_rate"
-        )
+    result: GrossSplitRunArguments = {**_validate_common_run_arguments(arguments)}
+    # Preserve GS behavior: inflation_rate_applied_to is accepted but omitted.
     if "cum_production_split_offset" in arguments:
         result["cum_production_split_offset"] = _require_float_array_or_float_or_none(
             arguments["cum_production_split_offset"], "cum_production_split_offset"
-        )
-    if "year_inflation" in arguments:
-        result["year_inflation"] = _require_year_array_or_none(
-            arguments["year_inflation"], "year_inflation"
-        )
-    if "sum_undepreciated_cost" in arguments:
-        result["sum_undepreciated_cost"] = _require_bool(
-            arguments["sum_undepreciated_cost"], "sum_undepreciated_cost"
-        )
-    if "is_dmo_end_weighted" in arguments:
-        result["is_dmo_end_weighted"] = _require_bool(
-            arguments["is_dmo_end_weighted"], "is_dmo_end_weighted"
         )
     if "amortization" in arguments:
         result["amortization"] = _require_bool(
             arguments["amortization"], "amortization"
         )
-    if "tax_regime" in arguments:
-        result["tax_regime"] = _require_enum(
-            arguments["tax_regime"], TaxRegime, "tax_regime"
-        )
     if "effective_tax_rate" in arguments:
-        value = arguments["effective_tax_rate"]
-        result["effective_tax_rate"] = (
-            None
-            if value is None
-            else _require_float_array_or_number_or_none(value, "effective_tax_rate")
-        )
-    if "depr_method" in arguments:
-        result["depr_method"] = _require_enum(
-            arguments["depr_method"], DeprMethod, "depr_method"
-        )
-    if "decline_factor" in arguments:
-        result["decline_factor"] = _require_number(
-            arguments["decline_factor"], "decline_factor"
+        result["effective_tax_rate"] = _require_float_array_or_number_or_none(
+            arguments["effective_tax_rate"], "effective_tax_rate"
         )
     if "regime" in arguments:
         result["regime"] = _require_enum(
