@@ -10,6 +10,7 @@ from datetime import date
 from functools import reduce
 from typing import TypeVar, cast
 
+from pyscnomics.econ._array import sum_float64 as _sum_float
 from pyscnomics.econ.revenue import Lifting, aggregate_lifting_for_fluid
 from pyscnomics.contracts.summary_profile import PostRunSummaryProfile
 from pyscnomics.econ.selection import (
@@ -81,12 +82,6 @@ def _select_list(
     values: list[_ListValue], mask: npt.NDArray[np.bool_]
 ) -> list[_ListValue]:
     return [value for index, value in enumerate(values) if bool(mask.item(index))]
-
-
-def _sum_float(values: npt.NDArray[np.float64]) -> np.float64:
-    result: npt.NDArray[np.float64] = np.empty((), dtype=np.float64)
-    _ = np.sum(values, dtype=np.float64, out=result)
-    return np.float64(result[()])
 
 
 def _require_float_array(value: object, field_name: str) -> npt.NDArray[np.float64]:

@@ -5,12 +5,37 @@ A collection of unit testing for class CostRecovery
 from dataclasses import dataclass, field
 from datetime import date
 import numpy as np
+import pytest
 
 from pyscnomics.contracts.costrecovery import CostRecovery
 from pyscnomics.dataset.sample import load_data
+from pyscnomics.econ._array import last_float64, sum_float64
 from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR, LBT, CostOfSales
 from pyscnomics.econ.revenue import Lifting
 from pyscnomics.econ.selection import CostType, FluidType
+
+
+class _FloatArraySubclass(np.ndarray[tuple[int, ...], np.dtype[np.float64]]):
+    pass
+
+
+def test_typed_float64_helpers_preserve_scalar_and_reduction_behavior() -> None:
+    values = np.array([1.0, np.nan, 2.0, 3.0, 4.0, 5.0])[1::2]
+
+    last = last_float64(values)
+    total = sum_float64(values)
+    assert type(last) is np.float64
+    assert last == 5.0
+    assert type(total) is np.float64
+    assert np.isnan(total)
+    subclass_values = np.array([1.0, 2.0], dtype=np.float64).view(_FloatArraySubclass)
+    assert type(sum_float64(subclass_values)) is np.float64
+    empty = np.array([], dtype=np.float64)
+    assert sum_float64(empty) == 0.0
+    with pytest.raises(
+        IndexError, match=r"cannot do a non-empty take from an empty axes\."
+    ):
+        _ = last_float64(empty)
 
 
 def test_cost_recovery_reuses_normalized_condition_dict():

@@ -11,6 +11,8 @@ import numpy.typing as npt
 import pandas as pd
 from typing_extensions import override
 
+from pyscnomics.econ._array import last_float64 as _last_float
+from pyscnomics.econ._array import sum_float64 as _sum_float
 from pyscnomics.econ.costs import CapitalCost
 from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts.summary_profile import PostRunSummaryProfile
@@ -116,19 +118,6 @@ def _as_bool_array(values: object, name: str) -> npt.NDArray[np.bool_]:
     return array
 
 
-def _sum_float(values: FloatArray) -> np.float64:
-    # Preserve NumPy's reduction order and dtype semantics.
-    result: FloatArray = np.empty((), dtype=np.float64)
-    _ = np.sum(values, dtype=np.float64, out=result)
-    return np.float64(result[()])
-
-
-def _last_float(values: FloatArray) -> np.float64:
-    result: FloatArray = np.empty((), dtype=np.float64)
-    _ = np.take(values.reshape(-1), -1, mode="raise", out=result)
-    return np.float64(result[()])
-
-
 def _as_float(value: object, name: str) -> float:
     if not isinstance(value, Real):
         raise CostRecoveryException(f"{name} must be numeric")
@@ -137,10 +126,10 @@ def _as_float(value: object, name: str) -> float:
 
 def _array_float_at(values: FloatArray, index: int, name: str) -> float:
     """Read a NumPy scalar through an explicit numeric boundary."""
-    for position, value in enumerate(values.flat):
-        if position == index:
-            return float(value)
-    raise IndexError(f"{name} index {index} out of range")
+    if index < 0 or index >= values.size:
+        raise IndexError(f"{name} index {index} out of range")
+    flat_index = int(index) if isinstance(index, (bool, np.bool_)) else index
+    return float(values.item(flat_index))
 
 
 def _as_rc_icp_conditions(values: RCICPInput) -> RCICPConditions:

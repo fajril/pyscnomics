@@ -11,6 +11,8 @@ import numpy as np
 import numpy.typing as npt
 import pandas as pd
 
+from pyscnomics.econ._array import last_float64 as _last_float
+from pyscnomics.econ._array import sum_float64 as _sum_float
 from pyscnomics.contracts.project import BaseProject
 from pyscnomics.contracts.summary_profile import PostRunSummaryProfile
 import pyscnomics.contracts.psc_tools as psc_tools
@@ -184,24 +186,15 @@ def _as_float(value: object, name: str = "value") -> float:
     return float(value)
 
 
-def _sum_float(values: FloatArray) -> np.float64:
-    """Sum a concrete float array without leaking NumPy's Any scalar type."""
-    result: FloatArray = np.empty((), dtype=np.float64)
-    _ = np.sum(values, dtype=np.float64, out=result)
-    return np.float64(result[()])
-
-
-def _last_float(values: FloatArray) -> np.float64:
-    """Read the final flattened element without reducing the array."""
-    result: FloatArray = np.empty((), dtype=np.float64)
-    _ = np.take(values.reshape(-1), -1, mode="raise", out=result)
-    return np.float64(result[()])
-
-
 def _index_float(values: FloatArray, index: int) -> float:
-    result: FloatArray = np.empty((), dtype=np.float64)
-    _ = np.take(values.reshape(-1), index, mode="raise", out=result)
-    return float(result[()])
+    if values.size == 0:
+        raise IndexError("cannot do a non-empty take from an empty axes.")
+    flattened_index = int(index) if isinstance(index, (bool, np.bool_)) else index
+    if flattened_index < -values.size or flattened_index >= values.size:
+        raise IndexError(
+            f"index {flattened_index} is out of bounds for axis 0 with size {values.size}"
+        )
+    return float(values.item(flattened_index))
 
 
 @dataclass
