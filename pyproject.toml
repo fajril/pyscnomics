@@ -31,7 +31,7 @@ authors = [
 ]
 description = "An economic engine for calculating PSC Scheme in Indonesia."
 readme = "README.md"
-license = {file = "LICENSE.txt"}
+license = {file = "LICENSE"}
 keywords = ["Production Sharing Contract", "PSC", "Project Economic"]
 classifiers = [
     "Programming Language :: Python"

@@ -1,25 +1,18 @@
-# ── Stage 1: build ──────────────────────────────────────────────
-FROM python:3.11-alpine AS builder
-
-RUN apk add --no-cache uv
+FROM python:3.11-slim AS builder
 
 WORKDIR /build
 
-COPY pyproject.toml README.md ./
+COPY --from=ghcr.io/astral-sh/uv:0.11.7 /uv /uvx /bin/
+
+ENV UV_PROJECT_ENVIRONMENT=/opt/venv
+
+COPY pyproject.toml uv.lock README.md ./
+COPY LICENSE ./
 COPY pyscnomics/ pyscnomics/
 
-# Install into a virtual env
-RUN uv venv /opt/venv \
-    && VIRTUAL_ENV=/opt/venv uv pip install --no-cache . \
-    && find /opt/venv -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true \
-    && find /opt/venv -type d -name "tests" -exec rm -rf {} + 2>/dev/null || true \
-    && find /opt/venv -type d -name "test" -exec rm -rf {} + 2>/dev/null || true \
-    && find /opt/venv -path "*/matplotlib/mpl-data/sample_data" -exec rm -rf {} + 2>/dev/null || true \
-    && find /opt/venv -name "*.pyc" -delete 2>/dev/null || true \
-    && find /opt/venv -name "*.dist-info" -exec rm -rf {} + 2>/dev/null || true
+RUN uv sync --frozen --no-dev --no-editable --python /usr/local/bin/python
 
-# ── Stage 2: runtime ───────────────────────────────────────────
-FROM python:3.11-alpine
+FROM python:3.11-slim
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
@@ -27,7 +20,6 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
-# Copy only the virtual env from builder
 COPY --from=builder /opt/venv /opt/venv
 
 EXPOSE 9999

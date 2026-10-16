@@ -2,6 +2,9 @@
 .git/
 .github/
 __pycache__/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
 *.pyc
 *.pyo
 *.egg-info/
@@ -11,7 +14,6 @@ docs/
 tests/
 *.md
 !README.md
-LICENSE*
 Dockerfile
 docker-compose.yml
 .dockerignore
