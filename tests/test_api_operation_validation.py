@@ -795,5 +795,6 @@ def test_forecast_numpy_longdouble_is_located_and_accepted() -> None:
         numeric = cast("float", cast("object", value))
         ltp = get_ltp(numeric, 2025, 2100, FluidType.OIL)
         rdp = get_rdp(2025, 2100, 2, 0.08, 0.1, 0.05, numeric)
+        assert rdp.dtype == np.dtype(np.float64), label
         assert np.array_equal(ltp, base_ltp), label
         assert np.array_equal(rdp, base_rdp), label

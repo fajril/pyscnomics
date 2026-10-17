@@ -2497,7 +2497,7 @@ def get_rdp(
         q_min_ratio=q_min_ratio,
     )
 
-    rate_rdp = model.predict(volume)
+    rate_rdp = model.predict(float(volume))
 
     # Initiating the array of years
     year_arr = np.arange(start_year, end_year + 1)
