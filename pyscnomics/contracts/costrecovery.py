@@ -58,15 +58,13 @@ pd.set_option("display.max_colwidth", 100)
 
 # Dtype-only aliases match BaseProject; runtime helpers validate external shapes.
 FloatArray = npt.NDArray[np.float64]
-FloatMatrix = npt.NDArray[np.float64]
 BoolArray = npt.NDArray[np.bool_]
 YearArray = npt.NDArray[np.int64]
 TableArray = FloatArray | YearArray
 CostSchedules = dict[str, FloatArray]
 RCICPBand = dict[str, float]
 RCICPConditions = dict[str, RCICPBand]
-RCICPColumnConditions = Mapping[str, npt.ArrayLike]
-RCICPInput = RCICPConditions | RCICPColumnConditions
+RCICPInput = RCICPConditions | Mapping[str, npt.ArrayLike]
 
 
 class SunkCostException(Exception):
@@ -3833,24 +3831,24 @@ class CostRecovery(BaseProject):
 
         oil_allocation = self._oil_revenue - self._oil_ftp - self._oil_ic_paid
         gas_allocation = self._gas_revenue - self._gas_ftp - self._gas_ic_paid
-        allocation: FloatMatrix = np.vstack((oil_allocation, gas_allocation)).T
+        allocation: FloatArray = np.vstack((oil_allocation, gas_allocation)).T
         # non_capital = np.vstack((self._oil_non_capital, self._gas_non_capital)).T
         # depreciation = np.vstack((self._oil_depreciation, self._gas_depreciation)).T
-        non_capital: FloatMatrix = np.vstack(
+        non_capital: FloatArray = np.vstack(
             (self._oil_non_depr_total, self._gas_non_depr_total)
         ).T
-        depreciation: FloatMatrix = np.vstack(
+        depreciation: FloatArray = np.vstack(
             (self._oil_depr_total, self._gas_depr_total)
         ).T
 
-        ets_pre_trf: FloatMatrix = np.zeros_like(allocation)
-        ets_post_trf: FloatMatrix = np.zeros_like(allocation)
-        unrec_pre_trf: FloatMatrix = np.zeros_like(allocation)
-        unrec_post_trf: FloatMatrix = np.zeros_like(allocation)
-        rec_pre_trf: FloatMatrix = np.zeros_like(allocation)
-        rec_post_trf: FloatMatrix = np.zeros_like(allocation)
-        recoverable_cost: FloatMatrix = np.zeros_like(allocation)
-        trf_to_og: FloatMatrix = np.zeros_like(allocation)
+        ets_pre_trf: FloatArray = np.zeros_like(allocation)
+        ets_post_trf: FloatArray = np.zeros_like(allocation)
+        unrec_pre_trf: FloatArray = np.zeros_like(allocation)
+        unrec_post_trf: FloatArray = np.zeros_like(allocation)
+        rec_pre_trf: FloatArray = np.zeros_like(allocation)
+        rec_post_trf: FloatArray = np.zeros_like(allocation)
+        recoverable_cost: FloatArray = np.zeros_like(allocation)
+        trf_to_og: FloatArray = np.zeros_like(allocation)
         project_duration = len(self.project_years)
         prev_unrec: FloatArray = np.zeros(2)
 

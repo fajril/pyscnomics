@@ -1,4 +1,4 @@
-from typing import Callable, Literal, TypeAlias, TypeVar, TypedDict
+from typing import Literal, TypeAlias, TypeVar, TypedDict
 
 import numpy as np
 import numpy.typing as npt
@@ -15,7 +15,7 @@ from pyscnomics.econ.selection import (
     DiscountingMode,
     NPVSelection,
 )
-from pyscnomics.tools.summary import SummaryResult, get_summary
+from pyscnomics.tools.summary import get_summary
 
 from pyscnomics.econ.costs import CapitalCost, Intangible, OPEX, ASR, LBT
 from pyscnomics.optimize.optimization import adjust_useful_life_years
@@ -64,18 +64,6 @@ def _required_items(items: tuple[_CostItem, ...] | None) -> tuple[_CostItem, ...
     return items
 
 
-def _run_transition(contract: Transition, arguments: _TransitionRunArguments) -> None:
-    """Run Transition while preserving its public dynamic keyword payload."""
-
-    contract.run(**arguments)
-
-
-def _get_summary(arguments: _SummaryArguments) -> SummaryResult:
-    """Call the shared summary helper through its dynamic keyword boundary."""
-
-    return get_summary(**arguments)
-
-
 def _read_optimization_result(
     result: object,
 ) -> tuple[_OptimizationScalar, _OptimizationScalar]:
@@ -116,15 +104,6 @@ def _optimization_bound_value(
     if bounds.ndim != 1 or bounds.dtype != np.dtype(np.float64):
         raise TypeError("optimization bounds must be a one-dimensional float64 array")
     return bounds.flat[index]
-
-
-def _minimize_scalar(
-    objective: Callable[[float], _SummaryValue],
-    bounds: tuple[_OptimizationScalar, _OptimizationScalar],
-) -> object:
-    """Call SciPy at its untyped boundary and validate its result separately."""
-
-    return minimize_scalar(objective, bounds=bounds, method="bounded")
 
 
 def adjust_contract(
@@ -237,12 +216,12 @@ def adjust_contract(
             contract.argument_contract2["effective_tax_rate"] = _run_float(value)
 
     # Running the contract
-    _run_transition(contract, contract_arguments)
+    contract.run(**contract_arguments)
 
     # Get the summary of the new contract and get its value of the targeted optimization
     summary_argument["contract"] = contract
     result_psc = _summary_scalar(
-        _get_summary(summary_argument)[target_parameter], target_parameter
+        get_summary(**summary_argument)[target_parameter], target_parameter
     )
 
     return result_psc, contract
@@ -680,7 +659,9 @@ def optimize_psc_core(
                 return result_obj
 
             # Optimization of the objective function
-            optim_result = _minimize_scalar(objective_run, bounds)
+            optim_result: object = minimize_scalar(
+                objective_run, bounds=bounds, method="bounded"
+            )
 
             # Difference value from target and optimization result
             optimized_diff, optimized_parameter = _read_optimization_result(

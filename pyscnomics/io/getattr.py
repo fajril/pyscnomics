@@ -1319,12 +1319,6 @@ def convert_object(objects: object) -> object:
         return objects
 
 
-def _prepare_args(
-    target_arg: str, default: object, contract_arguments: Mapping[str, object]
-) -> object:
-    return contract_arguments.get(target_arg, default)
-
-
 def _object_attributes(value: object) -> dict[str, object]:
     """Return an object's instance attributes with a concrete value type."""
     attributes: dict[str, object] = vars(value)
@@ -1717,8 +1711,8 @@ def construct_costrecovery_arguments_attr(
     }
 
     cr_arguments = {
-        key: _prepare_args(*val, contract_arguments)
-        for key, val in mapping_args.items()
+        key: contract_arguments.get(target_arg, default)
+        for key, (target_arg, default) in mapping_args.items()
     }
 
     for key, value in cr_arguments.items():
@@ -1828,8 +1822,8 @@ def construct_grosssplit_arguments_attr(
     }
 
     gs_arguments = {
-        key: _prepare_args(*val, contract_arguments)
-        for key, val in mapping_args.items()
+        key: contract_arguments.get(target_arg, default)
+        for key, (target_arg, default) in mapping_args.items()
     }
 
     for key, value in gs_arguments.items():
@@ -1871,8 +1865,8 @@ def construct_baseproject_arguments_attr(
     }
 
     bp_arguments = {
-        key: _prepare_args(*val, contract_arguments)
-        for key, val in mapping_args.items()
+        key: contract_arguments.get(target_arg, default)
+        for key, (target_arg, default) in mapping_args.items()
     }
 
     for key, value in bp_arguments.items():

@@ -55,11 +55,6 @@ def _sum_float(value: FloatArray | None) -> np.float64:
     return np.sum(value)
 
 
-def _as_float(value: float | np.float64) -> float:
-    """Normalize NumPy scalar output to a Python float."""
-    return float(value)
-
-
 def _last_float(values: FloatArray | None) -> np.float64:
     """Return the final value of a completed numeric profile."""
     if values is None:
@@ -72,15 +67,9 @@ def _last_float(values: FloatArray | None) -> np.float64:
 def _divide_float(
     numerator: float | np.float64,
     denominator: float | np.float64,
-    where: bool = True,
 ) -> float | np.float64:
     """Return the zero-safe scalar ratio used by legacy summary output."""
-    return numerator / denominator if where else 0.0
-
-
-def _is_nonzero(value: float | np.float64) -> bool:
-    """Convert NumPy scalar comparison to the bool expected by ``np.divide``."""
-    return bool(value != 0)
+    return numerator / denominator if denominator != 0 else 0.0
 
 
 def _require_array(value: FloatArray | None, name: str) -> FloatArray:
@@ -357,7 +346,6 @@ class Summary:
             self.oil_wap = _divide_float(
                 _sum_float(_require_array(self._profile.oil_revenue, "_oil_revenue")),
                 _sum_float(oil_lifting.get_lifting_rate_ghv_arr()),
-                where=_is_nonzero(_sum_float(oil_lifting.get_lifting_rate_ghv_arr())),
             )
 
         self.lifting_gas = float(_sum_float(gas_lifting.get_lifting_rate_ghv_arr()))
@@ -372,7 +360,6 @@ class Summary:
                     * gas_lifting.get_lifting_rate_ghv_arr()
                 ),
                 _sum_float(gas_lifting.get_lifting_rate_ghv_arr()),
-                where=_is_nonzero(_sum_float(gas_lifting.get_lifting_rate_ghv_arr())),
             )
 
     def _get_gross_revenue(self):
@@ -411,10 +398,7 @@ class Summary:
         self.sunk_cost_extended = np.concatenate(
             (
                 _require_array(
-                    _require_array(
-                        self._profile.consolidated_sunk_cost, "_consolidated_sunk_cost"
-                    ),
-                    "_consolidated_sunk_cost",
+                    self._profile.consolidated_sunk_cost, "_consolidated_sunk_cost"
                 ),
                 np.zeros(
                     len(self._profile.project_years)
@@ -569,20 +553,14 @@ class Summary:
         # Cashflow sunk cost
         if self.sunk_cost == 0:
             self.cashflow_sunk_cost_pooled = _require_array(
-                _require_array(
-                    self._profile.consolidated_cashflow, "_consolidated_cashflow"
-                ),
-                "_consolidated_cashflow",
+                self._profile.consolidated_cashflow, "_consolidated_cashflow"
             )
         else:
             self.cashflow_sunk_cost_pooled = np.concatenate(
                 (
                     np.array([-self.sunk_cost]),
                     _require_array(
-                        _require_array(
-                            self._profile.consolidated_cashflow,
-                            "_consolidated_cashflow",
-                        ),
+                        self._profile.consolidated_cashflow,
                         "_consolidated_cashflow",
                     )[
                         len(
@@ -621,10 +599,7 @@ class Summary:
             self.gov_ddmo = float(
                 _sum_float(
                     _require_array(
-                        _require_array(
-                            self._profile.consolidated_ddmo, "_consolidated_ddmo"
-                        ),
-                        "_consolidated_ddmo",
+                        self._profile.consolidated_ddmo, "_consolidated_ddmo"
                     )
                 )
             )
@@ -696,10 +671,7 @@ class Summary:
         """
         self.ctr_irr = irr(
             cashflow=_require_array(
-                _require_array(
-                    self._profile.consolidated_cashflow, "_consolidated_cashflow"
-                ),
-                "_consolidated_cashflow",
+                self._profile.consolidated_cashflow, "_consolidated_cashflow"
             )
         )
         self.ctr_irr_sunk_cost_pooled = irr(
@@ -719,10 +691,7 @@ class Summary:
         # Contractor NPV
         self.ctr_npv = npv_skk_real_terms(
             cashflow=_require_array(
-                _require_array(
-                    self._profile.consolidated_cashflow, "_consolidated_cashflow"
-                ),
-                "_consolidated_cashflow",
+                self._profile.consolidated_cashflow, "_consolidated_cashflow"
             ),
             cashflow_years=self._profile.project_years,
             discount_rate=self.discount_rate,
@@ -1096,7 +1065,7 @@ class Summary:
 
         self.ctr_net_cashflow = float(_sum_float(cashflow_point_forward))
         gross_revenue_point_forward = _sum_float(gross_revenue_point_forward)
-        self.ctr_net_cashflow_over_gross_rev = _as_float(
+        self.ctr_net_cashflow_over_gross_rev = float(
             self.ctr_net_cashflow / gross_revenue_point_forward
         )
 
@@ -1136,7 +1105,7 @@ class Summary:
         """
         if self.profitability_discounted:
             self.ctr_pv_ratio = _divide_float(
-                self.ctr_npv, self.investment_npv, where=self.investment_npv != 0
+                self.ctr_npv, self.investment_npv
             )
 
         # Condition when the Profitability Index is calculated using un-discounted investment
@@ -1163,7 +1132,6 @@ class Summary:
             self.ctr_pv_ratio = _divide_float(
                 self.ctr_npv,
                 self.investment_pi,
-                where=_is_nonzero(self.investment_pi),
             )
 
         self.ctr_pi = 1 + self.ctr_pv_ratio
@@ -1190,7 +1158,7 @@ class Summary:
                     "_consolidated_cost_recovery_after_tf",
                 )
             )
-            self.cost_recovery_over_gross_rev = _as_float(
+            self.cost_recovery_over_gross_rev = float(
                 self.cost_recovery / self.gross_revenue
             )
 
@@ -1232,8 +1200,8 @@ class Summary:
                     "_consolidated_unrecovered_after_transfer",
                 )
             )
-            self.unrec_over_costrec = _as_float(self.unrec_cost / self.cost_recovery)
-            self.unrec_over_gross_rev = _as_float(self.unrec_cost / self.gross_revenue)
+            self.unrec_over_costrec = float(self.unrec_cost / self.cost_recovery)
+            self.unrec_over_gross_rev = float(self.unrec_cost / self.gross_revenue)
 
         elif isinstance(self.contract, GrossSplit):
             # Carry Forward Cost
@@ -1590,10 +1558,10 @@ class Summary:
             inflation_rate=self.inflation_rate,
             profitability_discounted=self.profitability_discounted,
         )
-        self.ctr_gross_share = _as_float(
+        self.ctr_gross_share = float(
             first_summary["ctr_gross_share"] + second_summary["ctr_gross_share"]
         )
-        self.gov_gross_share = _as_float(
+        self.gov_gross_share = float(
             first_summary["gov_gross_share"] + second_summary["gov_gross_share"]
         )
 

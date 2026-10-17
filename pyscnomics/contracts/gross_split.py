@@ -77,7 +77,6 @@ def _validated_year_inflation(
 
 
 FloatArray = npt.NDArray[np.float64]
-FloatMatrix = npt.NDArray[np.float64]
 YearArray = npt.NDArray[np.int64]
 TableArray = FloatArray | YearArray
 BoolArray = npt.NDArray[np.bool_]
@@ -4200,18 +4199,18 @@ class GrossSplit(BaseProject):
 
         # ====================================================================================
 
-        allocation: FloatMatrix = np.stack(
+        allocation: FloatArray = np.stack(
             [oil_ctr_share_before_transfer, gas_ctr_share_before_transfer], axis=1
         )
-        tobe_deducted: FloatMatrix = np.stack(
+        tobe_deducted: FloatArray = np.stack(
             [oil_cost_tobe_deducted, gas_cost_tobe_deducted], axis=1
         )
-        deductible: FloatMatrix = np.zeros_like(allocation)
-        undeductible_pre_trf: FloatMatrix = np.zeros_like(allocation)
-        undeductible_post_trf: FloatMatrix = np.zeros_like(allocation)
-        net_pre_trf: FloatMatrix = np.zeros_like(allocation)
-        net_post_trf: FloatMatrix = np.zeros_like(allocation)
-        trf_to_og: FloatMatrix = np.zeros_like(allocation)
+        deductible: FloatArray = np.zeros_like(allocation)
+        undeductible_pre_trf: FloatArray = np.zeros_like(allocation)
+        undeductible_post_trf: FloatArray = np.zeros_like(allocation)
+        net_pre_trf: FloatArray = np.zeros_like(allocation)
+        net_post_trf: FloatArray = np.zeros_like(allocation)
+        trf_to_og: FloatArray = np.zeros_like(allocation)
 
         prev_undeductible: FloatArray = np.zeros(2)
         for i in range(self.project_duration):

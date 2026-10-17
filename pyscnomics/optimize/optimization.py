@@ -3,7 +3,7 @@ Configuration to undertake optimization study.
 """
 
 from collections.abc import Mapping
-from typing import Callable, Literal, TypeAlias, TypeVar, TypedDict, TypeGuard
+from typing import Literal, TypeAlias, TypeVar, TypedDict, TypeGuard
 
 import numpy as np
 import numpy.typing as npt
@@ -138,15 +138,6 @@ def _run_contract(
         contract.run(**validate_gross_split_run_arguments(arguments))
 
 
-def _get_contract_summary(
-    contract: CostRecovery | GrossSplit,
-    arguments: _SummaryArguments,
-) -> dict[str, _SummaryValue]:
-    """Get a summary while preserving the public dynamic keyword payload."""
-
-    return contract.get_summary(**arguments)
-
-
 def _read_optimization_result(
     result: object,
 ) -> tuple[_OptimizationScalar, _OptimizationScalar]:
@@ -157,15 +148,6 @@ def _read_optimization_result(
     if not isinstance(result["fun"], float) or not isinstance(result["x"], float):
         raise OptimizationException("scalar optimization returned an invalid result")
     return result["fun"], result["x"]
-
-
-def _minimize_scalar(
-    objective: Callable[[float], _SummaryValue],
-    bounds: tuple[_OptimizationScalar, _OptimizationScalar],
-) -> object:
-    """Call SciPy at its untyped boundary and validate its result separately."""
-
-    return minimize_scalar(objective, bounds=bounds, method="bounded")
 
 
 class OptimizationException(Exception):
@@ -312,7 +294,7 @@ def adjust_contract(
     _run_contract(contract, contract_arguments)
 
     # Get the summary of the new contract and get its value of the targeted optimization
-    result_psc = _get_contract_summary(contract, summary_argument)[target_parameter]
+    result_psc = contract.get_summary(**summary_argument)[target_parameter]
 
     return result_psc, contract
 
@@ -481,7 +463,9 @@ def optimize_psc_core(
                 return result_obj
 
             # Optimization of the objective function
-            optim_result = _minimize_scalar(objective_run, bounds)
+            optim_result: object = minimize_scalar(
+                objective_run, bounds=bounds, method="bounded"
+            )
 
             # Difference value from target and optimization result
             optimized_diff, optimized_parameter = _read_optimization_result(
@@ -969,7 +953,7 @@ def optimize_psc(
 
     # Get the summary of the base case
     _run_contract(contract, contract_arguments)
-    summary_base = _get_contract_summary(contract, summary_arguments)
+    summary_base = contract.get_summary(**summary_arguments)
 
     # Retrieve the economic indicator of the base case corresponding to the chosen indicator
     _target_key_mapping = {
@@ -1121,7 +1105,7 @@ def optimize_psc(
         list_executed_contract[-1] = contract
 
         # Retrieving the summary of the contract
-        summary_optimized = _get_contract_summary(contract, summary_arguments)
+        summary_optimized = contract.get_summary(**summary_arguments)
 
         # Retrieving the corresponding target value
         result_optimization = summary_optimized[_target_key_mapping[target_parameter]]

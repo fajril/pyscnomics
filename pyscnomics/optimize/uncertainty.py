@@ -406,10 +406,6 @@ def _require_rcicp_input(value: object) -> RCICPInput:
     return value
 
 
-def _get_summary(contract: ProjectContract, arguments: SummaryArguments) -> Summary:
-    return contract.get_summary(**arguments)
-
-
 def _require_lifting_items(
     value: tuple[Lifting, ...] | None,
 ) -> tuple[Lifting, ...]:
@@ -787,7 +783,7 @@ def get_baseproject(data: SerializedContract) -> Summary:
     # Fill summary arguments
     summary_arguments_dict = get_summary_dict(data=data)
 
-    return _get_summary(contract, summary_arguments_dict)
+    return contract.get_summary(**summary_arguments_dict)
 
 
 def build_costrecovery_instance(data: SerializedContract) -> CostRecovery:
@@ -1059,7 +1055,7 @@ def get_costrecovery(data: SerializedContract) -> Summary:
     # Fill summary arguments
     summary_arguments_dict = get_summary_dict(data=data)
 
-    return _get_summary(contract, summary_arguments_dict)
+    return contract.get_summary(**summary_arguments_dict)
 
 
 def build_grosssplit_instance(data: SerializedContract) -> GrossSplit:
@@ -1338,7 +1334,7 @@ def get_grosssplit(data: SerializedContract) -> Summary:
     # Fill summary arguments
     summary_arguments_dict = get_summary_dict(data=data)
 
-    return _get_summary(contract, summary_arguments_dict)
+    return contract.get_summary(**summary_arguments_dict)
 
 
 def get_transition(data: SerializedContract) -> Summary:
